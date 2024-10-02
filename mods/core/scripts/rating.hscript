@@ -1,0 +1,129 @@
+var score = 0;
+var accuracy = 0;
+
+var maxHits = 0;
+
+var tally = {
+    sick: 0,
+    good: 0,
+    bad: 0,
+    shit: 0,
+    miss: 0
+}
+
+var mults = {
+    good: 0.7,
+    bad: 0.4,
+    shit: 0
+}
+
+var BASE_SCORE = 350;
+
+function start(song)
+{
+    for (note in game.unspawnNotes)
+        if (note.mustPress && !note.isSustainNote)
+            maxHits++;
+
+    game.hscriptManager.setAll('maxHits', maxHits);
+    game.hscriptManager.setAll('tally', tally);
+    game.hscriptManager.setAll('accuracy', accuracy);
+    game.hscriptManager.setAll('score', score);
+}
+
+function postStart(song)
+{
+    finalizeCalc(null, {rating: null, scoreDiff: 0, noteDiff: 0});
+}
+
+function goodNoteHit(note)
+{
+    if (note.isSustainNote)
+        return;
+
+    var diff = Math.abs(note.strumTime - Conductor.songPosition + ClientPrefs.data.ratingOffset);
+    diff /= game.playbackRate;
+    diff = Std.int(diff);
+
+    var absDiff = Math.abs(diff);
+
+    var noteRating = 'sick';
+
+    if (absDiff > ClientPrefs.data.sickWindow)
+        noteRating = 'good';
+
+    if (absDiff > ClientPrefs.data.goodWindow)
+        noteRating = 'bad';
+
+    if (absDiff > ClientPrefs.data.badWindow)
+        noteRating = 'shit';
+
+    var scoreToAdd = BASE_SCORE;
+
+    switch(noteRating)
+    {
+        case 'sick':
+            tally.sick++;
+
+        case 'good':
+            tally.good++;
+            scoreToAdd *= mults.good;
+
+        case 'bad':
+            tally.bad++;
+            scoreToAdd *= mults.bad;
+
+        case 'shit':
+            tally.shit++;
+            scoreToAdd *= mults.shit;
+    }
+
+    score += scoreToAdd;
+
+    finalizeCalc(note, {rating: noteRating, scoreDiff: scoreToAdd, noteDiff: diff});
+}
+
+function onMiss(dir, note)
+{
+    if (!game.practiceMode) score -= 50;
+
+    if (note != null)
+        if (!note.isSustainNote)
+            tally.miss++;
+
+    finalizeCalc(null, {rating: 'miss', scoreDiff: -50, noteDiff: 0});
+}
+
+function finalizeCalc(note, data)
+{
+    accuracy = calcAccuracy(tally.sick, tally.good, tally.bad, tally.shit + tally.miss);
+
+    game.hscriptManager.setAll('accuracy', accuracy);
+    game.hscriptManager.setAll('score', score);
+    game.hscriptManager.setAll('tally', tally);
+
+    game.hscriptManager.callAll('postScoreCalc', [note, data]);
+}
+
+function onEndSong()
+{
+    if (!SONG.validScore)
+        return;
+
+    percent = accuracy;
+    if(Math.isNaN(percent)) percent = 0;
+
+    Highscore.saveScore(SONG.song, score, game.storyDifficulty, percent);
+}
+
+// osu! mania accuracy calc
+function calcAccuracy(sickHits, goodHits, badHits, misses)
+{
+    var sickScore = BASE_SCORE * (maxHits + sickHits);
+    var goodScore = (BASE_SCORE * mults.good) * goodHits;
+    var badScore = (BASE_SCORE * mults.bad) * badHits;
+
+    var shitScore = BASE_SCORE * (maxHits + sickHits + goodHits + badHits + misses);
+
+    return (sickScore + goodScore + badScore) / shitScore;
+}

@@ -1,0 +1,87 @@
+var offsets = [[-10, 0], [0, 10], [0, -10], [10, 0]];
+var mult = 1.5;
+
+var timers = [];
+
+function start(song)
+{
+    for (char in game.characters)
+    {
+        var time = new FlxTimer();
+        timers.push(time);
+
+        game.modchartTimers[char.name + ' cammove timer'] = time;
+    }
+
+    prevFocus = charFocus;
+}
+
+function goodNoteHit(note)
+{
+    var focused = game.charFocus == game.charNames.indexOf(note.attachedChar);
+
+    if (!focused)
+        return;
+
+    var focus = game.getCurBF();
+    var point = focus.getCameraPosition();
+    
+    var x = point.x + (offsets[note.noteData][0] * mult);
+    var y = point.y + (offsets[note.noteData][1] * mult);
+
+    game.camManager.focusOnPos(x, y);
+
+    cancelTimers();
+
+    var focus = charFocus;
+
+    timers[charFocus].start(0.5, ()->
+    {
+        if (focus != charFocus)
+            return;
+            
+        game.camManager.focusOnPos(point.x, point.y);
+    });
+}
+
+function opponentNoteHit(note)
+{
+    var focused = game.charFocus == game.charNames.indexOf(note.attachedChar);
+
+    if (!focused)
+        return;
+
+    var focus = game.getCurDad();
+    var point = focus.getCameraPosition();
+
+    var x = point.x + (offsets[note.noteData][0] * mult);
+    var y = point.y + (offsets[note.noteData][1] * mult);
+
+    game.camManager.focusOnPos(x, y);
+
+    cancelTimers();
+
+    var focus = charFocus;
+
+    timers[charFocus].start(0.5, ()->
+    {
+        if (focus != charFocus)
+            return;
+
+        game.camManager.focusOnPos(point.x, point.y);
+    });
+}
+
+function onSection(section)
+{
+    if (prevFocus != charFocus)
+        cancelTimers();
+
+    prevFocus = charFocus;
+}
+
+function cancelTimers()
+{
+    for (timer in timers)
+        timer.cancel();
+}

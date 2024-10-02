@@ -1,0 +1,20 @@
+{
+	"flip_x": false,
+	"metadata": {
+		"animators": [
+			"PhantomArcade"
+		],
+		"artists": [
+			"PhantomArcade"
+		]
+	},
+	"healthbar_colors": [
+		165,
+		0,
+		77
+	],
+	"antialiasing": true,
+	"name": "gf",
+	"sing_duration": 4,
+	"scale": 1
+}

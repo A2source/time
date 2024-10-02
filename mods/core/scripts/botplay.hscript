@@ -1,0 +1,18 @@
+var text;
+
+function start(song)
+{
+    text = new FlxText(0, 0, -1, 'BOTPLAY');
+    text.setFormat(Paths.modsFont('vcr'), 20, 0xFFFFFFFF, 'left', FlxTextBorderStyle.OUTLINE, 0xFF000000);
+    text.cameras = [game.camHUD];
+    text.screenCenter();
+    text.y = game.strumLine.y;
+    text.y += text.height * 1.5;
+    text.borderSize = 3;
+    add(text);
+}
+
+function update(dt)
+{
+    text.visible = game.cpuControlled;
+}

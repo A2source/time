@@ -1,0 +1,1 @@
+lime test windows -build -D no-deprecation-warnings

@@ -1,0 +1,7 @@
+function onEndSong()
+{
+    FlxTimer.wait(0.5, ()->
+    {
+        LoadingState.loadAndSwitchCustomState('ExampleState');
+    });
+}

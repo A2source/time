@@ -1,0 +1,20 @@
+{
+	"flip_x": false,
+	"metadata": {
+		"animators": [
+			"PhantomArcade"
+		],
+		"artists": [
+			"PhantomArcade"
+		]
+	},
+	"healthbar_colors": [
+		49,
+		177,
+		209
+	],
+	"antialiasing": true,
+	"name": "bf",
+	"sing_duration": 9.6,
+	"scale": 1
+}

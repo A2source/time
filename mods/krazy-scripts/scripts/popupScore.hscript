@@ -1,0 +1,84 @@
+var delayTime = Conductor.crochet * 0.002 / game.playbackRate;
+
+var msText;
+var alphaTween;
+function start(song)
+{
+    msText = new FlxText(570, 390, 0, '', 14);
+    msText.setFormat(Paths.modsFont('vcr'), 14, 0xFFFFFFFF, 'left', FlxTextBorderStyle.OUTLINE, 0xFF000000);
+    msText.borderSize = 3;
+    msText.cameras = [game.camHUD];
+    msText.color = 0xFFA2A2A2;
+    msText.alpha = 0;
+    add(msText);
+
+    alphaTween = FlxTween.tween(msText, {alpha: 0}, 0);
+}
+
+function postScoreCalc(note, data)
+{
+    if (data.rating == null)
+        return;
+
+    if (data.rating == 'miss')
+        return;
+
+    var rating = new FlxSprite(350, 300).load(Paths.modsImage(data.rating, 'krazy-scripts'));
+    rating.cameras = [game.camHUD];
+    insert(game.length, rating);
+
+    rating.scale.set(0, 0);
+
+    FlxTween.tween(rating.scale, {x: 0.5, y: 0.5}, 0.2, {ease: FlxEase.expoOut});
+
+    rating.acceleration.x = FlxG.random.int(-20, 20);
+
+    rating.velocity.y = -200;
+    rating.acceleration.y = 450;
+
+    FlxTween.tween(rating.scale, {x: 1.2, y: 0}, 0.29, {ease: FlxEase.backIn, startDelay: delayTime});
+    FlxTween.tween(rating, {alpha: 0}, 0.3, {startDelay: delayTime, 
+        onComplete: (twn)->
+        {
+            rating.destroy();
+            remove(rating);
+        }});
+
+    alphaTween.cancel();
+
+    msText.text = '(' + data.noteDiff + ' ms.)';
+    msText.alpha = 1;
+
+    alphaTween = FlxTween.tween(msText, {alpha: 0}, 0.3, {startDelay: delayTime});
+
+    if (combo < 10)
+        return;
+
+    var comboString = ('' + combo).split('');
+    var i = 0;
+    for (digit in comboString)
+    {
+        var int = Std.parseInt(digit);
+
+        var sprite = new FlxSprite(350 + (40 * i), 380).load(Paths.modsImage('num' + digit, 'krazy-scripts'));
+        sprite.cameras = [game.camHUD];
+        insert(game.length, sprite);
+
+        sprite.scale.set(0.4, 0.4);
+
+        sprite.acceleration.x = FlxG.random.int(-10, 10);
+
+        sprite.velocity.y = -100;
+        sprite.acceleration.y = 250;
+
+        FlxTween.tween(sprite.scale, {x: 1.2, y: 0}, 0.29, {ease: FlxEase.backIn, startDelay: delayTime});
+        FlxTween.tween(sprite, {alpha: 0}, 0.3, {startDelay: delayTime, 
+            onComplete: (twn)->
+            {
+                sprite.destroy();
+                remove(sprite);
+            }});
+
+        i++;
+    }
+}

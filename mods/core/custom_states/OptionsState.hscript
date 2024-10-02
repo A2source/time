@@ -1,0 +1,142 @@
+var object = {
+    setting: false,
+    id: 0,
+    key: '',
+    array: []
+}
+
+function create()
+{
+    FlxG.mouse.visible = true;
+
+    box = new HBox();
+    push = new VBox();
+
+    view = new ScrollView();
+    view.height = FlxG.height - 50;
+
+    UiS.addSpacer(25, 0, box);
+    UiS.addSpacer(0, 50, push);
+
+    box.addComponent(push);
+    push.addComponent(view);
+
+    for (field in Reflect.fields(ClientPrefs.data))
+    {
+        var value = Reflect.field(ClientPrefs.data, field);
+
+        trace(field, value, Type.typeof(value));
+
+        var curBox = new HBox();
+        curBox.backgroundColor = 0xFF420000;
+
+        UiS.addLabel(field, curBox);
+        UiS.addSpacer(10, 0, curBox);
+
+        switch(Type.typeof(value))
+        {
+            case ValueType.TBool:
+                check = new CheckBox();
+                check.selected = value;
+                check.onClick = (e) ->
+                {
+                    Reflect.setProperty(ClientPrefs.data, field, check.selected);
+                    ClientPrefs.saveSettings();
+                }
+                curBox.addComponent(check);
+
+            case ValueType.TInt:
+                switch(field)
+                {
+
+                }
+
+            case ValueType.TClass(Array):
+                for (thing in value)
+                    trace(thing);
+        }
+
+        view.addComponent(curBox);
+    }
+
+    UiS.addSpacer(50, 0, box);
+
+    controlBox = new ScrollView();
+
+    box.addComponent(controlBox);
+
+    for (control in ['note_left', 'note_down', 'note_up', 'note_right'])
+    {   
+        var curBind = ClientPrefs.keyBinds.get(control);
+
+        if (curBind == null || curBind == [] || curBind.length == 0)
+        {
+            ClientPrefs.keyBinds.set(control, [87, 87]);
+            curBind = ClientPrefs.keyBinds.get(control);
+        }
+
+        if (curBind.length > 2)
+        {
+            ClientPrefs.keyBinds.set(control, [curBind[0], curBind[1]]);
+            curBind = ClientPrefs.keyBinds.get(control);
+        }
+
+        trace(control, curBind);
+
+        var keyBox = new HBox();
+        keyBox.backgroundColor = 0xFF420000;
+
+        UiS.addLabel(control, keyBox);
+        UiS.addSpacer(10, 0, keyBox);
+
+        for (i in 0...2)
+        {
+            var cur = curBind;
+
+            var button = new Button();
+            button.text = InputFormatter.getKeyName(curBind[i]);
+            button.onClick = (e) ->
+            {
+                object.id = i;
+                object.key = control;
+                object.setting = true;
+                object.array = curBind;
+            }
+
+            keyBox.addComponent(button);
+        }
+
+        controlBox.addComponent(keyBox);
+    }
+
+    Screen.addComponent(box);
+}
+
+function update(dt)
+{
+    if (controls.BACK && !object.setting) LoadingState.loadAndSwitchCustomState('ExampleState');
+
+    if (!object.setting)
+        return;
+
+    if (!FlxG.keys.justPressed.ANY)
+        return;
+
+    var array = [];
+
+    switch(object.id)
+    {
+        case 0:
+            array = [FlxG.keys.firstJustPressed(), object.array[1]];
+
+        case 1:
+            array = [object.array[0], FlxG.keys.firstJustPressed()];
+    }
+
+    ClientPrefs.keyBinds.set(object.key, array); 
+    object.setting = false;
+
+    ClientPrefs.saveSettings();
+
+    LoadingState.loadAndSwitchCustomState('OptionsState');
+}

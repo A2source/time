@@ -1,0 +1,91 @@
+var combo = 0;
+
+function onMiss(dir, note)
+{
+    checkInstakill();
+
+    combo = 0;
+    
+    if (note != null)
+        game.health -= note.missHealth * game.healthLoss;
+
+    game.vocals.volume = 0;
+
+    noteMiss(note);
+    gameFeedback(dir);
+        
+    game.hscriptManager.setAll('combo', combo);
+}
+
+function goodNoteHit(note)
+{
+    game.health += note.hitHealth * game.healthGain;
+
+    if (note.isSustainNote)
+        return;
+
+    combo += 1;
+    if(combo > 9999) combo = 9999;
+
+    game.hscriptManager.setAll('combo', combo);
+}
+
+function noteMiss(note)
+{
+    if (note == null)
+        return;
+
+    game.notes.forEachAlive((cur) -> 
+    {
+        var kill = true;
+
+        if (note == cur)
+            kill = false;
+
+        if (!cur.mustPress)
+            kill = false;
+
+        if (cur.noteData != note.noteData)
+            kill = false;
+
+        if (note.isSustainNote != cur.isSustainNote)
+            kill = false;
+
+        if (Math.abs(note.strumTime - cur.strumTime) > 1) 
+            kill = false;
+
+        if (kill)
+        {
+            note.kill();
+            notes.remove(note, true);
+            note.destroy();
+        }
+    });
+}
+
+function update(dt)
+{
+    if (game.health >= 2)
+        game.health = 2;
+}
+
+function gameFeedback(dir)
+{
+    var guy = game.getCurBF();
+	if (guy.stunned)
+        return;
+
+    FlxG.sound.play(Paths.soundRandom('missnote', 1, 3), FlxG.random.float(0.1, 0.2));
+
+    if (guy.hasMissAnimations)
+        guy.playAnim(SING_ANIMATIONS[Std.int(Math.abs(dir))] + '-miss', true);
+}
+
+function checkInstakill()
+{
+    if (!game.instakillOnMiss)
+        return;
+
+    game.vocals.volume = 0;
+    game.doDeathCheck(true);
+}

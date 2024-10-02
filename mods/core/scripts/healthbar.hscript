@@ -1,0 +1,255 @@
+var playerIcon;
+var opponentIcon;
+
+var healthbarBG;
+var healthBar;
+
+var scoreText;
+var scoreTextTween;
+
+var iconPositionOverride = false;
+
+var curScore = 0;
+
+function start(song)
+{
+    healthBarBG = new AttachedSprite(Paths.modsImage('healthBar'));
+    healthBarBG.y = FlxG.height * 0.89;
+    healthBarBG.x = FlxG.width / 2 - healthBarBG.width / 2;
+    healthBarBG.scrollFactor.set();
+    healthBarBG.visible = !ClientPrefs.data.hideHud;
+    healthBarBG.xAdd = -4;
+    healthBarBG.yAdd = -4;
+    add(healthBarBG);
+
+    if(ClientPrefs.data.downScroll) healthBarBG.y = 0.11 * FlxG.height;
+
+    healthBar = new FlxBar(healthBarBG.x + 4, healthBarBG.y + 4, FlxBarFillDirection.RIGHT_TO_LEFT, Std.int(healthBarBG.width - 8), Std.int(healthBarBG.height - 8), game,
+        'health', 0, 2);
+    healthBar.scrollFactor.set();
+    healthBar.visible = !ClientPrefs.data.hideHud;
+    healthBar.alpha = ClientPrefs.data.healthBarAlpha;
+    add(healthBar);
+
+    healthBarBG.sprTracker = healthBar;
+
+    playerIcon = new HealthIcon(game.playerGroup.members[0].name, true);
+    opponentIcon = new HealthIcon(game.opponentGroup.members[0].name, false);
+
+    for (icon in [playerIcon, opponentIcon])
+    {
+        icon.y = healthBar.y - 75;
+        icon.visible = !ClientPrefs.data.hideHud;
+        icon.alpha = ClientPrefs.data.healthBarAlpha;
+        icon.cameras = [game.camHUD];
+
+        add(icon);
+    }
+
+    scoreText = new FlxText(0, healthBarBG.y + 36, FlxG.width, "", 20);
+    scoreText.setFormat(Paths.modsFont('vcr'), 18, 0xFFFFFFFF, 'center', FlxTextBorderStyle.OUTLINE, 0xFF000000);
+    scoreText.scrollFactor.set();
+    scoreText.borderSize = 1.8;
+    scoreText.visible = !ClientPrefs.data.hideHud;
+    add(scoreText);
+
+    for (item in [healthBarBG, healthBar, scoreText])
+        item.cameras = [game.camHUD];
+
+    onHealthBarReload();
+}
+
+function update(dt)
+{
+    updateIconPositions();
+    updateIconScale(dt);
+    updateIconAnimations();
+
+    updateScoreText(dt);
+}
+
+function updateScoreText(dt)
+{
+    if (scoreText == null)
+        return;
+
+    curScore = Std.int(FlxMath.lerp(score, curScore, CoolUtil.boundTo(1 - (dt * 18 * game.playbackRate), 0, 1)));
+        
+    scoreText.text = 'Score: ' + curScore
+    + ' | Misses: ' + tally.miss
+    + ' | Accuracy: ' + FlxMath.roundDecimal(accuracy * 100, 2) + '%';
+}
+
+var ICON_OFFSET = 56;
+function updateIconPositions()
+{
+    if (iconPositionOverride)
+        return;
+
+    playerIcon.x = getIconPosition(true);
+	opponentIcon.x = getIconPosition(false);
+}
+
+function getIconPosition(player)
+{
+    var icon = player ? playerIcon : opponentIcon;
+
+    var x = healthBar.x;
+
+    var remap = FlxMath.remapToRange(healthBar.percent, 0, 100, 100, 0);
+
+    var iconScale = (150 * icon.scale.x - (player ? 150 : 0)) / 2;
+    var offset = iconScale - ICON_OFFSET * 2;
+
+    var combine = remap * healthBar.width - iconScale - offset;
+    x += remap;
+
+    return healthBar.x + (healthBar.width * (FlxMath.remapToRange(healthBar.percent, 0, 100, 100, 0) * 0.01)) + (150 * icon.scale.x - (player ? 150 : 300)) / 2 - ICON_OFFSET;
+
+    return x + combine;
+}
+
+function updateIconAnimations()
+{
+    if (playerIcon.animation.frames == 3) 
+    {
+        if (healthBar.percent < 20)
+            playerIcon.animation.curAnim.curFrame = 1;
+        else if (healthBar.percent >80)
+            playerIcon.animation.curAnim.curFrame = 2;
+        else
+            playerIcon.animation.curAnim.curFrame = 0;
+    } 
+    else 
+    {
+        if (healthBar.percent < 20)
+            playerIcon.animation.curAnim.curFrame = 1;
+        else
+            playerIcon.animation.curAnim.curFrame = 0;
+    }
+
+    if (opponentIcon.animation.frames == 3) 
+    {
+        if (healthBar.percent > 80)
+            opponentIcon.animation.curAnim.curFrame = 1;
+        else if (healthBar.percent < 20)
+            opponentIcon.animation.curAnim.curFrame = 2;
+        else 
+            opponentIcon.animation.curAnim.curFrame = 0;
+    } 
+    else 
+    {
+        if (healthBar.percent > 80)
+            opponentIcon.animation.curAnim.curFrame = 1;
+        else 
+            opponentIcon.animation.curAnim.curFrame = 0;
+    }
+}
+
+function updateIconScale(dt)
+{
+    for (icon in [playerIcon, opponentIcon])
+    {
+        var mult = FlxMath.lerp(1, icon.scale.x, CoolUtil.boundTo(1 - (dt * 9 * game.playbackRate), 0, 1));
+        
+        icon.scale.set(mult, mult);
+        icon.updateHitbox();
+
+        icon.origin.set(icon.width / 2, icon.height / 2);
+    }
+}
+
+function onHealthBarReload()
+{
+    if (healthBar == null)
+		return;
+
+    healthBar.createFilledBar(colorFromInt(game.dadCol), colorFromInt(game.bfCol));
+
+    trace(game.dadCol, game.bfCol);
+
+    healthBar.updateBar();
+}
+
+function postScoreCalc(note)
+{
+    if (note != null && !game.cpuControlled)
+    {
+        if(scoreTextTween != null)
+            scoreTextTween.cancel();
+        
+        scoreText.scale.x = 1.075;
+        scoreText.scale.y = 1.075;
+        scoreTextTween = FlxTween.tween(scoreText.scale, {x: 1, y: 1}, 0.2, {
+            onComplete: function(twn) {
+                scoreTextTween = null;
+            }
+        });
+    }
+}
+
+function getIconString(char)
+{
+    return '' + (char.iconSuffix != '' ? '-' : '') + char.iconSuffix;
+}
+
+function goodNoteHit(note)
+{
+    var playerIndex = SONG.players.indexOf(note.attachedChar);
+    if (playerIndex == game.curBF)
+        return;
+    
+    if (note.isSustainNote)
+        return;
+
+    game.curBF = playerIndex;
+
+    playerIcon.change(SONG.players[game.curBF], getIconString(char(SONG.players[curBF])));
+    game.updateCharCols();
+}
+
+function opponentNoteHit(note)
+{
+    var oppIndex = SONG.opponents.indexOf(note.attachedChar);
+	if (oppIndex == game.curDAD)
+        return;
+
+    if (note.isSustainNote)
+        return;
+
+    game.curDAD = oppIndex;
+    opponentIcon.change(SONG.opponents[game.curDAD], getIconString(char(SONG.opponents[game.curDAD])));
+    game.updateCharCols();
+}
+
+function beatHit(beat)
+{
+    for (icon in [playerIcon, opponentIcon])
+    {
+        icon.scale.set(1.2, 1.2);
+        icon.updateHitbox();
+    }
+}
+
+function onEvent(name, v1, v2, v3)
+{
+    if (name != 'Set Icon Suffix')
+        return;
+
+    if (!game.charNames.contains(v1))
+    {
+        trace('Character "' + v1 + '" not found, cannot set icon suffix');
+        return;
+    }
+
+    var char = char(v1);
+    char.iconSuffix = '-$v2';
+
+    var icon = '' + (char.iconSuffix != '' ? '-' : '') + char.iconSuffix;
+
+    if (game.getCurBF().name == v1)
+        playerIcon.change(SONG.players[game.curBF], icon);
+
+    if (game.getCurDad().name == v1)
+        opponentIcon.change(SONG.opponents[game.curDAD], icon);
+}

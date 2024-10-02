@@ -1,0 +1,263 @@
+{
+	"simplified": true,
+	"shadows": [
+		{
+			"baseScale": [
+				1.28409090909091,
+				0.431818181818182
+			],
+			"offsets": {
+				"singDOWN-miss": [
+					-5.68181818181818,
+					0
+				],
+				"singDOWN": [
+					-5.68181818181818,
+					0
+				],
+				"singUP": [
+					0,
+					0
+				],
+				"singLEFT-miss": [
+					0,
+					0
+				],
+				"singRIGHT-miss": [
+					0,
+					0
+				],
+				"idle": [
+					0,
+					0
+				],
+				"singRIGHT": [
+					0,
+					0
+				],
+				"singLEFT": [
+					0,
+					0
+				],
+				"singUP-miss": [
+					0,
+					0
+				]
+			},
+			"baseSkew": [
+				0,
+				0
+			],
+			"alpha": 0.191489361702128,
+			"baseOffset": [
+				187.5,
+				0
+			],
+			"scales": {
+				"singDOWN-miss": [
+					-0.0113636363636364,
+					0
+				],
+				"singDOWN": [
+					-0.0113636363636364,
+					0
+				],
+				"singUP": [
+					0,
+					0
+				],
+				"singLEFT-miss": [
+					0,
+					0
+				],
+				"singRIGHT-miss": [
+					0,
+					0
+				],
+				"idle": [
+					0,
+					0
+				],
+				"singRIGHT": [
+					0,
+					0
+				],
+				"singLEFT": [
+					0,
+					0
+				],
+				"singUP-miss": [
+					0,
+					0
+				]
+			},
+			"name": "bf",
+			"skews": {
+				"singDOWN-miss": [
+					0,
+					0
+				],
+				"singDOWN": [
+					0,
+					0
+				],
+				"singUP": [
+					0,
+					0
+				],
+				"singLEFT-miss": [
+					0,
+					0
+				],
+				"singRIGHT-miss": [
+					0,
+					0
+				],
+				"idle": [
+					0,
+					0
+				],
+				"singRIGHT": [
+					0,
+					0
+				],
+				"singLEFT": [
+					0,
+					0
+				],
+				"singUP-miss": [
+					0,
+					0
+				]
+			}
+		},
+		{
+			"baseScale": [
+				1.42045454545455,
+				0.375
+			],
+			"offsets": {
+				"idle": [
+					0,
+					0
+				],
+				"singDOWN": [
+					0,
+					0
+				],
+				"singRIGHT": [
+					0,
+					0
+				],
+				"singLEFT": [
+					0,
+					0
+				],
+				"singUP": [
+					0,
+					0
+				]
+			},
+			"baseSkew": [
+				0,
+				0
+			],
+			"alpha": 0.151595744680851,
+			"baseOffset": [
+				255.681818181818,
+				357.954545454545
+			],
+			"scales": {
+				"idle": [
+					0,
+					0
+				],
+				"singDOWN": [
+					0,
+					0
+				],
+				"singRIGHT": [
+					0,
+					0
+				],
+				"singLEFT": [
+					0,
+					0
+				],
+				"singUP": [
+					0,
+					0
+				]
+			},
+			"name": "dad",
+			"skews": {
+				"idle": [
+					0,
+					0
+				],
+				"singDOWN": [
+					0,
+					0
+				],
+				"singRIGHT": [
+					0,
+					0
+				],
+				"singLEFT": [
+					0,
+					0
+				],
+				"singUP": [
+					0,
+					0
+				]
+			}
+		},
+		{
+			"baseScale": [
+				2,
+				0.375
+			],
+			"offsets": {
+				"danceLEFT": [
+					0,
+					0
+				],
+				"danceRIGHT": [
+					0,
+					0
+				]
+			},
+			"baseSkew": [
+				-11.25,
+				1.02272727272727
+			],
+			"alpha": 0.178191489361702,
+			"baseOffset": [
+				232.954545454545,
+				227.272727272727
+			],
+			"scales": {
+				"danceLEFT": [
+					0.556818181818182,
+					0
+				],
+				"danceRIGHT": [
+					0.556818181818182,
+					0
+				]
+			},
+			"name": "gf",
+			"skews": {
+				"danceLEFT": [
+					0,
+					0
+				],
+				"danceRIGHT": [
+					0,
+					0
+				]
+			}
+		}
+	]
+}

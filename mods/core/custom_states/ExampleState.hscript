@@ -1,0 +1,121 @@
+buttons = [
+    'Options',
+    'Chart Editor',
+    'Character Editor'
+];
+
+stateNames = [
+    'OptionsState',
+    new ChartingState(),
+    new CharacterEditorState('bf', false)
+];
+
+isCustomState = [
+    true,
+    false,
+    false
+];
+
+diff = [
+    'easy',
+    'normal',
+    'hard'
+];
+
+function create()
+{
+    if (FlxG.sound.music != null)
+		FlxG.sound.music.stop();
+
+    trace(ALERT_TITLE);
+
+    FlxG.mouse.visible = true;
+
+    view = new HBox();
+    formatBox = new VBox();
+
+    UiS.addSpacer(75, 0, view);
+    view.addComponent(formatBox);
+    UiS.addSpacer(0, 75, formatBox);
+
+    for (i in 0...buttons.length)
+    {
+        var button = getButton(buttons[i]);
+        button.onClick = (e)->
+        {
+            if (isCustomState[buttons.indexOf(button.text)])
+                LoadingState.loadAndSwitchCustomState(stateNames[i]);
+            else
+                LoadingState.loadAndSwitchState(stateNames[i]);
+        }
+
+        formatBox.addComponent(button);
+        UiS.addSpacer(0, 25, formatBox);
+    }
+
+    UiS.addSpacer(125, 0, view);
+
+    quickLoadBox = new VBox();
+    UiS.addSpacer(0, 75, quickLoadBox);
+    UiS.addLabel('Quick Load Song', quickLoadBox);
+
+    source = getDataSource();
+    for (song in FileSystem.readDirectory(Paths.mods('songs')))
+        source.add({text: song});
+
+    listView = new ListView();
+    listView.dataSource = source;
+    listView.width = 200;
+    listView.height = FlxG.height - 150;
+    listView.onChange = (e)->
+    {
+        if (listView.selectedItem == null)
+            return;
+
+        if (diffSelect.selectedItem == null)
+        {
+            alert('Select difficulty first', ALERT_TITLE);
+            return;
+        }
+
+	    PlayState.SONG = Song.loadFromJson(listView.selectedItem.text, true);
+
+        var dif = diffSelect.selectedItem.text;
+
+        PlayState.difficulty = dif == 'normal' ? '' : dif;
+        PlayState.storyDifficulty = diff.indexOf(dif);
+        PlayState.storyWeek = 1;
+
+        LoadingState.loadAndSwitchState(new PlayState());
+    }
+    quickLoadBox.addComponent(listView);
+
+    diffBox = new VBox();
+    UiS.addSpacer(0, 75, diffBox);
+    UiS.addLabel('Difficulty', diffBox);
+
+    diffSource = getDataSource();
+    for (thing in diff)
+        diffSource.add({text: thing});
+
+    diffSelect = new ListView();
+    diffSelect.dataSource = diffSource;
+    diffSelect.width = 100;
+    diffBox.addComponent(diffSelect);
+
+    view.addComponent(quickLoadBox);
+    UiS.addSpacer(25, 0, view);
+    view.addComponent(diffBox);
+
+    Screen.addComponent(view);
+}
+
+function getButton(text)
+{
+    var button = new Button();
+    button.text = text;
+    button.width = 90;
+    button.height = 60;
+
+    return button;
+}

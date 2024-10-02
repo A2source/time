@@ -1,0 +1,123 @@
+function start(song)
+{
+    var elements = [];
+
+    back = new FlxSprite().load(Paths.stageImage('stage', 'stageback'));
+    elements.push(back);
+    
+    floor = new FlxSprite(0, 750).load(Paths.stageImage('stage', 'stagefront'));
+    elements.push(floor);
+
+    light1 = new FlxSprite(-800, 300).load(Paths.stageImage('stage', 'stage_light'));
+    elements.push(light1);
+
+    light2 = new FlxSprite(300, 300).load(Paths.stageImage('stage', 'stage_light'));
+    light2.flipX = true;
+    elements.push(light2);
+
+    curtains = new FlxSprite(0, -50).load(Paths.stageImage('stage', 'stagecurtains'));
+    curtains.scale.set(0.9, 1.2);
+    curtains.scrollFactor.set(1.1, 0.95);
+    elements.push(curtains);
+
+    game.camManager.focusOnPos(700, 500);
+    game.camManager.resume();
+
+    for (e in elements)
+    {
+        e.x -= 565;
+        e.y -= 50;
+
+        e.antialiasing = ClientPrefs.data.antialiasing;
+        addSprite(e, e == curtains ? BEHIND_NONE : BEHIND_ALL);
+    }
+
+    screen = new FlxSprite(-1000, -1000).makeGraphic(3000, 3000, 0xFF000000);
+    screen.alpha = 0.4;
+    screen.visible = false;
+    addSprite(screen, BEHIND_NONE);
+
+    spotlight = new FlxSprite(0, -80).load(Paths.modsImage('spotlight'));
+    spotlight.alpha = 0.5;
+    spotlight.visible = false;
+    spotlight.blend = 'add';
+    addSprite(spotlight, BEHIND_NONE);
+}
+
+var smokes = [];
+function onEvent(name, v1, v2, v3)
+{
+    if (name != 'Spotlight')
+        return;
+
+    var on = v1 == 'on';
+
+    if (!screen.visible)
+    {
+        for (i in 0...2)
+        {
+            var right = i == 1;
+
+            var smoke = new FlxSprite(right ? 1150 : -350, FlxG.random.int(225, 235)).load(Paths.modsImage('smoke'));
+            smoke.y += 550;
+
+            var rand = FlxG.random.float(0.5, 0.7);
+            smoke.scale.set(rand, rand);
+
+            smoke.flipX = !right;
+            smoke.alpha = 0;
+            FlxTween.tween(smoke, {alpha: 0.6}, 3, {ease: FlxEase.expoOut});
+            smoke.velocity.x = right ? -10 : 10;
+            smokes.push(smoke);
+        }
+
+        for (smoke in smokes)
+        {
+            smoke.antialiasing = ClientPrefs.data.antialiasing;
+            addSprite(smoke, BEHIND_NONE);
+        }
+    }
+
+    if (!on)
+    {
+        for (smoke in smokes)
+        {
+            FlxTween.tween(smoke, {alpha: 0}, 1, {ease: FlxEase.expoIn, onComplete: (twn)->
+            {
+                remove(smoke);
+                smoke.destroy();
+            }});
+        }
+
+        smokes = [];
+    }
+
+    screen.visible = on;
+
+    spotlight.visible = false;
+    
+    FlxTimer.wait(0.3, ()->
+    {
+        spotlight.visible = on;
+
+        if (on)
+            game.triggerEventNote('Load Rim Light File', v2 + '-spotlight');
+    });
+
+    if (['bf', 'dad'].contains(v2))
+        spotlight.x = char(v2).x;
+
+    spotlight.x -= 70;
+}
+
+function sectionHit(curSection)
+{
+    switch(charFocus)
+    {
+        case 0:
+            game.camManager.defaultZoom = 0.9;
+
+        case 1:
+            game.camManager.defaultZoom = 0.75;
+    }
+}

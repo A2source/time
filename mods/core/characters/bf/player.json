@@ -1,0 +1,120 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				-5,
+				-350
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "idle",
+			"loop": false,
+			"name": "BF idle dance",
+			"sheet": "bf"
+		},
+		{
+			"offsets": [
+				5,
+				-356
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "singLEFT",
+			"loop": false,
+			"name": "BF NOTE LEFT0",
+			"sheet": "bf"
+		},
+		{
+			"offsets": [
+				-47,
+				-355
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "singRIGHT",
+			"loop": false,
+			"name": "BF NOTE RIGHT0",
+			"sheet": "bf"
+		},
+		{
+			"offsets": [
+				-47,
+				-320
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "singUP",
+			"loop": false,
+			"name": "BF NOTE UP0",
+			"sheet": "bf"
+		},
+		{
+			"offsets": [
+				-25,
+				-399
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "singDOWN",
+			"loop": false,
+			"name": "BF NOTE DOWN0",
+			"sheet": "bf"
+		},
+		{
+			"offsets": [
+				-43,
+				-320
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "singUP-miss",
+			"loop": false,
+			"name": "BF NOTE UP MISS",
+			"sheet": "bf"
+		},
+		{
+			"offsets": [
+				-27,
+				-370
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "singDOWN-miss",
+			"loop": false,
+			"name": "BF NOTE DOWN MISS",
+			"sheet": "bf"
+		},
+		{
+			"offsets": [
+				6,
+				-331
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "singLEFT-miss",
+			"loop": false,
+			"name": "BF NOTE LEFT MISS",
+			"sheet": "bf"
+		},
+		{
+			"offsets": [
+				-40,
+				-330
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "singRIGHT-miss",
+			"loop": false,
+			"name": "BF NOTE RIGHT MISS",
+			"sheet": "bf"
+		}
+	],
+	"position": [
+		0,
+		0
+	],
+	"camera_position": [
+		4,
+		400
+	]
+}

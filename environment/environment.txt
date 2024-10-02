@@ -1,0 +1,8 @@
+Hey Everyone!
+This is all the stuff you need to install to compile the game. 
+
+Download the latest release of Haxe from the link provided.
+
+The PNG is all the C++ stuff you need to install using Visual Studio 2019. You need to check the "Desktop Development in C++" box and install the correct things in the PNG if you don't have them already.
+
+Run "setLibVer.bat" to install all of the libraries required to compile.

@@ -1,0 +1,346 @@
+{
+	"speed": 1,
+	"stage": "stage",
+	"players": [
+		"bf"
+	],
+	"events": [
+		{
+			"value1": "0.5",
+			"value2": "1",
+			"value3": "",
+			"event": "Cinematic Bars",
+			"strumTime": 800
+		},
+		{
+			"value1": "1.5",
+			"value2": "5",
+			"value3": "",
+			"event": "Zoom Camera",
+			"strumTime": 800
+		}
+	],
+	"notes": {
+		"easy": {
+			"bf": [],
+			"dad": []
+		},
+		"hard": {
+			"bf": [],
+			"dad": []
+		},
+		"normal": {
+			"bf": [
+				{
+					"ms": 1900,
+					"t": "",
+					"l": 0,
+					"d": 3
+				},
+				{
+					"ms": 2600,
+					"t": "",
+					"l": 0,
+					"d": 1
+				},
+				{
+					"ms": 3500,
+					"t": "",
+					"l": 0,
+					"d": 0
+				},
+				{
+					"ms": 4100,
+					"t": "",
+					"l": 0,
+					"d": 2
+				},
+				{
+					"ms": 5300,
+					"t": "",
+					"l": 0,
+					"d": 1
+				},
+				{
+					"ms": 6700,
+					"t": "",
+					"l": 0,
+					"d": 3
+				},
+				{
+					"ms": 6800,
+					"t": "",
+					"l": 0,
+					"d": 2
+				},
+				{
+					"ms": 7000,
+					"t": "",
+					"l": 0,
+					"d": 1
+				},
+				{
+					"ms": 7900,
+					"t": "",
+					"l": 0,
+					"d": 0
+				},
+				{
+					"ms": 8500,
+					"t": "",
+					"l": 0,
+					"d": 2
+				},
+				{
+					"ms": 8600,
+					"t": "",
+					"l": 0,
+					"d": 2
+				},
+				{
+					"ms": 8900,
+					"t": "",
+					"l": 0,
+					"d": 0
+				},
+				{
+					"ms": 9000,
+					"t": "",
+					"l": 0,
+					"d": 3
+				}
+			],
+			"dad": [
+				{
+					"d": 0,
+					"l": 0,
+					"t": "",
+					"ms": 500
+				},
+				{
+					"d": 1,
+					"l": 0,
+					"t": "",
+					"ms": 600
+				},
+				{
+					"d": 2,
+					"l": 0,
+					"t": "",
+					"ms": 700
+				},
+				{
+					"d": 3,
+					"l": 0,
+					"t": "",
+					"ms": 800
+				},
+				{
+					"d": 2,
+					"l": 0,
+					"t": "",
+					"ms": 900
+				},
+				{
+					"d": 1,
+					"l": 0,
+					"t": "",
+					"ms": 1000
+				},
+				{
+					"d": 0,
+					"l": 0,
+					"t": "",
+					"ms": 1100
+				},
+				{
+					"ms": 16500,
+					"t": "",
+					"l": 0,
+					"d": 2
+				},
+				{
+					"ms": 16600,
+					"t": "",
+					"l": 0,
+					"d": 1
+				},
+				{
+					"ms": 16700,
+					"t": "",
+					"l": 0,
+					"d": 1
+				},
+				{
+					"ms": 16800,
+					"t": "",
+					"l": 0,
+					"d": 2
+				},
+				{
+					"ms": 16900,
+					"t": "",
+					"l": 0,
+					"d": 2
+				},
+				{
+					"ms": 17000,
+					"t": "",
+					"l": 0,
+					"d": 0
+				},
+				{
+					"ms": 17100,
+					"t": "",
+					"l": 0,
+					"d": 1
+				},
+				{
+					"ms": 17200,
+					"t": "",
+					"l": 0,
+					"d": 2
+				},
+				{
+					"ms": 17300,
+					"t": "",
+					"l": 0,
+					"d": 3
+				}
+			]
+		}
+	},
+	"opponents": [
+		"dad"
+	],
+	"sections": [
+		{
+			"sectionBeats": 4,
+			"charFocus": 1,
+			"changeBPM": false,
+			"bpm": 150
+		},
+		{
+			"sectionBeats": 4,
+			"charFocus": 0,
+			"changeBPM": false,
+			"bpm": 150
+		},
+		{
+			"charFocus": 0,
+			"sectionBeats": 4,
+			"bpm": 150,
+			"changeBPM": false
+		},
+		{
+			"charFocus": 0,
+			"sectionBeats": 4,
+			"bpm": 150,
+			"changeBPM": false
+		},
+		{
+			"charFocus": 0,
+			"sectionBeats": 4,
+			"bpm": 150,
+			"changeBPM": false
+		},
+		{
+			"sectionBeats": 4,
+			"charFocus": 0,
+			"changeBPM": false,
+			"bpm": 150
+		},
+		{
+			"sectionBeats": 4,
+			"charFocus": 0,
+			"changeBPM": false,
+			"bpm": 150
+		},
+		{
+			"sectionBeats": 4,
+			"charFocus": 0,
+			"changeBPM": false,
+			"bpm": 150
+		},
+		{
+			"charFocus": 0,
+			"sectionBeats": 4,
+			"bpm": 150,
+			"changeBPM": false
+		},
+		{
+			"charFocus": 0,
+			"sectionBeats": 4,
+			"bpm": 150,
+			"changeBPM": false
+		},
+		{
+			"sectionBeats": 4,
+			"charFocus": 0,
+			"changeBPM": false,
+			"bpm": 150
+		},
+		{
+			"charFocus": 0,
+			"bpm": 150,
+			"sectionBeats": 4,
+			"changeBPM": false
+		},
+		{
+			"charFocus": 0,
+			"bpm": 150,
+			"sectionBeats": 4,
+			"changeBPM": false
+		},
+		{
+			"charFocus": 0,
+			"bpm": 150,
+			"sectionBeats": 4,
+			"changeBPM": false
+		},
+		{
+			"charFocus": 0,
+			"bpm": 150,
+			"sectionBeats": 4,
+			"changeBPM": false
+		},
+		{
+			"charFocus": 0,
+			"bpm": 150,
+			"sectionBeats": 4,
+			"changeBPM": false
+		},
+		{
+			"charFocus": 1,
+			"bpm": 150,
+			"sectionBeats": 4,
+			"changeBPM": false
+		}
+	],
+	"validScore": true,
+	"bpm": 150,
+	"needsVoices": true,
+	"countdownType": "normal",
+	"metadata": {
+		"additionalAnimators": [
+			""
+		],
+		"charters": [
+			""
+		],
+		"additionalArtists": [
+			""
+		],
+		"programmers": [
+			""
+		],
+		"musicians": [
+			""
+		],
+		"voiceActors": [
+			""
+		]
+	},
+	"song": "Test",
+	"autoGF": "gf"
+}

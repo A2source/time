@@ -1,0 +1,72 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				0,
+				0
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "idle",
+			"loop": false,
+			"name": "Dad idle",
+			"sheet": "DADDY_DEAREST"
+		},
+		{
+			"offsets": [
+				-8,
+				52
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "singUP",
+			"loop": false,
+			"name": "Dad Sing Note UP",
+			"sheet": "DADDY_DEAREST"
+		},
+		{
+			"offsets": [
+				0,
+				-40
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "singDOWN",
+			"loop": false,
+			"name": "Dad Sing Note DOWN",
+			"sheet": "DADDY_DEAREST"
+		},
+		{
+			"offsets": [
+				-8,
+				10
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "singLEFT",
+			"loop": false,
+			"name": "Dad Sing Note LEFT",
+			"sheet": "DADDY_DEAREST"
+		},
+		{
+			"offsets": [
+				0,
+				26
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "singRIGHT",
+			"loop": false,
+			"name": "Dad Sing Note RIGHT",
+			"sheet": "DADDY_DEAREST"
+		}
+	],
+	"position": [
+		0,
+		0
+	],
+	"camera_position": [
+		0,
+		0
+	]
+}

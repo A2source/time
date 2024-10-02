@@ -1,0 +1,8 @@
+function onPause(bf)
+{
+    trace('game paused at ' + Conductor.songPosition);
+
+    var pause = new CustomSubState('PauseSubState', null);
+    pause.hscriptManager.setAll('game', game);
+	game.openSubState(pause);
+}
