@@ -21,13 +21,17 @@ function stepHit(step)
     FlxTween.tween(timer, {alpha: 1}, 1, {ease: FlxEase.expoOut});
 }
 
+var done = false;
 function update(dt)
 {
-    if (songLength == 0)
+    if (songLength == 0 || done)
         return;
 
     var calc = songLength - (Conductor.songPosition - ClientPrefs.data.noteOffset);
 
     timer.text = FlxStringUtil.formatTime(Math.floor(calc / 1000), false);
     timer.x = game.playerStrums.members[1].x + 110 - timer.width / 2;
+
+    if (timer.text == '0:00')
+        done = true;
 }

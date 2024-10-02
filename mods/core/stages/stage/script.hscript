@@ -8,10 +8,10 @@ function start(song)
     floor = new FlxSprite(0, 750).load(Paths.stageImage('stage', 'stagefront'));
     elements.push(floor);
 
-    light1 = new FlxSprite(-800, 300).load(Paths.stageImage('stage', 'stage_light'));
+    light1 = new FlxSprite(500).load(Paths.stageImage('stage', 'stage_light'));
     elements.push(light1);
 
-    light2 = new FlxSprite(300, 300).load(Paths.stageImage('stage', 'stage_light'));
+    light2 = new FlxSprite(1800).load(Paths.stageImage('stage', 'stage_light'));
     light2.flipX = true;
     elements.push(light2);
 
