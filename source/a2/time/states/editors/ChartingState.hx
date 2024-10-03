@@ -59,6 +59,8 @@ import a2.time.util.Paths;
 
 import flixel.util.typeLimit.OneOfTwo;
 
+import haxe.ui.core.Screen;
+
 import Type;
 
 using StringTools;
@@ -83,12 +85,10 @@ class ChartingState extends MusicBeatState
 	public static var noteTypeDataBase:Array<CustomNoteFile> =
 	[
 		{name: '', desc: 'The default note.', texture: ''},
-		{name: 'Hey!', desc: 'When hit, the character plays the "Hey!" animation.', texture: ''},
-		{name: 'Hurt Note', desc: 'Deals damage when hit.', texture: 'HURT'},
 		{name: 'No Animation', desc: 'When hit, no animation is played.', texture: ''}
 	];
 
-	public static var HARDCODED_NOTES:Array<String> = ['', 'Hey!', 'Hurt Note', 'No Animation'];
+	public static var HARDCODED_NOTES:Array<String> = ['', 'No Animation'];
 
 	var formattedDifficulties:Map<String, String> = 
 	[
@@ -163,6 +163,8 @@ If you have any questions about the editor, ask me!';
 	var curSong:String = 'Test';
 	var amountSteps:Int = 0;
 	var bullshitUI:FlxGroup;
+
+	var noteDisplayNameList:Array<String> = [];
 
 	var highlight:FlxSprite;
 
@@ -239,7 +241,6 @@ If you have any questions about the editor, ask me!';
 		}
 	}
 
-	var tempBpm:Float = 0;
 	var playbackSpeed:Float = 1;
 
 	var vocals:FlxSound = null;
@@ -296,9 +297,6 @@ If you have any questions about the editor, ask me!';
 		24
 	];
 	var curZoom:Int = 2;
-
-	var blockInteractionGeneral:Array<haxe.ui.core.InteractiveComponent> = [];
-	var blockInteractionDropDown:Array<haxe.ui.components.DropDown> = [];
 
 	var waveformSprite:FlxSprite;
 	var gridLayer:FlxTypedGroup<FlxSprite>;
@@ -422,10 +420,6 @@ If you have any questions about the editor, ask me!';
 
 		vortex = FlxG.save.data.chart_vortex;
 		ignoreWarnings = FlxG.save.data.ignoreWarnings;
-		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('chartMenu'));
-		bg.scrollFactor.set();
-		bg.color = 0xFF222222;
-		add(bg);
 
 		gridLayer = new FlxTypedGroup<FlxSprite>();
 		add(gridLayer);
@@ -458,8 +452,6 @@ If you have any questions about the editor, ask me!';
 		otherRenderedIcons = new FlxTypedGroup<HealthIcon>();
 
 		if(curSec >= _song.sections.length) curSec = _song.sections.length - 1;
-
-		tempBpm = _song.bpm;
 
 		addSection();
 
@@ -560,7 +552,7 @@ If you have any questions about the editor, ask me!';
 		else
 			closeEye();
 
-		quant = new AttachedSprite('chart_quant','chart_quant');
+		quant = new AttachedSprite(Paths.image('chart_quant'), Paths.file('images/chart_quant.xml'));
 		quant.animation.addByPrefix('q','chart_quant',0,false);
 		quant.animation.play('q', true, false, 0);
 		quant.sprTracker = strumLine;
@@ -652,6 +644,8 @@ If you have any questions about the editor, ask me!';
 		haxeUIBox.addComponent(createTab);
 		haxeUIBox.addComponent(editorTab);
 
+		setupNotetypeDatabase();
+
 		addCharacterHaxeUI();
 		addChartingHaxeUI();
 		addEventsHaxeUI();
@@ -679,39 +673,130 @@ If you have any questions about the editor, ask me!';
 
 		haxe.ui.Toolkit.styleSheet.buildStyleFor(haxeUIBox);
 
+		Screen.instance.addComponent(getQuickCharacterHaxeUI());
+
 		FlxG.camera.follow(camPos);
+
+		updateGrid();
 	}
 
+	function setupNotetypeDatabase()
+	{
+		Paths.VERBOSE = false;
+
+		var key:Int = 0;
+		while (key < noteTypeDataBase.length) 
+		{
+			noteDisplayNameList.push(noteTypeDataBase[key].name);
+			noteTypeMap.set(noteTypeDataBase[key].name, key);
+			noteTypeIntMap.set(key, noteTypeDataBase[key].name);
+			key++;
+		}
+
+		var mods:Array<String> = [];
+		for (mod in Paths.getModDirectories())
+			if (Paths.mods('custom_notetypes', mod) != null)
+				mods.push(mod);
+
+		for (mod in mods)
+			for (file in FileSystem.readDirectory(Paths.mods('custom_notetypes', mod)))
+			{
+				var check = Paths.noteJson(file.split('.json')[0], mod);
+				if (check == null)
+					continue;
+
+				var fileToCheck:CustomNoteFile = cast haxe.Json.parse(File.getContent(check));
+				if (noteDisplayNameList.contains(fileToCheck.name))
+					continue;
+
+				noteDisplayNameList.push(fileToCheck.name);
+				noteTypeMap.set(fileToCheck.name, key);
+				noteTypeIntMap.set(key, fileToCheck.name);
+				noteTypeDataBase.push(fileToCheck);
+				
+				key++;
+			}
+
+		Paths.VERBOSE = true;
+	}
+
+	function getQuickCharacterHaxeUI()
+	{
+		var formatBox = new haxe.ui.containers.VBox();
+		var push = new haxe.ui.containers.HBox();
+
+		UiS.addSpacer(0, 490, formatBox);
+
+		var setFocus = new haxe.ui.components.Button();
+		setFocus.text = 'Set Focus Here';
+		setFocus.percentWidth = 100;
+		setFocus.onClick = (e) ->
+		{
+			_song.sections[curSec].charFocus = curCharIndex;
+
+			updateSectionUI();
+			
+			updateGrid();
+			updateHeads();
+		}
+		formatBox.addComponent(setFocus);
+
+		var charBox = new haxe.ui.containers.HBox();
+
+		var charLeft = new haxe.ui.components.Button();
+		charLeft.text = '<';
+		charLeft.height = 35;
+		charLeft.width = 35;
+		charLeft.onClick = (e) ->
+		{
+			changeChar(-1);
+		}
+		charBox.addComponent(charLeft);
+
+		UiS.addSpacer(7, 0, charBox);
+
+		var charRight = new haxe.ui.components.Button();
+		charRight.text = '>';
+		charRight.height = 35;
+		charRight.width = 35;
+		charRight.onClick = (e) ->
+		{
+			changeChar(1);
+		}
+		charBox.addComponent(charRight);
+
+		formatBox.addComponent(charBox);
+
+		UiS.addSpacer(35, 0, push);
+		push.addComponent(formatBox);
+
+		return push;
+	}
+
+	// BMM BMM ahahahahaha haha BMM
+	// why so serious?
 	function getCurrentModCharacters()
 	{
-		var directories:Array<String> = [Paths.mods('characters/')];
+		Paths.VERBOSE = false;
+
+		var mods:Array<String> = [Main.MOD_NAME];
+		for (mod in Paths.getModDirectories())
+			if (Paths.mods('characters', mod) != null)
+				mods.push(mod);
 
 		var characters:Array<String> = [];
 		var tempMap:Map<String, Bool> = new Map<String, Bool>();
 
-		for (i in 0...directories.length) 
-		{
-			var directory:String = directories[i];
-			if(FileSystem.exists(directory)) 
-			{
-				for (folder in FileSystem.readDirectory(directory)) 
-				{
-					var charFolder = haxe.io.Path.join([directory, folder]);
-					if (sys.FileSystem.isDirectory(charFolder))
+		for (mod in mods)
+			for (char in FileSystem.readDirectory(Paths.mods('characters', mod)))
+				if (FileSystem.exists('${Paths.charFolder(char, mod)}/character.json'))
+					if (!tempMap.exists(char))
 					{
-						if (FileSystem.exists('${charFolder}/character.json'))
-						{
-							var charToCheck = folder;
-							if(!charToCheck.endsWith('-dead') && !tempMap.exists(charToCheck)) 
-							{
-								tempMap.set(charToCheck, true);
-								characters.push(charToCheck);
-							}
-						}
+						tempMap.set(char, true);
+						characters.push(char);
 					}
-				}
-			}
-		}
+
+		Paths.VERBOSE = true;
 
 		return characters;
 	}
@@ -791,6 +876,8 @@ If you have any questions about the editor, ask me!';
 		formatBox.addComponent(createLoadSong);
 		UiS.addHR(7, formatBox);
 
+		UiS.addLabel('Working Mod Directory: "${Paths.WORKING_MOD_DIRECTORY}"', formatBox);
+
 		var createNewSong = new haxe.ui.components.Button();
 		createNewSong.text = 'Create';
 		createNewSong.onClick = function(e)
@@ -803,7 +890,10 @@ If you have any questions about the editor, ask me!';
 
 			var name = createSongName.text;
 
-			var checkSong = Paths.songFolder(name);
+			if (Paths.mods('songs', Paths.WORKING_MOD_DIRECTORY) == null)
+				FileSystem.createDirectory('mods/${Paths.WORKING_MOD_DIRECTORY}/songs');
+
+			var checkSong = Paths.songFolder(name, Paths.WORKING_MOD_DIRECTORY);
 
 			if (checkSong != null)
 			{
@@ -811,7 +901,7 @@ If you have any questions about the editor, ask me!';
 				return;
 			}
 
-			var songPath = '${Paths.mods('songs')}/$name';
+			var songPath = '${Paths.mods('songs', Paths.WORKING_MOD_DIRECTORY)}/$name';
 
 			FileSystem.createDirectory(songPath);
 
@@ -870,7 +960,7 @@ If you have any questions about the editor, ask me!';
 			if ((dummyData != null) && (dummyData.length > 0))
 				File.saveContent('$songPath/$name.json', dummyData);
 
-			Lib.application.window.alert('Created new song "$name"!');
+			Lib.application.window.alert('Created new song "$name"!\n"$songPath/$name', ALERT_TITLE_STRING);
 
 			if (createLoadSong.selected)
 				loadJson(name);
@@ -1302,8 +1392,6 @@ If you have any questions about the editor, ask me!';
 		//
 
 		characterTab.addComponent(formatBox);
-
-		blockInteractionDropDown.push(charSelectDropDown);
 	}
 
 	function updateCharacterUI():Void
@@ -1398,7 +1486,7 @@ If you have any questions about the editor, ask me!';
 		{
 			var dataSource = new haxe.ui.data.ArrayDataSource<Dynamic>();
 
-			var root:String = Paths.mods('data');
+			var root:String = Paths.mods('songs', Paths.WORKING_MOD_DIRECTORY);
 			for (song in FileSystem.readDirectory(root))
 			{
 				if (!FileSystem.isDirectory('$root/$song'))
@@ -1417,11 +1505,11 @@ If you have any questions about the editor, ask me!';
 			dialogue.destroyOnClose = false;
 			dialogue.title = 'Select Song';
 
-			blockInput = true;
+			this.blockInput = true;
 
 			dialogue.onDialogClosed = function(e)
 			{
-				blockInput = false;
+				this.blockInput = false;
 
 				switch(e.button)
 				{
@@ -1455,11 +1543,11 @@ If you have any questions about the editor, ask me!';
 			dialogue.destroyOnClose = false;
 			dialogue.title = 'Select Difficulty';
 
-			blockInput = true;
+			this.blockInput = true;
 
 			dialogue.onDialogClosed = function(e)
 			{
-				blockInput = false;
+				this.blockInput = false;
 
 				switch(e.button)
 				{
@@ -1487,12 +1575,12 @@ If you have any questions about the editor, ask me!';
 		songBPMStepper = new haxe.ui.components.NumberStepper();
 		songBPMStepper.min = 1;
 		songBPMStepper.max = 999;
-		songBPMStepper.pos = Conductor.bpm;
+		songBPMStepper.pos = _song.bpm;
 		songBPMStepper.step = 1;
 		songBPMStepper.autoCorrect = false;
 		songBPMStepper.onChange = (e) ->
 		{
-			tempBpm = songBPMStepper.pos;
+			_song.bpm = songBPMStepper.pos;
 			Conductor.mapBPMChanges(_song);
 			Conductor.changeBPM(songBPMStepper.pos);
 		}
@@ -1544,39 +1632,21 @@ If you have any questions about the editor, ask me!';
 		var stageDataSource = new haxe.ui.data.ArrayDataSource<Dynamic>();
 
 		var directories:Array<String> = [Paths.mods('stages/')];
+		for (mod in Paths.getModDirectories())
+			if (Paths.mods('stages', mod) != null)
+				directories.push(Paths.mods('stages', mod));
 
-		var tempMap:Map<String, Bool> = new Map<String, Bool>();
-		var stageFile:Array<String> = CoolUtil.coolTextFile(Paths.txt('stageList'));
 		var stages:Array<String> = [];
-		for (i in 0...stageFile.length) { //Prevent duplicates
-			var stageToCheck:String = stageFile[i];
-			if(!tempMap.exists(stageToCheck)) 
-				stages.push(stageToCheck);
-			tempMap.set(stageToCheck, true);
-		}
-
-		for (i in 0...directories.length) {
-			var directory:String = directories[i];
-			if(FileSystem.exists(directory)) {
-				for (file in FileSystem.readDirectory(directory)) {
-					var path = haxe.io.Path.join([directory, file]);
-					if (!FileSystem.isDirectory(path) && file.endsWith('.json')) {
-						var stageToCheck:String = file.substr(0, file.length - 5);
-						if(!tempMap.exists(stageToCheck)) {
-							tempMap.set(stageToCheck, true);
-							stages.push(stageToCheck);
-
-							stageDataSource.add({text: stageToCheck});
-						}
-					}
-				}
-			}
-		}
-
-		if(stages.length < 1) 
+		for (dir in directories) 
 		{
-			stages.push('stage');
-			stageDataSource.add({text: 'stage'});
+			var mod:String = dir.split('/')[1];
+
+			for (stage in FileSystem.readDirectory(dir))
+				if (Paths.stageJson(stage, mod) != null && !stages.contains(stage))
+				{
+					stages.push(stage);
+					stageDataSource.add({text: stage});
+				}
 		}
 
 		songStageDrop = new haxe.ui.components.DropDown();
@@ -1601,20 +1671,25 @@ If you have any questions about the editor, ask me!';
 		{
 			var dataSource = new haxe.ui.data.ArrayDataSource<Dynamic>();
 
-			var root:String = Paths.mods('characters');
-			for (character in FileSystem.readDirectory(root))
-			{
-				if (!FileSystem.isDirectory('$root/$character'))
-					continue;
+			var directories:Array<String> = [Paths.mods('characters')];
+			for (mod in Paths.getModDirectories())
+				if (Paths.mods('characters', mod) != null)
+					directories.push(Paths.mods('characters', mod));
+			
+			for (root in directories)
+				for (character in FileSystem.readDirectory(root))
+				{
+					if (!FileSystem.isDirectory('$root/$character'))
+						continue;
 
-				if (!FileSystem.exists('$root/$character/character.json'))
-					continue;
+					if (!FileSystem.exists('$root/$character/character.json'))
+						continue;
 
-				if (characterList.contains(character))
-					continue;
+					if (characterList.contains(character))
+						continue;
 
-				dataSource.add({text: character});
-			}
+					dataSource.add({text: character});
+				}
 
 			var select = new haxe.ui.containers.ListView();
 			select.width = 200;
@@ -1626,11 +1701,11 @@ If you have any questions about the editor, ask me!';
 			dialogue.destroyOnClose = false;
 			dialogue.title = 'Select Character';
 
-			blockInput = true;
+			this.blockInput = true;
 
 			dialogue.onDialogClosed = function(e)
 			{
-				blockInput = false;
+				this.blockInput = false;
 
 				switch(e.button)
 				{
@@ -1693,11 +1768,6 @@ If you have any questions about the editor, ask me!';
 		formatBox.addComponent(clearEventButton);
 
 		songTab.addComponent(formatBox);
-
-		blockInteractionGeneral.push(songBPMStepper);
-		blockInteractionGeneral.push(songSpeedStepper);
-
-		blockInteractionDropDown.push(songStageDrop);
 	}
 
 	function getCopyLastString(char:String, amt:Int)
@@ -2157,11 +2227,6 @@ If you have any questions about the editor, ask me!';
 
 		formatBox.addComponent(copyBox);
 		sectionTab.addComponent(formatBox);
-
-		blockInteractionGeneral.push(sectionStepperBeats);
-		blockInteractionGeneral.push(sectionStepperBPM);
-		blockInteractionDropDown.push(sectionCharFocus);
-		blockInteractionDropDown.push(sectionCopyFrom);
 	}
 
 	var noteSustainStepper:haxe.ui.components.NumberStepper;
@@ -2211,45 +2276,11 @@ If you have any questions about the editor, ask me!';
 
 		UiS.addHR(7, formatBox);
 
-		var key:Int = 0;
-		var displayNameList:Array<String> = [];
-		while (key < noteTypeDataBase.length) 
-		{
-			displayNameList.push(noteTypeDataBase[key].name);
-			noteTypeMap.set(noteTypeDataBase[key].name, key);
-			noteTypeIntMap.set(key, noteTypeDataBase[key].name);
-			key++;
-		}
-
-		var directories:Array<String> = [Paths.mods('custom_notetypes/')];
-
-		for (i in 0...directories.length) 
-		{
-			var directory:String =  directories[i];
-			if(FileSystem.exists(directory)) 
-			{
-				for (file in FileSystem.readDirectory(directory)) 
-				{
-					var path = haxe.io.Path.join([directory, file]);
-					if (!FileSystem.isDirectory(path) && file.endsWith('.json')) 
-					{
-						var fileToCheck:CustomNoteFile = cast haxe.Json.parse(File.getContent(path));
-						if(!displayNameList.contains(fileToCheck.name))
-						{
-							displayNameList.push(fileToCheck.name);
-							noteTypeMap.set(fileToCheck.name, key);
-							noteTypeIntMap.set(key, fileToCheck.name);
-							noteTypeDataBase.push(fileToCheck);
-							key++;
-						}
-					}
-				}
-			}
-		}
-
 		var dataSource = new haxe.ui.data.ArrayDataSource<Dynamic>();
-		for (i in 0...displayNameList.length)
-			dataSource.add({text: i + '. ' + displayNameList[i]});
+		for (i in 0...noteDisplayNameList.length)
+			dataSource.add({text: '$i. ${noteDisplayNameList[i]}'});
+
+		trace(noteDisplayNameList);
 
 		noteTypeSelect = new haxe.ui.components.DropDown();
 		noteTypeSelect.searchable = true;
@@ -2258,6 +2289,9 @@ If you have any questions about the editor, ask me!';
 		noteTypeSelect.dataSource = dataSource;
 		noteTypeSelect.onChange = (e) ->
 		{
+			if (noteTypeSelect.selectedItem == null)
+				return;
+
 			// removes the "0." "1." formatting from the start of the names
 			var noteTypeName:String = noteTypeSelect.selectedItem.text.substr(3);
 			noteDescContent.text = noteTypeDataBase[noteTypeMap[noteTypeName]].desc;
@@ -2282,10 +2316,6 @@ If you have any questions about the editor, ask me!';
 
 		formatBox.addComponent(noteDesc);
 		noteTab.addComponent(formatBox);
-
-		blockInteractionGeneral.push(noteSustainStepper);
-		blockInteractionGeneral.push(noteStrumTime);
-		blockInteractionDropDown.push(noteTypeSelect);
 	}
 
 	function changeEventSelected(change:Int = 0)
@@ -2327,27 +2357,26 @@ If you have any questions about the editor, ask me!';
 		var formatBox = new haxe.ui.containers.VBox();
 
 		var eventPushedMap:Map<String, Bool> = new Map<String, Bool>();
-		var directories:Array<String> = [Paths.mods('custom_events/')];
+		var directories:Array<String> = [];
+		for (mod in Paths.getModDirectories())
+			if (Paths.mods('custom_events', mod) != null)
+				directories.push(Paths.mods('custom_events', mod));
 
 		var dataSource = new haxe.ui.data.ArrayDataSource<Dynamic>();
 
-		for (i in 0...directories.length) {
-			var directory:String =  directories[i];
-			if(FileSystem.exists(directory)) {
-				for (file in FileSystem.readDirectory(directory)) {
-					var path = haxe.io.Path.join([directory, file]);
-					if (!FileSystem.isDirectory(path) && file != 'readme.txt' && file.endsWith('.txt')) {
-						var fileToCheck:String = file.substr(0, file.length - 4);
-						if(!eventPushedMap.exists(fileToCheck)) {
-							eventPushedMap.set(fileToCheck, true);
-							eventStuff.set(fileToCheck, File.getContent(path));
-						}
-					}
+		for (path in directories)
+		{
+			var mod = path.split('/')[1];
+
+			for (file in FileSystem.readDirectory(path))
+			{
+				if (file.endsWith('txt') && !eventPushedMap.exists(file))
+				{
+					eventPushedMap.set(file, true);
+					eventStuff.set(file, File.getContent(Paths.eventTxt(file.split('.txt')[0], mod)));
 				}
 			}
 		}
-		eventPushedMap.clear();
-		eventPushedMap = null;
 
 		var eventStuffBox = new haxe.ui.containers.HBox();
 
@@ -2531,11 +2560,6 @@ If you have any questions about the editor, ask me!';
 
 		formatBox.addComponent(eventStuffBox);
 		eventsTab.addComponent(formatBox);
-
-		blockInteractionDropDown.push(eventsDropDown);
-		blockInteractionGeneral.push(val1Input);
-		blockInteractionGeneral.push(val2Input);
-		blockInteractionGeneral.push(val3Input);
 	}
 
 	var chartingWaveformInst:haxe.ui.components.CheckBox;
@@ -2774,11 +2798,6 @@ If you have any questions about the editor, ask me!';
 		#end
 
 		chartingTab.addComponent(formatBox);
-
-		blockInteractionGeneral.push(metronomeStepper);
-		blockInteractionGeneral.push(metronomeOffsetStepper);
-		blockInteractionGeneral.push(chartingInstVolume);
-		blockInteractionGeneral.push(chartingVocVolume);
 	}
 
 	function loadSong():Void
@@ -2789,7 +2808,7 @@ If you have any questions about the editor, ask me!';
 			// vocals.stop();
 		}
 
-		var file:Dynamic = Paths.modsVoices(currentSongName);
+		var file:Dynamic = Paths.modsVoices(currentSongName, Paths.WORKING_MOD_DIRECTORY);
 		vocals = new FlxSound();
 		if (file != null) 
 		{
@@ -2797,7 +2816,7 @@ If you have any questions about the editor, ask me!';
 			FlxG.sound.list.add(vocals);
 		}
 
-		var file:Dynamic = Paths.modsInst(currentSongName);
+		var file:Dynamic = Paths.modsInst(currentSongName, Paths.WORKING_MOD_DIRECTORY);
 		inst = new FlxSound();
 		if (file != null)
 		{
@@ -2953,8 +2972,6 @@ If you have any questions about the editor, ask me!';
 			Lib.application.window.alert(ALERT_STRING, ALERT_TITLE_STRING);
 
 		handleInput(dt);
-
-		_song.bpm = tempBpm;
 
 		strumLineNotes.visible = quant.visible = vortex;
 
@@ -3199,7 +3216,7 @@ If you have any questions about the editor, ask me!';
 
 	function handleInput(dt:Float)
 	{
-		if (blockInput)
+		if (this.blockInput)
 			return;
 
 		if (FlxG.keys.justPressed.ENTER)
@@ -3719,7 +3736,7 @@ If you have any questions about the editor, ask me!';
 			dataSource.add({text: char});
 
 		sectionCharFocus.dataSource = dataSource;
-		sectionCharFocus.selectedIndex = sec.charFocus;
+		sectionCharFocus.selectedItem = {text: characterList[sec.charFocus]};
 
 		sectionCopyFrom.dataSource = dataSource;
 
@@ -3797,6 +3814,8 @@ If you have any questions about the editor, ask me!';
 
 	function updateGrid():Void
 	{
+		Paths.VERBOSE = false;
+
 		curRenderedNotes.clear();
 		curRenderedSustains.clear();
 		curRenderedNoteType.clear();
@@ -3849,8 +3868,8 @@ If you have any questions about the editor, ask me!';
 
 						var daText:AttachedFlxText = new AttachedFlxText(0, 0, 100, theType, 24);
 						daText.setFormat(Paths.font("vcr.ttf"), 18, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-						daText.xAdd = -32;
-						daText.yAdd = 6;
+						daText.xAdd = -22;
+						daText.yAdd = 12;
 						daText.borderSize = 2;
 						curRenderedNoteType.add(daText);
 						daText.sprTracker = note;
@@ -3966,6 +3985,8 @@ If you have any questions about the editor, ask me!';
 		}
 
 		updateNoteUI();
+
+		Paths.VERBOSE = true;
 	}
 
 	function setupNoteData(_note:NoteFile, isNextSection:Bool):Note
@@ -4094,7 +4115,6 @@ If you have any questions about the editor, ask me!';
 		}
 
 		changeEventSelected();
-		updateGrid();
 	}
 
 	function deleteNote(note:Note):Void
@@ -4317,9 +4337,9 @@ If you have any questions about the editor, ask me!';
 
 	private function saveLevel()
 	{
-		if (Paths.songFolder(_song.song) == null)
+		if (Paths.songFolder(_song.song, Paths.WORKING_MOD_DIRECTORY) == null)
 		{
-			var path:String = '${Paths.mods('songs')}/${_song.song}';
+			var path:String = '${Paths.mods('songs', Paths.WORKING_MOD_DIRECTORY)}/${_song.song}';
 			trace('creating "$path"');
 
 			FileSystem.createDirectory(path);
@@ -4376,7 +4396,7 @@ If you have any questions about the editor, ask me!';
 		};
 
 		// lol!
-		var songPath:String = Paths.songFolder(_song.song);
+		var songPath:String = Paths.songFolder(_song.song, Paths.WORKING_MOD_DIRECTORY);
 
 		var chartData:String = Json.stringify(mainJson, "\t");
 		if ((chartData != null) && (chartData.length > 0))
@@ -4416,7 +4436,8 @@ class AttachedFlxText extends FlxText
 	{
 		super.update(dt);
 
-		if (sprTracker != null) {
+		if (sprTracker != null) 
+		{
 			setPosition(sprTracker.x + xAdd, sprTracker.y + yAdd);
 			angle = sprTracker.angle;
 			alpha = sprTracker.alpha;

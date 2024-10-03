@@ -29,21 +29,23 @@ function create()
         {
             game.closeSubState();
 
+            if (['Restart', 'Exit'].contains(button.text))
+            {
+                if (FlxG.sound.music != null)
+                    FlxG.sound.music.volume = 0;
+
+                if (game.vocals != null)
+                    game.vocals.volume = 0;
+            }
+
             switch(button.text)
             {
                 case 'Restart':
                     game.paused = true;
-
-                    if (FlxG.sound.music != null)
-                        FlxG.sound.music.volume = 0;
-
-                    if (game.vocals != null)
-                        game.vocals.volume = 0;
-
                     LoadingState.loadAndSwitchState(new PlayState());
 
                 case 'Exit':
-                    LoadingState.loadAndSwitchCustomState('ExampleState');
+                    LoadingState.loadAndSwitchCustomState('MasterEditorMenu');
             }
         }
 

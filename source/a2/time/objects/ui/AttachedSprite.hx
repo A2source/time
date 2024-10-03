@@ -21,17 +21,13 @@ class AttachedSprite extends FlxSprite
 	public var copyAlpha:Bool = true;
 	public var copyVisible:Bool = false;
 
-	public function new(?pngPath:String = null, ?xmlPath:String = null, ?anim:String = null, ?library:String = null, ?loop:Bool = false)
+	public function new(?pngPath:Dynamic = null, ?xmlPath:String = null, ?library:String = null, ?loop:Bool = false)
 	{
 		super();
 
-		if (anim != null)
-		{
+		if (xmlPath != null)
 			frames = FlxAtlasFrames.fromSparrow(pngPath, xmlPath);
-			animation.addByPrefix('idle', anim, 24, loop);
-			animation.play('idle');
-		} 
-		else if (pngPath != null) 
+		else
 			loadGraphic(pngPath);
 		
 		antialiasing = ClientPrefs.data.antialiasing;

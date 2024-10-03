@@ -927,7 +927,6 @@ class PlayState extends MusicBeatState
 		var stageData:StageFile = StageData.getStageFile(curStage);
 		if(stageData == null) { //Stage couldn't be found, create a dummy stage for preventing a crash
 			stageData = {
-				directory: "",
 				defaultZoom: 0.9,
 				isPixelStage: false,
 
@@ -2090,7 +2089,7 @@ class PlayState extends MusicBeatState
 
 			var shadowData:String = haxe.Json.stringify(shadows, '\t');
 
-			var songPath:String = Paths.songFolder(SONG.song);
+			var songPath:String = Paths.songFolder(SONG.song, Paths.WORKING_MOD_DIRECTORY);
 			File.saveContent('$songPath/shadows.json', shadowData);
 
 			Lib.application.window.alert('Saved Shadow Data.\n"$songPath/"', Main.ALERT_TITLE);
@@ -2162,10 +2161,13 @@ class PlayState extends MusicBeatState
 		var foldersToCheck:Array<String> = [Paths.mods('shaders')];
 
 		for(mod in Paths.getModDirectories())
-			foldersToCheck.insert(0, Paths.mods('shaders', mod));
+			foldersToCheck.push(Paths.mods('shaders', mod));
 		
 		for (path in foldersToCheck)
 		{
+			if (path == null)
+				continue;
+
 			trace('$path/$name');
 
 			var frag:String = '$path/$name.frag';
@@ -2273,22 +2275,21 @@ class PlayState extends MusicBeatState
 		}
 	}
 
-	public function startCharacterScript(char:String)
+	public function startCharacterScript(name:String)
 	{
 		if (hscriptManager == null)
 			return;
 
-		var check:String = Paths.charFolder(char);
+		var check:String = Paths.charFolder(name, char(name).modDirectory);
 
 		if (check != null)
 			hscriptManager.addScriptsFromFolder(check);
-		else
-			trace('failed to start scripts of character "$char"');
 	}
 
 	function startCharacterPos(char:Character, ?gfCheck:Bool = false) 
 	{
-		if(gfCheck && char.curCharacter.startsWith('gf')) { //IF DAD IS GIRLFRIEND, HE GOES TO HER POSITION
+		if(gfCheck && char.curCharacter.startsWith('gf')) 
+		{
 			char.setPosition(GF_X, GF_Y);
 			char.scrollFactor.set(0.95, 0.95);
 			char.danceEveryNumBeats = 2;
@@ -2387,8 +2388,14 @@ class PlayState extends MusicBeatState
 		for (mod in Paths.getModDirectories())
 			hscriptManager.addScriptsFromFolder(Paths.mods('scripts', mod));
 
-		hscriptManager.addScriptsFromFolder(Paths.stageFolder(SONG.stage.toLowerCase()));
-		hscriptManager.addScriptsFromFolder(Paths.songFolder(SONG.song.toLowerCase()));
+		for (mod in Paths.getModDirectories())
+		{
+			var check = Paths.stageFolder(SONG.stage.toLowerCase(), mod);
+			if (check != null)
+				hscriptManager.addScriptsFromFolder(check);
+		}
+		
+		hscriptManager.addScriptsFromFolder(Paths.songFolder(SONG.song.toLowerCase(), Paths.WORKING_MOD_DIRECTORY));
 
 		for (char in charNames)
 			startCharacterScript(char);
@@ -2396,13 +2403,14 @@ class PlayState extends MusicBeatState
 		startCharacterScript(gf.curCharacter);
 
 		for (event in allEvents)
-		{
-			var script:String = Paths.eventScript(event);
-			if (script == null)
-				continue;
+			for (mod in Paths.getModDirectories())
+			{
+				var script:String = Paths.eventScript(event, mod);
+				if (script == null)
+					continue;
 
-			hscriptManager.addScriptFromPath(script);
-		}
+				hscriptManager.addScriptFromPath(script);
+			}
 
 		for (chars in [SONG.players, SONG.opponents])
 		{
@@ -2412,9 +2420,12 @@ class PlayState extends MusicBeatState
 				{
 					if (!hscriptManager.exists(note.t) && ChartingState.HARDCODED_NOTES != null && !ChartingState.HARDCODED_NOTES.contains(note.t))
 					{
-						var script:String = Paths.noteScript(note.t);
-						if (script != null)
-							hscriptManager.addScriptFromPath(script);
+						for (mod in Paths.getModDirectories())
+						{
+							var script:String = Paths.noteScript(note.t, mod);
+							if (script != null)
+								hscriptManager.addScriptFromPath(script);
+						}
 					}
 				}
 			}
@@ -2636,7 +2647,7 @@ class PlayState extends MusicBeatState
 		previousFrameTime = FlxG.game.ticks;
 		lastReportedPlayheadPosition = 0;
 
-		FlxG.sound.playMusic(Paths.modsInst(PlayState.SONG.song), 1, false);
+		FlxG.sound.playMusic(Paths.modsInst(PlayState.SONG.song, Paths.WORKING_MOD_DIRECTORY), 1, false);
 		FlxG.sound.music.pitch = playbackRate;
 		FlxG.sound.music.onComplete = finishSong.bind();
 		vocals.play();
@@ -2688,13 +2699,13 @@ if (!inDev)
 		curSong = songData.song;
 
 		if (SONG.needsVoices)
-			vocals = new FlxSound().loadEmbedded(Paths.modsVoices(PlayState.SONG.song.toLowerCase()));
+			vocals = new FlxSound().loadEmbedded(Paths.modsVoices(PlayState.SONG.song.toLowerCase(), Paths.WORKING_MOD_DIRECTORY));
 		else
 			vocals = new FlxSound();
 
 		vocals.pitch = playbackRate;
 		FlxG.sound.list.add(vocals);
-		FlxG.sound.list.add(new FlxSound().loadEmbedded(Paths.modsInst(PlayState.SONG.song.toLowerCase())));
+		FlxG.sound.list.add(new FlxSound().loadEmbedded(Paths.modsInst(PlayState.SONG.song.toLowerCase(), Paths.WORKING_MOD_DIRECTORY)));
 
 		notes = new FlxTypedGroup<Note>();
 		add(notes);
@@ -2739,9 +2750,6 @@ if (!inDev)
 					swagNote.attachedChar = char;
 					swagNote.mustPress = isPlayer;
 
-					if (swagNote.noteType == 'kitoDodge')
-						swagNote.noteData = 10;
-
 					swagNote.scrollFactor.set();
 
 					var susLength:Float = swagNote.sustainLength;
@@ -2752,7 +2760,7 @@ if (!inDev)
 					var floorSus:Int = Math.floor(susLength);
 					if(floorSus > 0) 
 					{
-						for (susNote in 0...floorSus+1)
+						for (susNote in 0...floorSus + 1)
 						{
 							oldNote = unspawnNotes[Std.int(unspawnNotes.length - 1)];
 
@@ -3157,9 +3165,9 @@ if (!inDev)
 
 	function loadRimLightJson(?forceName:String)
 	{
-		var rtxFile:String = Paths.modsSongJson(SONG.song, shadeNameInput.text =='' ? 'shade' : 'shade-${shadeNameInput.text}');
+		var rtxFile:String = Paths.modsSongJson(SONG.song, shadeNameInput.text =='' ? 'shade' : 'shade-${shadeNameInput.text}', Paths.WORKING_MOD_DIRECTORY);
 		if (forceName != null)
-			rtxFile = Paths.modsSongJson(SONG.song, 'shade${forceName != '' ? '-$forceName' : ''}');
+			rtxFile = Paths.modsSongJson(SONG.song, 'shade${forceName != '' ? '-$forceName' : ''}', Paths.WORKING_MOD_DIRECTORY);
 		
 		if (rtxFile == null)
 		{
@@ -3183,6 +3191,9 @@ if (!inDev)
 		for (light in lights)
 		{
 			var ref = char(light.name).rimLightShader;
+			if (ref == null)
+				continue;
+
 			ref.setFloatArray('overlayColor', [light.overlayCol[0], light.overlayCol[1], light.overlayCol[2], light.overlayCol[3]]);
 			ref.setFloatArray('satinColor', [light.satinCol[0], light.satinCol[1], light.satinCol[2], light.satinCol[3]]);
 			ref.setFloatArray('innerShadowColor', [light.innerCol[0], light.innerCol[1], light.innerCol[2], light.innerCol[3]]);
@@ -3253,7 +3264,7 @@ if (!inDev)
 
 		var string:String = haxe.Json.stringify(data, "\t");
 
-		var songPath:String = Paths.songFolder(SONG.song);
+		var songPath:String = Paths.songFolder(SONG.song, Paths.WORKING_MOD_DIRECTORY);
 		var fullPath:String = '$songPath/${shadeNameInput.text == '' ? 'shade' : 'shade-${shadeNameInput.text}'}.json';
 		File.saveContent(fullPath, string);
 
@@ -3264,7 +3275,7 @@ if (!inDev)
 
 	function loadShadowFile(?suffix:String)
 	{
-		var shadowPath = Paths.modsSongJson(SONG.song, 'shadows');
+		var shadowPath = Paths.modsSongJson(SONG.song, 'shadows', Paths.WORKING_MOD_DIRECTORY);
 		if (shadowPath == null)
 			return;
 
@@ -3800,12 +3811,19 @@ if (!inDev)
 		&& ChartingState.HARDCODED_EVENTS != null && !ChartingState.HARDCODED_EVENTS.contains(eventName) 
 		&& ignoreEventHscript != null && !ignoreEventHscript.contains(eventName))
 		{
-			var script:String = Paths.eventScript(eventName);
-			if (script != null)
+			Paths.VERBOSE = false;
+
+			for (mod in Paths.getModDirectories())
 			{
-				hscriptManager.addScriptFromPath(script);
-				hscriptManager.call('start', [SONG.song], eventName);
+				var script:String = Paths.eventScript(eventName, mod);
+				if (script != null)
+				{
+					hscriptManager.addScriptFromPath(script);
+					hscriptManager.call('start', [SONG.song], eventName);
+				}
 			}
+
+			Paths.VERBOSE = true;
 		}
 
 		switch(eventName) 
@@ -4092,8 +4110,6 @@ if (!inDev)
 
 		if (storyPlaylist.length <= 0)
 		{
-			WeekData.loadTheFirstEnabledMod();
-
 			cancelMusicFadeTween();
 			if(FlxTransitionableState.skipNextTransIn)
 				CustomFadeTransition.nextCamera = null;
@@ -4156,9 +4172,9 @@ if (!inDev)
 		{
 			if(!getCurBF().stunned && generatedMusic && !endingSong)
 			{
-				//more accurate hit time for the ratings?
 				var lastTime:Float = Conductor.songPosition;
-				Conductor.songPosition = FlxG.sound.music.time;
+				if (FlxG.sound.music != null)
+					Conductor.songPosition = FlxG.sound.music.time;
 
 				var canMiss:Bool = !ClientPrefs.data.ghostTapping;
 
@@ -4208,7 +4224,8 @@ if (!inDev)
 						onMiss(key);
 
 				//more accurate hit time for the ratings? part 2 (Now that the calculations are done, go back to the time it was before for not causing a note stutter)
-				Conductor.songPosition = lastTime;
+				if (FlxG.sound.music != null)
+					Conductor.songPosition = lastTime;
 			}
 
 			var spr:StrumNote = playerStrums.members[key];
@@ -4341,13 +4358,8 @@ if (!inDev)
 		var char:Dynamic = getCurDad();
 
 		var animToPlay:String = SING_ANIMATIONS[Std.int(Math.abs(note.noteData))] + char.animSuffix;
-		if(note.noteType == 'Hey!' && char.animOffsets.exists('hey')) 
-		{
-			char.playAnim('hey', true);
-			char.specialAnim = true;
-			char.heyTimer = 0.6;
-		}
-		else if(!note.noAnimation) 
+		
+		if(!note.noAnimation) 
 		{
 			if(char != null)
 			{
@@ -4370,22 +4382,6 @@ if (!inDev)
 			time += 0.15;
 
 		StrumPlayAnim(true, Std.int(Math.abs(note.noteData)), time);
-
-		if (!note.isSustainNote)
-		{
-			if (char.prevDir != -1)
-			{
-				var animToSing:String = SING_ANIMATIONS[char.prevDir] + char.animSuffix;
-				if (animToSing != '')
-					char.playTrailAnim(true, animToSing, true);
-			}
-			char.prevDir = note.noteData;
-
-			new FlxTimer().start(0.03, function(bitch:FlxTimer)
-			{
-				char.prevDir = -1;
-			});
-		}
 
 		hscriptManager.callAll('opponentNoteHit', [note]);
 
@@ -4419,17 +4415,6 @@ if (!inDev)
 		{
 			onMiss(note.noteData, note);
 
-			if(!note.noMissAnimation)
-			{
-				switch(note.noteType) {
-					case 'Hurt Note': //Hurt note
-						if(char.animation.getByName('hurt') != null) {
-							char.playAnim('hurt', true);
-							char.specialAnim = true;
-						}
-				}
-			}
-
 			note.wasGoodHit = true;
 			if (!note.isSustainNote)
 			{
@@ -4444,20 +4429,6 @@ if (!inDev)
 		{
 			char.playAnim(animToPlay + char.animSuffix, true);
 			char.holdTimer = 0;
-
-			if(note.noteType == 'Hey!') {
-				if(char.animOffsets.exists('hey')) {
-					char.playAnim('hey', true);
-					char.specialAnim = true;
-					char.heyTimer = 0.6;
-				}
-
-				if(gf != null && gf.animOffsets.exists('cheer')) {
-					gf.playAnim('cheer', true);
-					gf.specialAnim = true;
-					gf.heyTimer = 0.6;
-				}
-			}
 		}
 
 		if(cpuControlled) 
@@ -4477,21 +4448,6 @@ if (!inDev)
 			}
 		}
 		note.wasGoodHit = true;
-
-		if(!note.isSustainNote)
-		{
-			if (char.prevDir != -1)
-			{
-				var animToSing:String = SING_ANIMATIONS[char.prevDir] + char.animSuffix;
-				if(animToSing != '')
-					char.playTrailAnim(true, animToSing, true);
-			}
-			char.prevDir = note.noteData;
-			new FlxTimer().start(0.03, function(bitch:FlxTimer)
-			{
-				char.prevDir = -1;
-			});
-		}
 
 		var isSus:Bool = note.isSustainNote; //GET OUT OF MY HEAD, GET OUT OF MY HEAD, GET OUT OF MY HEAD
 		var leData:Int = Math.round(Math.abs(note.noteData));

@@ -36,7 +36,19 @@ class HealthIcon extends FlxSprite
 	{
 		if(this.char != char) 
 		{
-			var file:Dynamic = Paths.timeGraphic(Paths.charImage(char, 'icons$suffix'));
+			var iconGraphic:Dynamic = null;
+			for (mod in Paths.getModDirectories())
+			{
+				var check = Paths.timeGraphic(Paths.charImage(char, 'icons$suffix', mod));
+
+				if (check != null)
+				{
+					iconGraphic = check;
+					break;
+				}
+			}
+
+			var file:Dynamic = iconGraphic;
 
 			if (file == null)
 				file = Paths.image('face');

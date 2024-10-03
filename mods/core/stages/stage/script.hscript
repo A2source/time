@@ -40,7 +40,7 @@ function start(song)
     spotlight = new FlxSprite(0, -80).load(Paths.modsImage('spotlight'));
     spotlight.alpha = 0.5;
     spotlight.visible = false;
-    spotlight.blend = 'add';
+    spotlight.blend = 'screen';
     addSprite(spotlight, BEHIND_NONE);
 }
 

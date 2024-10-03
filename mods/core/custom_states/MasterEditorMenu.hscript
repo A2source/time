@@ -1,19 +1,27 @@
 buttons = [
     'Options',
     'Chart Editor',
-    'Character Editor'
+    'Character Editor',
+    'Create Stage',
+    'Create Notetype'
 ];
+
+uiButtons = [];
 
 stateNames = [
     'OptionsState',
     new ChartingState(),
-    new CharacterEditorState('bf', false)
+    new CharacterEditorState('bf', false),
+    'MakeStageState',
+    'MakeCustomNoteState'
 ];
 
 isCustomState = [
     true,
     false,
-    false
+    false,
+    true,
+    true
 ];
 
 diff = [
@@ -22,12 +30,11 @@ diff = [
     'hard'
 ];
 
+var initialized = false;
 function create()
 {
     if (FlxG.sound.music != null)
 		FlxG.sound.music.stop();
-
-    trace(ALERT_TITLE);
 
     FlxG.mouse.visible = true;
 
@@ -51,7 +58,26 @@ function create()
 
         formatBox.addComponent(button);
         UiS.addSpacer(0, 25, formatBox);
+
+        uiButtons.push(button);
     }
+
+    UiS.addSpacer(0, 25, formatBox);
+    UiS.addLabel('Set Working Mod Directory', formatBox);
+
+    var mod = UiS.getModsDropdown(()-> 
+    { 
+        trace(WORKING_MOD_DIRECTORY);
+
+        if (!initialized)
+        {
+            initialized = true;
+            return;
+        }
+
+        LoadingState.loadAndSwitchCustomState('MasterEditorMenu');
+    });
+    formatBox.addComponent(mod);
 
     UiS.addSpacer(125, 0, view);
 
@@ -59,11 +85,23 @@ function create()
     UiS.addSpacer(0, 75, quickLoadBox);
     UiS.addLabel('Quick Load Song', quickLoadBox);
 
-    source = getDataSource();
-    for (song in FileSystem.readDirectory(Paths.mods('songs')))
-        source.add({text: song});
-
     listView = new ListView();
+    diffSelect = new ListView();
+
+    source = getDataSource();
+    if (Paths.mods('songs', WORKING_MOD_DIRECTORY) == null)
+    {
+        listView.disabled = true;
+        diffSelect.disabled = true;
+
+        source.add({text: 'Songs folder not found in mod directory "' + WORKING_MOD_DIRECTORY + '"'});
+
+        uiButtons[1].disabled = true;
+    }
+    else
+        for (song in FileSystem.readDirectory(Paths.mods('songs', WORKING_MOD_DIRECTORY)))
+            source.add({text: song});
+
     listView.dataSource = source;
     listView.width = 200;
     listView.height = FlxG.height - 150;
@@ -98,7 +136,6 @@ function create()
     for (thing in diff)
         diffSource.add({text: thing});
 
-    diffSelect = new ListView();
     diffSelect.dataSource = diffSource;
     diffSelect.width = 100;
     diffBox.addComponent(diffSelect);

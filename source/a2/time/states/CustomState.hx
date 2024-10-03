@@ -117,6 +117,7 @@ class CustomState extends MusicBeatState
 		interp.variables.set("Path", haxe.io.Path);
 		interp.variables.set("Std", Std);
 		interp.variables.set("FileSystem", sys.FileSystem);
+		interp.variables.set("File", sys.io.File);
 		interp.variables.set("Controls", a2.time.util.Controls);
 		interp.variables.set("flixelSave", FlxG.save);
 		interp.variables.set("Paths", a2.time.util.Paths);
@@ -156,7 +157,6 @@ class CustomState extends MusicBeatState
 		interp.variables.set("Song", a2.time.objects.song.Song);
 		interp.variables.set("FlxFlicker", FlxFlicker);
 		interp.variables.set("FlxGroup", flixel.group.FlxGroup);
-		interp.variables.set("FlxGridOverlay", flixel.addons.display.FlxGridOverlay);
 		interp.variables.set("FlxTrailArea", FlxTrailArea);
 		interp.variables.set("ShaderFilter", openfl.filters.ShaderFilter);
 		interp.variables.set("FlxTypedSpriteGroup", flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup);
@@ -164,7 +164,8 @@ class CustomState extends MusicBeatState
 		interp.variables.set("FlxTypedGroup", flixel.group.FlxGroup.FlxTypedGroup);
 		interp.variables.set("FlxSkewedSprite", flixel.addons.effects.FlxSkewedSprite);
 		interp.variables.set("FlxBackdrop", flixel.addons.display.FlxBackdrop);
-		interp.variables.set("Json", Json);
+		interp.variables.set("Json", haxe.Json);
+		interp.variables.set("stringifyJson", function(object:Dynamic, ?space:String) { return haxe.Json.stringify(object, space); });
 		interp.variables.set("FlxSound", FlxSound);
 		interp.variables.set("FlxGridOverlay", FlxGridOverlay);
 		interp.variables.set("FlxG", FlxG);
@@ -203,6 +204,7 @@ class CustomState extends MusicBeatState
 		interp.variables.set("Main", Main);
 		interp.variables.set("ALERT_TITLE", Main.ALERT_TITLE);
 		interp.variables.set('MOD_NAME', Main.MOD_NAME);
+		interp.variables.set('WORKING_MOD_DIRECTORY', Paths.WORKING_MOD_DIRECTORY);
 
 		interp.variables.set("Interp", Interp);
 		interp.variables.set("ParserEx", ParserEx);
@@ -231,7 +233,12 @@ class CustomState extends MusicBeatState
 			return new haxe.ui.data.ArrayDataSource<Dynamic>();
 		});
 
+		interp.variables.set('FocusManager', haxe.ui.focus.FocusManager);
+
 		interp.variables.set('Screen', haxe.ui.Toolkit.screen);
+
+		interp.variables.set('blockInput', MusicBeatState.instance.blockInput);
+		interp.variables.set('this', CustomState.instance);
 
 		return interp;
 	}

@@ -46,6 +46,9 @@ function start(song)
         add(icon);
     }
 
+    game.hscriptManager.setAll('playerIcon', playerIcon);
+    game.hscriptManager.setAll('opponentIcon', opponentIcon);
+
     scoreText = new FlxText(0, healthBarBG.y + 36, FlxG.width, "", 20);
     scoreText.setFormat(Paths.modsFont('vcr'), 18, 0xFFFFFFFF, 'center', FlxTextBorderStyle.OUTLINE, 0xFF000000);
     scoreText.scrollFactor.set();

@@ -123,7 +123,7 @@ class Song
 		var rawEventJson = null;
 
 		var moddyFile:String;
-		moddyFile = Paths.modsSongJson(songName, songName);
+		moddyFile = Paths.modsSongJson(songName, songName, Paths.WORKING_MOD_DIRECTORY);
 
 		trace('TRYING TO LOAD CHART $moddyFile');
 		if (moddyFile != null)
@@ -144,7 +144,7 @@ class Song
 			{
 				var jsonName = songName.replace(' ', '-').toLowerCase();
 				trace('searching psych chart "$jsonName$dif"');
-				if (Paths.modsSongJson(songName, '$jsonName$dif') != null)
+				if (Paths.modsSongJson(songName, '$jsonName$dif', Paths.WORKING_MOD_DIRECTORY) != null)
 				{
 					trace('Converting song "$songName" from Psych format.');
 					return convertFromPsych(songName, jsonName, dif);
@@ -174,11 +174,11 @@ class Song
 
 	static function convertFromPsych(song:String, oldName:String, dif:String):SwagSong
 	{
-		var oldPath = Paths.modsSongJson(oldName, '$oldName$dif');
-		var newPath = Paths.modsSongJson(song, '$song$dif');
+		var oldPath = Paths.modsSongJson(oldName, '$oldName$dif', Paths.WORKING_MOD_DIRECTORY);
+		var newPath = Paths.modsSongJson(song, '$song$dif', Paths.WORKING_MOD_DIRECTORY);
 
-		var oldPathNewName = Paths.modsSongJson(oldName, '$song$dif');
-		var newPathOldName = Paths.modsSongJson(song, '$oldName$dif');
+		var oldPathNewName = Paths.modsSongJson(oldName, '$song$dif', Paths.WORKING_MOD_DIRECTORY);
+		var newPathOldName = Paths.modsSongJson(song, '$oldName$dif', Paths.WORKING_MOD_DIRECTORY);
 
 		var rawJson:String = '';
 		if (oldPath != null)
@@ -303,7 +303,7 @@ class Song
 		var parsedEvents:Array<Dynamic> = chart.events;
 		if (chart.events.length == 0)
 		{
-			var eventsPath:String = Paths.modsSongJson(song, 'events');
+			var eventsPath:String = Paths.modsSongJson(song, 'events', Paths.WORKING_MOD_DIRECTORY);
 			if (eventsPath != null)
 			{
 				var rawEvents = File.getContent(eventsPath);

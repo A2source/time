@@ -127,7 +127,7 @@ class Paths
 		openfl.Assets.cache.clear('songs');
 	}
 
-	static public var currentModDirectory:String = '';
+	static public var WORKING_MOD_DIRECTORY:String = Main.MOD_NAME;
 	static public var currentLevel:String;
 	static public function setCurrentLevel(name:String)
 	{
@@ -191,6 +191,11 @@ class Paths
 	inline static public function imgXml(key:String, ?library:String)
 	{
 		return getPath('images/$key.xml', TEXT, library);
+	}
+
+	inline static public function imgPng(key:String, ?library:String)
+	{
+		return getPath('images/$key.png', TEXT, library);
 	}
 
 	inline static public function shaderFragment(key:String, ?library:String)

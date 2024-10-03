@@ -21,8 +21,6 @@ class HscriptManager
 
     public function new(func:Dynamic)
     {
-        trace('Creating new HSCRIPT manager');
-
         injectCustomInterp = func;
     }
 
@@ -51,7 +49,8 @@ class HscriptManager
 
 		var interp = CustomState.getBasicInterp('$modDirectory/$fileName');
 
-		trace('creating new interp ($scriptName)');
+		if (exists(scriptName))
+			scriptName += Date.now();
 
         if (injectCustomInterp != null)
             injectCustomInterp(interp);
@@ -63,10 +62,7 @@ class HscriptManager
     public function addScriptFromPath(path:String, ?file:String = '')
 	{
 		if (path == null || file == null)
-		{
-			trace('could not find script');
 			return;
-		}
 
 		if (file != '')
 		{
@@ -101,10 +97,7 @@ class HscriptManager
 	public function addScriptsFromFolder(path:String)
 	{
 		if (!FileSystem.exists(path))
-		{
-			trace('Path "$path" not found while trying to start scripts');
 			return;
-		}
 
 		for (file in FileSystem.readDirectory(path))
 			addScriptFromPath(path, file);

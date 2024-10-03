@@ -135,6 +135,8 @@ class Character extends TimeSprite
 	public var originalFlipX:Bool = false;
 	public var healthColorArray:Array<Int> = [255, 0, 0];
 
+	public var modDirectory:String = '';
+
 	public static var DEFAULT_CHARACTER:String = 'bf'; //In case a character is missing, it will use BF on its place
 	public function new(x:Float, y:Float, ?character:String = 'bf', ?isPlayer:Bool = false, ?type:CharacterType = NORMAL, ?debug:Bool = false)
 	{
@@ -165,17 +167,39 @@ class Character extends TimeSprite
 				var jsonToLoad:String = isPlayer ? 'player' : 'opponent';
 				var opposite:String = isPlayer ? 'opponent' : 'player';
 
-				var charPath:String = Paths.charJson(curCharacter, 'character');
-				var animPath:String = Paths.charJson(curCharacter, jsonToLoad);
+				var charPath:String = null;
+				var animPath:String = null;
 
-				if (charPath == null)
-					charPath = Paths.charJson(DEFAULT_CHARACTER, 'character'); 
+				for (mod in Paths.getModDirectories())
+				{
+					var charCheck = Paths.charJson(curCharacter, 'character', mod);
+					var animCheck = Paths.charJson(curCharacter, jsonToLoad, mod);
 
-				if (animPath == null) 
-					animPath = Paths.charJson(curCharacter, opposite);
+					if (charCheck != null && charPath == null)
+					{
+						charPath = charCheck;
+						modDirectory = mod;
+					}
 
-				if (animPath == null)
-						animPath = Paths.charJson(DEFAULT_CHARACTER, 'player'); 
+					if (animCheck != null && animPath == null)
+					{
+						animPath = animCheck;
+						modDirectory = mod;
+					}
+
+					if (animPath != null && charPath != null)
+						break;
+
+					if (animPath == null) 
+						animPath = Paths.charJson(curCharacter, opposite, mod);
+				}
+
+				if (charPath == null || animPath == null)
+				{
+					animPath = Paths.charJson(DEFAULT_CHARACTER, 'player', Main.MOD_NAME); 
+					charPath = Paths.charJson(DEFAULT_CHARACTER, 'character', Main.MOD_NAME);
+					modDirectory = Main.MOD_NAME;
+				}
 
 				var rawCharJson = File.getContent(charPath);
 				var rawAnimJson = File.getContent(animPath);
@@ -239,7 +263,7 @@ class Character extends TimeSprite
 									trace('not supported');
 								
 								case "sparrow":
-									frames = Paths.getCharSparrow(name, anim.sheet);
+									frames = Paths.getCharSparrow(name, anim.sheet, modDirectory);
 								
 								case "texture":
 									frames = AtlasFrameMaker.construct(anim.sheet);
@@ -271,7 +295,7 @@ class Character extends TimeSprite
 					case "sparrow":
 						for (sheet in spriteSheets)
 						{
-							frames = Paths.getCharSparrow(name, sheet);
+							frames = Paths.getCharSparrow(name, sheet, modDirectory);
 							sheetFrames.push(frames);
 						}
 					

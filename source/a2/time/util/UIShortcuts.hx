@@ -2,6 +2,32 @@ package a2.time.util;
 
 class UIShortcuts
 {
+	public static inline function getModsDropdown(callback:Dynamic):haxe.ui.components.DropDown
+	{
+		var source = new haxe.ui.data.ArrayDataSource<Dynamic>();
+		for (mod in Paths.getModDirectories())
+			source.add({text: mod});
+
+		var drop = new haxe.ui.components.DropDown();
+		drop.dataSource = source;
+		drop.searchable = true;
+		drop.searchPrompt = 'Find mod...';
+		drop.width = 150;
+		drop.selectedItem = {text: Paths.WORKING_MOD_DIRECTORY};
+		drop.onChange = (e) ->
+		{
+			if (drop.selectedItem == null)
+				return;
+
+			Paths.WORKING_MOD_DIRECTORY = drop.selectedItem.text;
+
+			if (callback != null)
+				callback();
+		}
+
+		return drop;
+	}
+
     public static inline function addSpacer(w:Int, h:Int, uiElement:Dynamic)
     {
         var spacer = new haxe.ui.components.Spacer();

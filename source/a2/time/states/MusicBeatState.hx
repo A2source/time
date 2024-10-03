@@ -47,14 +47,8 @@ class MusicBeatState extends FlxUIState
 
 	public static var transitioning:Bool = false;
 
-	public static final IGNORE_COMPONENT:Array<String> = 
-	[
-		'[object TabBarButton]',
-		'[object Window]'
-	];
-
 	// bullshit
-	static var lol:MusicBeatState;
+	public static var instance:MusicBeatState;
 
 	inline function get_controls():Controls
 		return Controls.instance;
@@ -70,7 +64,7 @@ class MusicBeatState extends FlxUIState
 		uiLayer.percentWidth = 100;
 		uiLayer.percentHeight = 100;
 
-		lol = this;
+		instance = this;
 
 		transitioning = false;
 
@@ -108,15 +102,18 @@ class MusicBeatState extends FlxUIState
 		super.update(elapsed);
 
 		if (FlxG.keys.justPressed.F6)
+		{
 			trace(Std.string(FocusManager.instance.focus));
+			trace(this.blockInput);
+		}
 
-		if (FocusManager.instance.focus != null && !IGNORE_COMPONENT.contains(Std.string(FocusManager.instance.focus)))
+		if (FocusManager.instance.focus != null || Screen.instance.hasSolidComponentUnderPoint(Screen.instance.currentMouseX, Screen.instance.currentMouseY))
 		{
 			FlxG.sound.muteKeys = [];
 			FlxG.sound.volumeDownKeys = [];
 			FlxG.sound.volumeUpKeys = [];
 
-			blockInput = true;
+			this.blockInput = true;
 		}
 		else
 		{
@@ -124,7 +121,7 @@ class MusicBeatState extends FlxUIState
 			FlxG.sound.volumeDownKeys = IntroState.volumeDownKeys;
 			FlxG.sound.volumeUpKeys = IntroState.volumeUpKeys;
 
-			blockInput = false;
+			this.blockInput = false;
 		}
 	}
 
@@ -136,7 +133,7 @@ class MusicBeatState extends FlxUIState
 		FocusManager.instance.focus.focus = false;
 
 		// i unfocused but forgot to turn this off so the keys were still locked
-		blockInput = false;
+		this.blockInput = false;
 	}
 
 	private function updateSection():Void
@@ -231,7 +228,7 @@ class MusicBeatState extends FlxUIState
 		WindowManager.instance.reset();
 		WindowManager.instance.container = new haxe.ui.core.Component();
 
-		Toolkit.screen.removeComponent(lol.uiLayer);
+		Toolkit.screen.removeComponent(instance.uiLayer);
 
 		@:privateAccess haxe.ui.ToolkitAssets.instance._imageCache?.clear();
 	}

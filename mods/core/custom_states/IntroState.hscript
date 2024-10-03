@@ -2,5 +2,5 @@ function create()
 {
     if (!IntroState.initialized) makeTransition();
 
-    LoadingState.loadAndSwitchCustomState('ExampleState');
+    LoadingState.loadAndSwitchCustomState('MasterEditorMenu');
 }

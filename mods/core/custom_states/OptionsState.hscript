@@ -40,8 +40,9 @@ function create()
                 check.selected = value;
                 check.onClick = (e) ->
                 {
-                    Reflect.setProperty(ClientPrefs.data, field, check.selected);
-                    ClientPrefs.saveSettings();
+                    var newVal = !Reflect.field(ClientPrefs.data, field);
+                    Reflect.setField(ClientPrefs.data, field, newVal);
+                    check.selected = newVal;
                 }
                 curBox.addComponent(check);
 
@@ -114,7 +115,11 @@ function create()
 
 function update(dt)
 {
-    if (controls.BACK && !object.setting) LoadingState.loadAndSwitchCustomState('ExampleState');
+    if (controls.BACK && !object.setting) 
+    {
+        ClientPrefs.saveSettings();
+        LoadingState.loadAndSwitchCustomState('MasterEditorMenu');
+    }
 
     if (!object.setting)
         return;

@@ -145,6 +145,7 @@ class Main extends Sprite
 		trace(Type.getInstanceFields(Toolkit));
 
 		haxe.ui.focus.FocusManager.instance.autoFocus = false;
+		haxe.ui.focus.FocusManager.instance.enabled = true;
 		haxe.ui.tooltips.ToolTipManager.defaultDelay = 200;
 	}
 

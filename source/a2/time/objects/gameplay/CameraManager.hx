@@ -29,9 +29,6 @@ class ZoomManager
 
     public function new()
     {
-        //  MAKE IT PRINT BADASS SHIT
-        trace('Cam Zoom Manager initialized.');
-
         zooming = ClientPrefs.data.camZooms;
     }
 }
@@ -51,14 +48,10 @@ class CameraManager
 
     public function new()
     {
-        trace('Creating cam manager...');
-
         zoom = new ZoomManager();
 
         desiredPos = new FlxPoint(0, 0);
         currentPos = new FlxObject(0, 0);
-
-        trace('Done.');
     }
 
     public function update(dt:Float, playbackRate:Float)

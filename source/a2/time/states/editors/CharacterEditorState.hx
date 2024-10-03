@@ -400,7 +400,7 @@ class CharacterEditorState extends MusicBeatState
 			var sheet = animSheet.text;
 			curAnim.ref.sheet = sheet;
 
-			if (Paths.charImage(char.name, sheet) == null)
+			if (Paths.charImage(char.name, sheet, char.modDirectory) == null)
 				return;
 
 			curAnim.ref.fps = animFPS.value;
@@ -418,7 +418,7 @@ class CharacterEditorState extends MusicBeatState
 				updateContentUI();
 			}
 
-			char.frames = Paths.getCharSparrow(char.name, sheet);
+			char.frames = Paths.getCharSparrow(char.name, sheet, char.modDirectory);
 			var controller = char.sheetAnimations[char.spriteSheets.indexOf(sheet)];
 
 			if (addFrames)
@@ -455,7 +455,7 @@ class CharacterEditorState extends MusicBeatState
 				addFrames = true;
 			}
 
-			char.trailChar.frames = Paths.getCharSparrow(char.name, sheet);
+			char.trailChar.frames = Paths.getCharSparrow(char.name, sheet, char.modDirectory);
 			var controller = char.trailChar.sheetAnimations[char.spriteSheets.indexOf(sheet)];
 
 			if (addFrames)
@@ -493,11 +493,11 @@ class CharacterEditorState extends MusicBeatState
 			dialogue.cameras = [camMenu];
 			@:privateAccess dialogue._overlay.cameras = [camMenu];
 
-			blockInput = true;
+			this.blockInput = true;
 
 			dialogue.onDialogClosed = function(e)
 			{
-				blockInput = false;
+				this.blockInput = false;
 
 				switch(e.button)
 				{
@@ -768,6 +768,9 @@ class CharacterEditorState extends MusicBeatState
 
 		var buttonBox = new haxe.ui.containers.HBox();
 
+		UiS.addLabel('Working Mod Directory: "${Paths.WORKING_MOD_DIRECTORY}"', formatBox);
+		UiS.addSpacer(0, 5, formatBox);
+
 		saveCharacterButton = new haxe.ui.components.Button();
 		saveCharacterButton.text = 'Save';
 		saveCharacterButton.onClick = function(e:haxe.ui.events.MouseEvent)
@@ -785,18 +788,19 @@ class CharacterEditorState extends MusicBeatState
 			var dataSource = new haxe.ui.data.ArrayDataSource<Dynamic>();
 			var chars:Array<String> = [];
 
-			var root:String = Paths.mods('characters');
-			for (folder in FileSystem.readDirectory(root))
-			{
-				if (FileSystem.isDirectory('$root/$folder'))
-				{
-					if (FileSystem.exists('$root/$folder/character.json'))
-					{
-						dataSource.add({text: folder});
-						chars.push(folder);
-					}
-				}
-			}
+			var directories:Array<String> = [];
+			for (mod in Paths.getModDirectories())
+				if (Paths.mods('characters', mod) != null)
+					directories.push(Paths.mods('characters', mod));
+
+			for (root in directories)
+				for (folder in FileSystem.readDirectory(root))
+					if (FileSystem.isDirectory('$root/$folder'))
+						if (FileSystem.exists('$root/$folder/character.json'))
+						{
+							dataSource.add({text: folder});
+							chars.push(folder);
+						}
 
 			var select = new haxe.ui.containers.ListView();
 			select.width = 200;
@@ -810,11 +814,11 @@ class CharacterEditorState extends MusicBeatState
 			dialogue.cameras = [camMenu];
 			@:privateAccess dialogue._overlay.cameras = [camMenu];
 
-			blockInput = true;
+			this.blockInput = true;
 
 			dialogue.onDialogClosed = function(e)
 			{
-				blockInput = false;
+				this.blockInput = false;
 
 				switch(e.button)
 				{
@@ -844,7 +848,7 @@ class CharacterEditorState extends MusicBeatState
 		openFolder.text = 'Open Character Folder';
 		openFolder.onClick = function(e)
 		{
-			var fullPath = haxe.io.Path.join([Sys.getCwd(), Paths.charFolder(char.name)]).replace('/', '\\');
+			var fullPath = haxe.io.Path.join([Sys.getCwd(), Paths.charFolder(char.name, char.modDirectory)]).replace('/', '\\');
 
 			Sys.command('explorer "$fullPath"');
 		}
@@ -916,7 +920,7 @@ class CharacterEditorState extends MusicBeatState
 					contentSheetsViewContent.text += '$name\n';
 				}
 
-				var charPath = Paths.charFolder(char.name);
+				var charPath = Paths.charFolder(char.name, char.modDirectory);
 				for (pair in pngXmlPairs)
 				{
 					File.copy(pair.png.fullPath, '$charPath/${pair.png.name}');
@@ -947,13 +951,13 @@ class CharacterEditorState extends MusicBeatState
 			if (sheetToRemove == '' || !char.spriteSheets.contains(sheetToRemove))
 				return;
 
-			if (Paths.charImage(char.name, sheetToRemove) == null)
+			if (Paths.charImage(char.name, sheetToRemove, char.modDirectory) == null)
 				return;
 
-			var path = Paths.charFolder(char.name);
+			var path = Paths.charFolder(char.name, char.modDirectory);
 
-			FileSystem.deleteFile(Paths.charImage(char.name, sheetToRemove));
-			FileSystem.deleteFile(Paths.charXml(char.name, sheetToRemove));
+			FileSystem.deleteFile(Paths.charImage(char.name, sheetToRemove, char.modDirectory));
+			FileSystem.deleteFile(Paths.charXml(char.name, sheetToRemove, char.modDirectory));
 
 			updateContentUI();
 		}
@@ -995,19 +999,19 @@ class CharacterEditorState extends MusicBeatState
 					dialogue.cameras = [camMenu];
 					@:privateAccess dialogue._overlay.cameras = [camMenu];
 
-					blockInput = true;
+					this.blockInput = true;
 
 					dialogue.onDialogClosed = function(e)
 					{
-						blockInput = false;
+						this.blockInput = false;
 
-						var charPath = Paths.charFolder(char.name);
+						var charPath = Paths.charFolder(char.name, char.modDirectory);
 						var finalPath = '$charPath/${file.name}';
 
 						switch(e.button)
 						{
 							case '{{cancel}}':
-								if (Paths.charImage(char.name, 'icons') != null)
+								if (Paths.charImage(char.name, 'icons', char.modDirectory) != null)
 									return;
 
 								File.copy(file.fullPath, finalPath);
@@ -1018,7 +1022,7 @@ class CharacterEditorState extends MusicBeatState
 							case 'Set Postfix':
 								if (iconRenameField.text == '')
 								{
-									if (Paths.charImage(char.name, 'icons') != null)
+									if (Paths.charImage(char.name, 'icons', char.modDirectory) != null)
 										return;
 
 									File.copy(file.fullPath, finalPath);
@@ -1029,7 +1033,7 @@ class CharacterEditorState extends MusicBeatState
 
 								var postfix = iconRenameField.text;
 
-								if (FileSystem.exists(Paths.charImage(char.name, 'icons-$postfix')))
+								if (FileSystem.exists(Paths.charImage(char.name, 'icons-$postfix', char.modDirectory)))
 									return;
 
 								File.copy(file.fullPath, finalPath);
@@ -1065,15 +1069,15 @@ class CharacterEditorState extends MusicBeatState
 			if (iconToRemove == '')
 				return;
 
-			if (Paths.charImage(char.name, iconToRemove) == null)
+			if (Paths.charImage(char.name, iconToRemove, char.modDirectory) == null)
 				return;
 
-			var path = Paths.charFolder(char.name);
+			var path = Paths.charFolder(char.name, char.modDirectory);
 
 			for (file in FileSystem.readDirectory(path))
 			{
 				if (file == '$iconToRemove.png')
-					FileSystem.deleteFile(Paths.charImage(char.name, iconToRemove));
+					FileSystem.deleteFile(Paths.charImage(char.name, iconToRemove, char.modDirectory));
 			}
 
 			updateContentUI();
@@ -1100,7 +1104,7 @@ class CharacterEditorState extends MusicBeatState
 			contentSheetsViewContent.text += '$sheet\n';
 
 		contentIconsViewContent.text = '';
-		for (file in FileSystem.readDirectory(Paths.charFolder(char.name)))
+		for (file in FileSystem.readDirectory(Paths.charFolder(char.name, char.modDirectory)))
 		{
 			if (!file.startsWith('icons'))
 				continue;
@@ -1237,11 +1241,11 @@ class CharacterEditorState extends MusicBeatState
 					dialogue.cameras = [camMenu];
 					@:privateAccess dialogue._overlay.cameras = [camMenu];
 
-					blockInput = true;
+					this.blockInput = true;
 
 					dialogue.onDialogClosed = function(e)
 					{
-						blockInput = false;
+						this.blockInput = false;
 
 						switch(e.button)
 						{
@@ -1268,7 +1272,7 @@ class CharacterEditorState extends MusicBeatState
 
 								var iconName = 'icons-$postfix';
 
-								if (Paths.charImage(newName, iconName) != null)
+								if (Paths.charImage(newName, iconName, char.modDirectory) != null)
 									return;
 
 								iconNames.push(iconName);
@@ -1290,6 +1294,9 @@ class CharacterEditorState extends MusicBeatState
 
 		UiS.addHR(7, formatBox);
 
+		UiS.addLabel('Working Mod Directory: "${Paths.WORKING_MOD_DIRECTORY}"', formatBox);
+		UiS.addSpacer(0, 5, formatBox);
+
 		var openAfterCreate = new haxe.ui.components.CheckBox();
 		openAfterCreate.text = 'Load character after creation?';
 		openAfterCreate.selected = true;
@@ -1301,13 +1308,18 @@ class CharacterEditorState extends MusicBeatState
 		{
 			var name = createName.text;
 
-			if (Paths.charFolder(name) != null)
-			{
-				Lib.application.window.alert('Character "$name" already exists!', alertTitleString);
-				return;
-			}
+			for (mod in Paths.getModDirectories())
+				if (Paths.mods('characters', mod) != null)
+					if (Paths.charFolder(name, mod) != null)
+					{
+						Lib.application.window.alert('Character "$name" already exists!', alertTitleString);
+						return;
+					}
 
-			var charPath = '${Paths.mods('characters')}/$name';
+			if (Paths.mods('characters', Paths.WORKING_MOD_DIRECTORY) == null)
+				FileSystem.createDirectory('mods/${Paths.WORKING_MOD_DIRECTORY}/characters');
+
+			var charPath = '${Paths.mods('characters', Paths.WORKING_MOD_DIRECTORY)}/$name';
 
 			FileSystem.createDirectory(charPath);
 
@@ -1464,14 +1476,14 @@ class CharacterEditorState extends MusicBeatState
 		});
 	}
 
-	function loadCharIcons(postfix:String = '', ?charPath:String)
+	function loadCharIcons(postfix:String = '')
 	{
-		var path = '${Paths.charFolder(char.name)}/icons$postfix.png';
+		var path = '${Paths.charFolder(char.name, char.modDirectory)}/icons$postfix.png';
 
 		if (FileSystem.exists(path))
 		{
-			charIcons.loadGraphic(Paths.timeImage(Paths.charImage(char.name, 'icons$postfix')));
-			iconForColButton.loadGraphic(Paths.timeImage(Paths.charImage(char.name, 'icons$postfix')));
+			charIcons.loadGraphic(Paths.timeImage(Paths.charImage(char.name, 'icons$postfix', char.modDirectory)));
+			iconForColButton.loadGraphic(Paths.timeImage(Paths.charImage(char.name, 'icons$postfix', char.modDirectory)));
 		}
 		else
 		{
@@ -1569,47 +1581,29 @@ class CharacterEditorState extends MusicBeatState
 
 	function loadChar(name, reload)
 	{
-		var directories:Array<String> = [Paths.mods('characters')];
 
-		for (i in 0...directories.length) 
-		{
-			var directory:String = directories[i];
-			if(FileSystem.exists(directory)) 
-			{
-				for (folder in FileSystem.readDirectory(directory)) 
-				{
-					var charFolder = haxe.io.Path.join([directory, folder]);
-					if (sys.FileSystem.isDirectory(charFolder) && folder == name)
-					{
-						var isPlayer = (reload ? char.isPlayer : Paths.charJson(name, 'player') != null);
+		var temp = new Character(0, 0, name, true, NORMAL, true);
+		var isPlayer = (reload ? char.isPlayer : Paths.charJson(name, 'player', temp.modDirectory) != null);
 
-						remove(char.trailChar);
-						remove(char);
+		remove(char.trailChar);
+		remove(char);
 
-						char = new Character(0, 0, name, isPlayer, NORMAL, true);
+		char = new Character(0, 0, name, isPlayer, NORMAL, true);
 
-						resetTrail();
+		resetTrail();
 
-						add(char.trailChar);
-						add(char);
+		add(char.trailChar);
+		add(char);
 
-						updateCharacterPositions();
-						setCharAnim(char.animationsArray[0].anim);
+		updateCharacterPositions();
+		setCharAnim(char.animationsArray[0].anim);
 
-						loadCharIcons('', charFolder);
+		loadCharIcons();
 
-						updateAnimNamesView();
-						updateCharacterHaxeUI();
-						updateContentUI();
-						updateMetaHaxeUI();
-
-						return;
-					}
-				}
-			}
-		}
-
-		Lib.application.window.alert('Unable to find character "$name".', alertTitleString);
+		updateAnimNamesView();
+		updateCharacterHaxeUI();
+		updateContentUI();
+		updateMetaHaxeUI();
 	}
 
 	function resetTrail()
@@ -1648,7 +1642,7 @@ class CharacterEditorState extends MusicBeatState
 			metadata: formattedMetadata
 		}
 
-		var charPath = Paths.charFolder(char.name);
+		var charPath = Paths.charFolder(char.name, Paths.WORKING_MOD_DIRECTORY);
 
 		var charContent:String = haxe.Json.stringify(charJsonData, '\t');
 		File.saveContent('$charPath/character.json', charContent);
@@ -1707,7 +1701,7 @@ class CharacterEditorState extends MusicBeatState
 
 	function handleInput(dt:Float)
 	{
-		if (blockInput)
+		if (this.blockInput)
 			return;
 
 		if (FlxG.keys.justPressed.ESCAPE) 

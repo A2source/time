@@ -1,0 +1,32 @@
+var SING_ANIMATIONS = ['singLEFT', 'singDOWN', 'singUP', 'singRIGHT'];
+
+function goodNoteHit(note)
+{
+    runGhost(note, false);
+}
+
+function opponentNoteHit(note)
+{
+    runGhost(note, true);
+}
+
+function runGhost(note, isDad)
+{
+    if (note.isSustainNote)
+        return;
+
+    var char = isDad ? game.getCurDad() : game.getCurBF();
+
+    if (char.prevDir != -1)
+    {
+        var animToSing = SING_ANIMATIONS[char.prevDir] + char.animSuffix;
+        if (animToSing != '')
+            char.playTrailAnim(true, animToSing, true);
+    }
+    char.prevDir = note.noteData;
+
+    FlxTimer.wait(0.03, ()->
+    {
+        char.prevDir = -1;
+    });
+}

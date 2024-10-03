@@ -166,6 +166,8 @@ class Note extends FlxSprite
 	{
 		loadCustomNote(value);
 
+		noteType = value;
+
 		return value;
 	}
 
@@ -255,20 +257,21 @@ class Note extends FlxSprite
 
 	public function loadCustomNote(name:String):Note
 	{
-		Paths.VERBOSE = false;
-
 		if (ChartingState.HARDCODED_NOTES.contains(name))
 			return this;
 
-		var path = Paths.noteJson(name);
-		if (path == null)
-			return this;
+		for (mod in Paths.getModDirectories())
+		{
+			Paths.VERBOSE = false;
 
-		var data:CustomNoteFile = haxe.Json.parse(File.getContent(path));
+			var path = Paths.noteJson(name, mod);
+			if (path == null)
+				continue;
 
-		reloadNote('', data.texture);
+			var data:CustomNoteFile = haxe.Json.parse(File.getContent(path));
 
-		Paths.VERBOSE = true;
+			reloadNote('', data.texture);
+		}
 
 		return this;
 	}
@@ -330,14 +333,21 @@ class Note extends FlxSprite
 		} 
 		else 
 		{
-			if (ChartingState.HARDCODED_NOTES.contains(texture))
-				Paths.VERBOSE = false;
+			Paths.VERBOSE = false;
 
-			var mods = Paths.modsSparrow('images', blahblah);
+			var anyMods:Bool = false;
+			for (mod in Paths.getModDirectories())
+			{
+				var mods = Paths.modsSparrow('images', blahblah, mod);
 
-			if (mods != null)
+				if (mods == null)
+					continue;
+				
 				frames = mods;
-			else
+				anyMods = true;
+			}
+
+			if (!anyMods)
 				frames = Paths.getSparrowAtlas(blahblah);
 
 			loadNoteAnims();

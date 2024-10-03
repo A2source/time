@@ -11,6 +11,7 @@ import flixel.FlxSubState;
 import flixel.FlxBasic;
 import flixel.FlxSprite;
 
+import haxe.ui.core.Screen;
 import haxe.ui.focus.FocusManager;
 
 class MusicBeatSubstate extends FlxSubState
@@ -37,7 +38,6 @@ class MusicBeatSubstate extends FlxSubState
 
 	override function update(elapsed:Float)
 	{
-		//everyStep();
 		var oldStep:Int = curStep;
 
 		updateCurStep();
@@ -48,13 +48,13 @@ class MusicBeatSubstate extends FlxSubState
 
 		super.update(elapsed);
 
-		if (FocusManager.instance.focus != null && !a2.time.states.MusicBeatState.IGNORE_COMPONENT.contains(Std.string(FocusManager.instance.focus)))
+		if (FocusManager.instance.focus != null || Screen.instance.hasSolidComponentUnderPoint(Screen.instance.currentMouseX, Screen.instance.currentMouseY))
 		{
 			FlxG.sound.muteKeys = [];
 			FlxG.sound.volumeDownKeys = [];
 			FlxG.sound.volumeUpKeys = [];
 
-			blockInput = true;
+			this.blockInput = true;
 		}
 		else
 		{
@@ -62,7 +62,7 @@ class MusicBeatSubstate extends FlxSubState
 			FlxG.sound.volumeDownKeys = IntroState.volumeDownKeys;
 			FlxG.sound.volumeUpKeys = IntroState.volumeUpKeys;
 
-			blockInput = false;
+			this.blockInput = false;
 		}
 	}
 
@@ -73,7 +73,7 @@ class MusicBeatSubstate extends FlxSubState
 
 		FocusManager.instance.focus.focus = false;
 
-		blockInput = false;
+		this.blockInput = false;
 	}
 
 	private function updateBeat():Void
