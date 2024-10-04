@@ -1,55 +1,22 @@
 package a2.time.states;
 
 import a2.time.objects.song.Highscore;
-import a2.time.util.CoolUtil;
+import a2.time.states.CustomState;
 import a2.time.util.ClientPrefs;
 import a2.time.util.Discord;
-
 import a2.time.util.Discord.DiscordClient;
+import a2.time.util.Paths;
+
 import flixel.FlxG;
-import flixel.FlxSprite;
-import flixel.util.FlxSpriteUtil;
-import flixel.FlxState;
-import flixel.FlxSubState;
-import flixel.addons.display.FlxGridOverlay;
 import flixel.addons.transition.FlxTransitionSprite.GraphicTransTileDiamond;
 import flixel.addons.transition.FlxTransitionableState;
 import flixel.addons.transition.TransitionData;
 import flixel.graphics.FlxGraphic;
-import flixel.graphics.frames.FlxAtlasFrames;
-import flixel.group.FlxGroup;
-import flixel.input.gamepad.FlxGamepad;
+import flixel.input.keyboard.FlxKey;
 import flixel.math.FlxPoint;
 import flixel.math.FlxRect;
-import flixel.system.FlxSound;
-import flixel.system.ui.FlxSoundTray;
-import flixel.util.FlxSave;
-import flixel.text.FlxText;
-import flixel.tweens.FlxEase;
-import flixel.tweens.FlxTween;
-import flixel.util.FlxColor;
-import flixel.util.FlxTimer;
+
 import lime.app.Application;
-import lime.ui.Window;
-import openfl.Assets;
-import haxe.Json;
-import openfl.Lib;
-
-#if sys
-import haxe.io.Path;
-import openfl.utils.ByteArray;
-import lime.media.AudioBuffer;
-import flash.media.Sound;
-import sys.FileSystem;
-import a2.time.objects.song.Song.SwagSong;
-#end
-
-import tjson.TJSON;
-import flixel.input.keyboard.FlxKey;
-
-import hscript.ParserEx;
-
-using StringTools;
 
 class IntroState extends MusicBeatState
 {
@@ -72,9 +39,9 @@ class IntroState extends MusicBeatState
 		diamond.persist = true;
 		diamond.destroyOnNoUse = false;
 
-		FlxTransitionableState.defaultTransIn = new TransitionData(FADE, FlxColor.BLACK, 1, new FlxPoint(0, -1), {asset: diamond, width: 32, height: 32},
+		FlxTransitionableState.defaultTransIn = new TransitionData(FADE, 0xFF000000, 1, new FlxPoint(0, -1), {asset: diamond, width: 32, height: 32},
 			new FlxRect(-200, -200, FlxG.width * 1.4, FlxG.height * 1.4));
-		FlxTransitionableState.defaultTransOut = new TransitionData(FADE, FlxColor.BLACK, 0.7, new FlxPoint(0, 1),
+		FlxTransitionableState.defaultTransOut = new TransitionData(FADE, 0xFF000000, 0.7, new FlxPoint(0, 1),
 			{asset: diamond, width: 32, height: 32}, new FlxRect(-200, -200, FlxG.width * 1.4, FlxG.height * 1.4));
 	}
 
@@ -108,6 +75,6 @@ class IntroState extends MusicBeatState
 
 		trace('should be running startup now.');
 
-		LoadingState.loadAndSwitchCustomState('IntroState');
+		new a2.time.util.HscriptManager(null).addScript('startup', Paths.mods('', Main.MOD_NAME), 'onStartup', 'hscript').callAll('create', []);
 	}
 }

@@ -323,6 +323,8 @@ class CharacterEditorState extends MusicBeatState
 		FlxG.mouse.visible = true;
 
 		uiLayer.cameras = [camMenu];
+
+		updatePresence();
 	}
 
 	var animHeader:haxe.ui.components.SectionHeader;
@@ -1678,7 +1680,7 @@ class CharacterEditorState extends MusicBeatState
 	function updatePresence() {
 		#if desktop
 		// Updating Discord Rich Presence
-		DiscordClient.changePresence("Character Editor", "Character: " + daAnim, leHealthIcon.getCharacter());
+		DiscordClient.changePresence('Character Editor');
 		#end
 	}
 

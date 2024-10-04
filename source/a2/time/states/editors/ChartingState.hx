@@ -415,7 +415,7 @@ If you have any questions about the editor, ask me!';
 
 		#if desktop
 		// Updating Discord Rich Presence
-		DiscordClient.changePresence("Chart Editor", StringTools.replace(_song.song, '-', ' '));
+		DiscordClient.changePresence('Chart Editor');
 		#end
 
 		vortex = FlxG.save.data.chart_vortex;
@@ -678,6 +678,22 @@ If you have any questions about the editor, ask me!';
 		FlxG.camera.follow(camPos);
 
 		updateGrid();
+	}
+
+	override function onFocusLost()
+	{
+		pauseSong();
+	}
+
+	override function onFocus()
+	{
+		pauseSong();
+	}
+
+	function pauseSong()
+	{
+		FlxG.sound.music.pause();
+		if(vocals != null) vocals.pause();
 	}
 
 	function setupNotetypeDatabase()
@@ -3261,10 +3277,7 @@ If you have any questions about the editor, ask me!';
 		if (FlxG.keys.justPressed.SPACE)
 		{
 			if (FlxG.sound.music.playing)
-			{
-				FlxG.sound.music.pause();
-				if(vocals != null) vocals.pause();
-			}
+				pauseSong();
 			else
 			{
 				if(vocals != null) {

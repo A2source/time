@@ -30,7 +30,7 @@ class HscriptManager
 		return (file.endsWith('.hscript') || file.endsWith('.hxs') || file.endsWith('.skibidi'));
 	}
 
-    public function addScript(scriptName:String, path:String, fileName:String, ext:String)
+    public function addScript(scriptName:String, path:String, fileName:String, ext:String):HscriptManager
     {
 		var parser = new ParserEx();
 
@@ -39,7 +39,7 @@ class HscriptManager
         if (!check)
         {
             Lib.application.window.alert('Hscript file "$fullPath" not found.', Main.ALERT_TITLE);
-            return;
+            return this;
         }
 
 		var program = parser.parseString(File.getContent(fullPath));
@@ -57,6 +57,8 @@ class HscriptManager
 
 		interp.execute(program);
 		states.set(scriptName, interp);
+
+		return this;
 	}
 
     public function addScriptFromPath(path:String, ?file:String = '')

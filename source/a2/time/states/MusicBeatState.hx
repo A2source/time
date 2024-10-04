@@ -4,6 +4,7 @@ import a2.time.objects.song.Conductor;
 import a2.time.objects.song.Conductor.BPMChangeEvent;
 import a2.time.util.Controls;
 import a2.time.util.ClientPrefs;
+import a2.time.util.Discord.DiscordClient;
 
 import flixel.FlxG;
 import flixel.addons.ui.FlxUIState;

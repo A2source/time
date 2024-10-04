@@ -422,15 +422,6 @@ class PlayState extends MusicBeatState
 	public var shaderUpdates:Array<Float->Void> = [];
 	public var camGameShaders:Array<ShaderEffect> = [];
 	public var camHUDShaders:Array<ShaderEffect> = [];
-	
-	public var inDev:Bool = false;
-
-	#if desktop
-	// Discord RPC variables
-	var storyDifficultyText:String = "";
-	var detailsText:String = "";
-	var detailsPausedText:String = "";
-	#end
 
 	// Lua shit
 	public var introSoundsSuffix:String = '';
@@ -906,13 +897,6 @@ class PlayState extends MusicBeatState
 		Conductor.mapBPMChanges(SONG);
 		Conductor.changeBPM(SONG.bpm);
 
-		#if desktop
-		storyDifficultyText = CoolUtil.difficulties[storyDifficulty];
-
-		// String for when the game is paused
-		detailsPausedText = 'Paused';
-		#end
-
 		var songName:String = SONG.song;
 
 		curStage = SONG.stage;
@@ -1101,11 +1085,7 @@ class PlayState extends MusicBeatState
 		precacheList.set('alphabet', 'image');
 	
 		#if desktop
-		// Updating Discord Rich Presence.
-		if (!inDev)
-			DiscordClient.changePresence(detailsText, SONG.song);
-  		else
-			DiscordClient.changePresence("nuh uh", "nuh uh");
+		DiscordClient.changePresence('In Game', SONG.song);
 		#end
 
 		if(!controls.controllerMode)
@@ -2665,16 +2645,6 @@ class PlayState extends MusicBeatState
 		}
 
    		songLength = FlxG.sound.music.length;
-
-		#if desktop
-		// Updating Discord Rich Presence (with Time Left)
-if (!inDev)
-   {
-		DiscordClient.changePresence(detailsText, SONG.song, '', true, songLength);
-   } else {
- 		DiscordClient.changePresence("nuh uh", "nuh uh");
-   }
-		#end
 	}
 
 	var debugNum:Int = 0;
@@ -2979,53 +2949,10 @@ if (!inDev)
 		if (paused)
 		{
 			unpauseStuff();
-
 			paused = false;
-
-			#if desktop
-			if (startTimer != null && startTimer.finished)
-			{
-				DiscordClient.changePresence(detailsText, SONG.song, '', true, songLength - Conductor.songPosition - ClientPrefs.data.noteOffset);
-			}
-			else
-			{
-				DiscordClient.changePresence(detailsText, SONG.song, '');
-			}
-			#end
 		}
 
 		super.closeSubState();
-	}
-
-	override public function onFocus():Void
-	{
-		#if desktop
-		if (health > 0 && !paused)
-		{
-			if (Conductor.songPosition > 0.0)
-			{
-				DiscordClient.changePresence(detailsText, SONG.song, '', true, songLength - Conductor.songPosition - ClientPrefs.data.noteOffset);
-			}
-			else
-			{
-				DiscordClient.changePresence(detailsText, SONG.song, '');
-			}
-		}
-		#end
-
-		super.onFocus();
-	}
-
-	override public function onFocusLost():Void
-	{
-		#if desktop
-		if (health > 0 && !paused)
-		{
-			DiscordClient.changePresence(detailsPausedText, SONG.song, '');
-		}
-		#end
-
-		super.onFocusLost();
 	}
 
 	function resyncVocals():Void
@@ -3708,10 +3635,6 @@ if (!inDev)
 		pauseGame();
 
 		hscriptManager.callAll('onPause', [getCurBF()]);
-
-		#if desktop
-		DiscordClient.changePresence(detailsPausedText, SONG.song);
-		#end
 	}
 
 	function openChartEditor()
@@ -3723,7 +3646,7 @@ if (!inDev)
 		chartingMode = true;
 
 		#if desktop
-		DiscordClient.changePresence("Chart Editor", null, null, true);
+		DiscordClient.changePresence('Chart Editor');
 		#end
 	}
 
@@ -3762,10 +3685,6 @@ if (!inDev)
 
 			hscriptManager.callAll('onGameover', []);
 
-			#if desktop
-			// Game Over doesn't get his own variable because it's only used here
-			DiscordClient.changePresence('Game Over - ' + detailsText, SONG.song);
-			#end
 			isDead = true;
 			return true;
 		}

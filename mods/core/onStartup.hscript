@@ -1,0 +1,25 @@
+function create()
+{
+    trace('Startup successful!');
+
+    var manager = new HscriptManager(null);
+
+    for (mod in Paths.getModDirectories())
+    {
+        if (mod == MOD_NAME)
+            continue;
+
+        trace('-----------------');
+        trace('Found mod "' + mod + '"');
+
+        var file = 'mods/' + mod + '/onStartup.hscript';
+        if (!FileSystem.exists(file))
+            continue;
+
+        manager.addScript('startup', Paths.mods('', mod), 'onStartup', 'hscript');
+    }
+
+    manager.callAll('create', []);
+
+    LoadingState.loadAndSwitchCustomState('IntroState');
+}

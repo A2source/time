@@ -6,7 +6,6 @@ import flixel.FlxGame;
 import flixel.FlxState;
 import openfl.Assets;
 import openfl.Lib;
-import openfl.display.FPS;
 import openfl.display.Sprite;
 import openfl.events.Event;
 import openfl.display.StageScaleMode;
@@ -19,6 +18,7 @@ import lime.app.Application;
 import a2.time.util.Discord;
 import a2.time.util.Discord.DiscordClient;
 import a2.time.util.ClientPrefs;
+import a2.time.objects.ui.FPS;
 
 import haxe.ui.components.Button;
 import haxe.ui.containers.VBox;

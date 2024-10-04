@@ -208,6 +208,7 @@ class CustomState extends MusicBeatState
 
 		interp.variables.set("Interp", Interp);
 		interp.variables.set("ParserEx", ParserEx);
+		interp.variables.set('HscriptManager', HscriptManager);
 
 		interp.variables.set('UIShortcuts', a2.time.util.UIShortcuts);
 		interp.variables.set('UiS', a2.time.util.UIShortcuts);
