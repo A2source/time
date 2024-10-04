@@ -7,6 +7,8 @@ import a2.time.util.HscriptManager;
 import a2.time.states.PlayState;
 import a2.time.substates.CustomSubState;
 
+import a2.time.objects.InteractableSprite;
+
 import flixel.FlxG;
 import flixel.FlxObject;
 import flixel.FlxSubState;
@@ -148,6 +150,19 @@ class CustomState extends MusicBeatState
 
 		interp.variables.set("CustomState", CustomState);
 		interp.variables.set("CustomSubState", CustomSubState);
+
+		interp.variables.set('InteractableSprite', InteractableSprite);
+
+		interp.variables.set('privateAccess', (func:Dynamic) ->
+		{
+			@:privateAccess
+			{
+				if (func != null)
+					func();
+			}
+		});
+
+		interp.variables.set('Date', Date);
 
 		interp.variables.set('ClientPrefs', a2.time.util.ClientPrefs);
 		interp.variables.set("MusicBeatState", a2.time.states.MusicBeatState);
