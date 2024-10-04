@@ -1,4 +1,5 @@
-var delayTime = Conductor.crochet * 0.002 / game.playbackRate;
+var tweenTime = Conductor.crochet * 0.0009;
+var delayTime = Conductor.crochet * 0.002;
 
 var msText;
 var alphaTween;
@@ -29,15 +30,15 @@ function postScoreCalc(note, data)
 
     rating.scale.set(0, 0);
 
-    FlxTween.tween(rating.scale, {x: 0.5, y: 0.5}, 0.2, {ease: FlxEase.expoOut});
+    FlxTween.tween(rating.scale, {x: 0.5, y: 0.5}, tweenTime / 3, {ease: FlxEase.expoOut});
 
     rating.acceleration.x = FlxG.random.int(-20, 20);
 
     rating.velocity.y = -200;
     rating.acceleration.y = 450;
 
-    FlxTween.tween(rating.scale, {x: 1.2, y: 0}, 0.29, {ease: FlxEase.backIn, startDelay: delayTime});
-    FlxTween.tween(rating, {alpha: 0}, 0.3, {startDelay: delayTime, 
+    FlxTween.tween(rating.scale, {x: 1.2, y: 0}, tweenTime - 0.01, {ease: FlxEase.backIn, startDelay: delayTime});
+    FlxTween.tween(rating, {alpha: 0}, tweenTime, {startDelay: delayTime, 
         onComplete: (twn)->
         {
             rating.destroy();
@@ -49,7 +50,7 @@ function postScoreCalc(note, data)
     msText.text = '(' + data.noteDiff + ' ms.)';
     msText.alpha = 1;
 
-    alphaTween = FlxTween.tween(msText, {alpha: 0}, 0.3, {startDelay: delayTime});
+    alphaTween = FlxTween.tween(msText, {alpha: 0}, tweenTime, {startDelay: delayTime});
 
     if (combo < 10)
         return;
@@ -71,8 +72,8 @@ function postScoreCalc(note, data)
         sprite.velocity.y = -100;
         sprite.acceleration.y = 250;
 
-        FlxTween.tween(sprite.scale, {x: 1.2, y: 0}, 0.29, {ease: FlxEase.backIn, startDelay: delayTime});
-        FlxTween.tween(sprite, {alpha: 0}, 0.3, {startDelay: delayTime, 
+        FlxTween.tween(sprite.scale, {x: 1.2, y: 0}, tweenTime - 0.01, {ease: FlxEase.backIn, startDelay: delayTime});
+        FlxTween.tween(sprite, {alpha: 0}, tweenTime, {startDelay: delayTime, 
             onComplete: (twn)->
             {
                 sprite.destroy();
