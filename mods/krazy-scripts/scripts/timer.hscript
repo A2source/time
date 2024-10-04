@@ -3,7 +3,7 @@ var songLength = 0;
 var timer;
 function postStart(song)
 {
-    timer = new FlxText(0, game.strumLine.y + 110);
+    timer = new FlxText(0, (ClientPrefs.data.downScroll ? 110 : -35));
     timer.setFormat(Paths.modsFont('vcr'), 20, 0xFFFFFFFF, 'center', FlxTextBorderStyle.OUTLINE, 0xFF000000);
     timer.borderSize = 3;
     timer.cameras = [game.camHUD];
