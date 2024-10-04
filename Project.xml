@@ -59,6 +59,9 @@
 	<assets path="assets/shared"        library="shared"        exclude="*.ogg" if="web"/>
 	<assets path="assets/shared"        library="shared"        exclude="*.mp3" unless="web"/>
 
+	<assets path='vlc/libvlc.dll' rename='libvlc.dll' embed='false'/>
+	<assets path='vlc/libvlccore.dll' rename='libvlccore.dll' embed='false'/>
+
 	<!-- un-comment this to include mod template in compilation -->
 	<!-- <define name="INCLUDE_MOD_TEMPLATE"/> -->
 
@@ -170,7 +173,7 @@
 
 	<!--Place custom nodes like icons here (higher priority to override the HaxeFlixel icon)-->
 	
-	<icon path="art/icon16.png" size='16'/>
-	<icon path="art/icon32.png" size='32'/>
 	<icon path="art/icon64.png" size='64'/>
+	<icon path="art/icon32.png" size='32'/>
+	<icon path="art/iconOG.png"/>
 </project>

@@ -65,21 +65,15 @@ class Main extends Sprite
 		super();
 
 		if (stage != null)
-		{
 			init();
-		}
 		else
-		{
 			addEventListener(Event.ADDED_TO_STAGE, init);
-		}
 	}
 
 	private function init(?E:Event):Void
 	{
 		if (hasEventListener(Event.ADDED_TO_STAGE))
-		{
 			removeEventListener(Event.ADDED_TO_STAGE, init);
-		}
 
 		setupGame();
 	}
@@ -100,12 +94,12 @@ class Main extends Sprite
 			gameHeight = Math.ceil(stageHeight / zoom);
 		}
 
-		// yeeah we load custom icon baby :)
-		var guardian:Int = FlxG.random.int(0, 6);
-		setWindowIcon('${guardian}');
+		var game:FlxGame = new FlxGame(gameWidth, gameHeight, initialState, framerate, framerate, skipSplash, startFullscreen);
+
+		@:privateAccess game._customSoundTray = a2.time.objects.ui.TimeSoundTray;
 	
 		ClientPrefs.loadDefaultKeys();
-		addChild(new FlxGame(gameWidth, gameHeight, initialState, framerate, framerate, skipSplash, startFullscreen));
+		addChild(game);
 
 		a2.time.util.Controls.instance = new a2.time.util.Controls();
 
@@ -149,9 +143,9 @@ class Main extends Sprite
 		haxe.ui.tooltips.ToolTipManager.defaultDelay = 200;
 	}
 
-	public static function setWindowIcon(what:String):Void
+	public static function setWindowIcon(path:String):Void
 	{
-		var icon:Image = Image.fromFile('assets/images/window/${what}.png');
+		var icon:Image = Image.fromFile(path);
 		Lib.application.window.setIcon(icon);
 	}
 
