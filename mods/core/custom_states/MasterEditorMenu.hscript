@@ -33,6 +33,8 @@ diff = [
 var initialized = false;
 function create()
 {
+    Paths.clearUnusedMemory();
+
     DiscordClient.changePresence('');
 
     if (FlxG.sound.music != null)

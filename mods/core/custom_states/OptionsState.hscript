@@ -1,147 +1,1174 @@
-var object = {
-    setting: false,
-    id: 0,
-    key: '',
-    array: []
+var lArrow;
+var rArrow;
+
+var ARROW_X_OFFSET = 2.5;
+var ARROW_Y_OFFSET = 2;
+
+var finishedAnim = {
+    left: true,
+    right: true
 }
+
+var screen;
+var spritesToRemove = [];
+
+var curPage = 0;
+var bindSelec = 0;
+var selec = 0;
+
+var pages = [
+    'controls',
+    'gameplay',
+    'visuals & ui',
+    'graphics'
+];
+
+var pageCols = [
+    'gameplay' => 0xFF3D9AD8
+    'visuals & ui' => 0xFFF05757,
+    'graphics' => 0xFFA4EB47
+];
+
+var box;
+var optionsText;
+
+var titleSprites = [];
+var optionSprites = [];
+var controlSprites = [];
+
+var curSprite = null;
+
+var transitioning = false;
+
+var camOptions;
+var camFront;
+
+var maxCamScroll = 1;
 
 function create()
 {
-    FlxG.mouse.visible = true;
+    DiscordClient.changePresence('Options Menu');
 
-    box = new HBox();
-    push = new VBox();
+    screen = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0xFF520000);
+    add(screen);
 
-    view = new ScrollView();
-    view.height = FlxG.height - 50;
-
-    UiS.addSpacer(25, 0, box);
-    UiS.addSpacer(0, 50, push);
-
-    box.addComponent(push);
-    push.addComponent(view);
-
-    for (field in Reflect.fields(ClientPrefs.data))
+    if (FlxG.save.data.optionsIndex == null)
     {
-        var value = Reflect.field(ClientPrefs.data, field);
-
-        trace(field, value, Type.typeof(value));
-
-        var curBox = new HBox();
-        curBox.backgroundColor = 0xFF420000;
-
-        UiS.addLabel(field, curBox);
-        UiS.addSpacer(10, 0, curBox);
-
-        switch(Type.typeof(value))
-        {
-            case ValueType.TBool:
-                check = new CheckBox();
-                check.selected = value;
-                check.onClick = (e) ->
-                {
-                    var newVal = !Reflect.field(ClientPrefs.data, field);
-                    Reflect.setField(ClientPrefs.data, field, newVal);
-                    check.selected = newVal;
-                }
-                curBox.addComponent(check);
-
-            case ValueType.TInt:
-                switch(field)
-                {
-
-                }
-
-            case ValueType.TClass(Array):
-                for (thing in value)
-                    trace(thing);
-        }
-
-        view.addComponent(curBox);
+        FlxG.save.data.optionsIndex = 0;
+        FlxG.save.flush();
     }
 
-    UiS.addSpacer(50, 0, box);
+    curPage = FlxG.save.data.optionsIndex;
 
-    controlBox = new ScrollView();
-
-    box.addComponent(controlBox);
-
-    for (control in ['note_left', 'note_down', 'note_up', 'note_right'])
-    {   
-        var curBind = ClientPrefs.keyBinds.get(control);
-
-        if (curBind == null || curBind == [] || curBind.length == 0)
-        {
-            ClientPrefs.keyBinds.set(control, [87, 87]);
-            curBind = ClientPrefs.keyBinds.get(control);
-        }
-
-        if (curBind.length > 2)
-        {
-            ClientPrefs.keyBinds.set(control, [curBind[0], curBind[1]]);
-            curBind = ClientPrefs.keyBinds.get(control);
-        }
-
-        trace(control, curBind);
-
-        var keyBox = new HBox();
-        keyBox.backgroundColor = 0xFF420000;
-
-        UiS.addLabel(control, keyBox);
-        UiS.addSpacer(10, 0, keyBox);
-
-        for (i in 0...2)
-        {
-            var cur = curBind;
-
-            var button = new Button();
-            button.text = InputFormatter.getKeyName(curBind[i]);
-            button.onClick = (e) ->
-            {
-                object.id = i;
-                object.key = control;
-                object.setting = true;
-                object.array = curBind;
-            }
-
-            keyBox.addComponent(button);
-        }
-
-        controlBox.addComponent(keyBox);
-    }
-
-    Screen.addComponent(box);
+    addUI();
 }
 
+var bindEndPos = FlxG.width / 1.175;
+var bindingInfo = {
+    binding: false,
+    sprites: []
+}
+
+var mPos = {x: FlxG.width / 2, y: FlxG.height / 2}
+
+var holdTimer = 0;
+var HOLD_THRESHOLD = 0.3;
+
+var turboCounter = 0;
+var TURBO_SPEED = 0.025;
+var doTurbo = false;
+
+var tweening = false;
 function update(dt)
 {
-    if (controls.BACK && !object.setting) 
+    if (bindingInfo.binding)
     {
-        ClientPrefs.saveSettings();
-        LoadingState.loadAndSwitchCustomState('MasterEditorMenu');
+        updateBinding(dt);
+        return;
     }
 
-    if (!object.setting)
+    if (FlxG.mouse.justMoved && !tweening) FlxTween.cancelTweensOf(mPos);
+
+    if (controls.UI_UP_P) genericVerticalSelect(-1);
+    if (controls.UI_DOWN_P) genericVerticalSelect(1);
+
+    if (controls.UI_LEFT_P) genericHorizontalSelect(-1);
+    if (controls.UI_RIGHT_P) genericHorizontalSelect(1);
+
+    updateTurbo(dt);
+
+    if (controls.ACCEPT && !transitioning)
+    {
+        switch(pages[curPage])
+        {
+            case 'controls':
+                if (curSprite != null)
+                    curSprite.onClick();
+        }
+    }
+    if (controls.BACK && !transitioning) goBack();
+
+    // ------------------------------------------------------------------
+
+    if (FlxG.mouse.wheel == 0 || camOptions == null || transitioning)
         return;
 
+    FlxTween.cancelTweensOf(camOptions.scroll);
+    FlxTween.tween(camOptions.scroll, {y: camOptions.scroll.y - FlxG.mouse.wheel * 150}, 1, {ease: FlxEase.expoOut, onUpdate: (_)->
+    {
+        if (camOptions.scroll.y < 0)
+        {
+            FlxTween.cancelTweensOf(camOptions.scroll);
+            camOptions.scroll.y = 0;
+        }
+        if (camOptions.scroll.y > maxCamScroll)
+        {
+            FlxTween.cancelTweensOf(camOptions.scroll);
+            camOptions.scroll.y = maxCamScroll;
+        }
+    }});
+}
+
+function updateTurbo(dt)
+{
+    if (pages[curPage] == 'controls' || transitioning)
+    {
+        resetTurbo();
+        return;
+    }
+
+    if (controls.UI_LEFT || controls.UI_RIGHT || FlxG.mouse.pressed) holdTimer++;
+    if (holdTimer * dt > HOLD_THRESHOLD)
+    {
+        if (turboCounter >= TURBO_SPEED)
+        {
+            if (curSprite != null)
+                curSprite.onClick();
+
+            turboCounter = 0;
+        }
+        turboCounter += dt;
+    }
+
+    if (controls.UI_LEFT_R || controls.UI_RIGHT_R || FlxG.mouse.justReleased)
+        resetTurbo();
+}
+
+function resetTurbo()
+{
+    holdTimer = 0;
+    turboCounter = 0;
+}
+
+function genericVerticalSelect(amt)
+{
+    if (transitioning)
+        return;
+        
+    selec += amt;
+
+    if (selec == 0)
+    {
+        curSprite = null;
+
+        tweenMouse(rArrow.x + 30, rArrow.y + 50, false);
+    }
+
+    switch(pages[curPage])
+    {
+        // fml
+        case 'controls':
+            if (selec > controlSprites.length)
+            {
+                selec = 1;
+
+                FlxTween.cancelTweensOf(camOptions.scroll);
+                FlxTween.tween(camOptions.scroll, {y: 0}, 0.5, {ease: FlxEase.expoOut});
+            }
+            if (selec < 1)
+                selec = controlSprites.length;
+
+            var cur = controlSprites[selec - 1];
+            var sprite = cur.sprites[Math.abs(bindSelec - 1)];
+
+            curSprite = sprite;
+
+            if (selec > 1)
+            {
+                FlxTween.cancelTweensOf(camOptions.scroll);
+                FlxTween.tween(camOptions.scroll, {y: sprite.y - 100}, 0.5, {ease: FlxEase.expoOut});
+            }
+
+            tweenMouse(bindSelec == 0 ? FlxG.width / 2 + camOptions.x : bindEndPos + camOptions.x - 5, sprite.y + sprite.height / 2, true);
+
+        case 'gameplay', 'visuals & ui', 'graphics':
+            if (selec > optionSprites.length)
+            {
+                selec = 1;
+
+                FlxTween.cancelTweensOf(camOptions.scroll);
+                FlxTween.tween(camOptions.scroll, {y: 0}, 0.5, {ease: FlxEase.expoOut});
+            }
+            if (selec < 1)
+                selec = optionSprites.length;
+                
+            var cur = optionSprites[selec - 1];
+            var sprite = cur.sprites[0];
+
+            curSprite = sprite;
+
+            if (selec > 1)
+            {
+                FlxTween.cancelTweensOf(camOptions.scroll);
+                FlxTween.tween(camOptions.scroll, {y: sprite.y - 100}, 0.5, {ease: FlxEase.expoOut});
+            }
+
+            tweenMouse(sprite.x + sprite.width + 30, sprite.y + sprite.height - 25, true);
+    }
+}
+
+function genericHorizontalSelect(amt)
+{
+    if (transitioning)
+        return;
+
+    // always control the top bar on selec = 0
+    if (selec == 0)
+    {
+        curSprite = null;
+
+        if (amt < 0)
+            lArrow.onClick();
+        else if (amt > 0)
+            rArrow.onClick();
+
+        return;
+    }
+
+    switch(pages[curPage])
+    {
+        case 'controls':
+            bindSelec += amt;
+
+            if (bindSelec > 1)
+                bindSelec = 0;
+            if (bindSelec < 0)
+                bindSelec = 1;
+
+            var cur = controlSprites[selec - 1];
+            var sprite = cur.sprites[Math.abs(bindSelec - 1)];
+
+            curSprite = sprite;
+
+            tweenMouse(bindSelec == 0 ? FlxG.width / 2 + camOptions.x : bindEndPos + camOptions.x - 5, sprite.y + sprite.height / 2, true);
+
+        case 'gameplay', 'visuals & ui', 'graphics':
+            var cur = optionSprites[selec - 1];
+
+            switch(cur.type)
+            {
+                case 'bool':
+                    cur.sprites[0].onClick();
+
+                case 'float', 'int':
+                    var left = cur.sprites[0];
+                    var right = cur.sprites[1];
+
+                    var sprite = amt < 0 ? left : right;
+
+                    curSprite = sprite;
+
+                    sprite.onClick();
+                    tweenMouse(sprite.x + sprite.width + 30, sprite.y + sprite.height - 25, true);
+            }
+    }
+}
+
+var formattedBinds = [
+    'note_up'		=> 'Note Up',
+    'note_left'		=> 'Note Left',
+    'note_down'		=> 'Note Down',
+    'note_right'	=> 'Note Right',
+    
+    'ui_up'			=> 'UI Up',
+    'ui_left'		=> 'UI Left',
+    'ui_down'		=> 'UI Down',
+    'ui_right'		=> 'UI Right',
+    
+    'accept'		=> 'Accept',
+    'back'			=> 'Back',
+    'pause'			=> 'Pause',
+    'reset'			=> 'Reset',
+    
+    'volume_mute'	=> 'Mute Volume',
+    'volume_up'		=> 'Volume Up',
+    'volume_down'	=> 'Volume Down',
+    
+    'debug_1'		=> 'Debug 1',
+    'debug_2'		=> 'Debug 2'
+];
+
+var bindsOrder = [
+    'note_up',
+    'note_left',
+    'note_down',
+    'note_right',
+    
+    'ui_up',
+    'ui_left',
+    'ui_down',
+    'ui_right',
+    
+    'accept',
+    'back'	,
+    'pause'	,
+    'reset'	,
+    
+    'volume_mute',
+    'volume_up',
+    'volume_down',
+    
+    'debug_1',
+    'debug_2'
+];
+
+function updateBinding(dt)
+{
     if (!FlxG.keys.justPressed.ANY)
         return;
 
+    var cur = controlSprites[selec - 1];
+
+    var keyCodes = ClientPrefs.keyBinds.get(cur.key);
     var array = [];
 
-    switch(object.id)
+    switch(bindSelec)
     {
         case 0:
-            array = [FlxG.keys.firstJustPressed(), object.array[1]];
+            array = [FlxG.keys.firstJustPressed(), keyCodes[1] != null ? keyCodes[1] : -1];
 
         case 1:
-            array = [object.array[0], FlxG.keys.firstJustPressed()];
+            array = [keyCodes[0] != null ? keyCodes[0] : -1, FlxG.keys.firstJustPressed()];
     }
 
-    ClientPrefs.keyBinds.set(object.key, array); 
-    object.setting = false;
-
+    ClientPrefs.keyBinds[cur.key] = array;
     ClientPrefs.saveSettings();
 
-    LoadingState.loadAndSwitchCustomState('OptionsState');
+    for (sprite in bindingInfo.sprites)
+        sprite.destroy();
+
+    var sprite = cur.sprites[bindSelec];
+
+    sprite.loadGraphic(generateTextBitmapData(InputFormatter.getKeyName(FlxG.keys.firstJustPressed()), 36));
+    sprite.x = getBindTextPos(sprite, bindSelec);
+
+    sprite.onHover();
+    sprite.onExit();
+
+    bindingInfo.binding = false;
+
+    genericHorizontalSelect(-1);
+    FlxTimer.wait(dt * 1.5, ()-> { genericHorizontalSelect(1); });
+}
+
+var bindSprites = [];
+var endingBinds = ['note_right', 'ui_right', 'reset', 'volume_down'];
+
+function createControls()
+{
+    controlSprites = [];
+
+    var totalHeight = 0;
+    var arrayOrder = 1;
+    for (control in bindsOrder)
+    {   
+        var curBind = ClientPrefs.keyBinds.get(control);
+
+        var me = {label: null, sprites: [], key: control}
+
+        var label = getFormattedText(formattedBinds[control], 36);
+        label.setPosition(25, 25 + totalHeight);
+
+        me.label = label;
+        spritesToRemove.push(label);
+
+        totalHeight += label.height + (endingBinds.contains(control) ? label.height / 2 : 0) + 15;
+
+        var mid = false;
+        for (key in [curBind[1], curBind[0]])
+        {
+            var id = mid ? 0 : 1;
+
+            var bind = new InteractableSprite().loadGraphic(generateTextBitmapData(InputFormatter.getKeyName(key), 36));
+            bind.setPosition(getBindTextPos(bind, id), label.y);
+            bind.cameras = [camOptions];
+
+            bind.onHover = ()->
+            {
+                if (bindingInfo.binding)
+                {
+                    bind.setCursor = false;
+                    return;
+                }
+                else
+                    bind.setCursor = true;
+
+                var cur = ClientPrefs.keyBinds[control][id];
+                
+                var text = getFormattedText(InputFormatter.getKeyName(cur), 36);
+                text.color = 0xFF000000;
+                text.borderColor = 0xFFFFFFFF;
+                text.drawFrame(true);
+
+                bind.loadGraphic(FlxGraphic.fromBitmapData(text.framePixels));
+                bind.x = getBindTextPos(bind, id);
+
+                curSprite = bind;
+            }
+
+            bind.onExit = ()->
+            {
+                var cur = ClientPrefs.keyBinds[control][id];
+                
+                var text = getFormattedText(InputFormatter.getKeyName(cur), 36);
+                text.drawFrame(true);
+
+                bind.loadGraphic(FlxGraphic.fromBitmapData(text.framePixels));
+                bind.x = getBindTextPos(bind, id);
+                bind.drawFrame(true);
+            }
+
+            var thisID = arrayOrder;
+            bind.onClick = ()->
+            {
+                if (bindingInfo.binding)
+                    return;
+
+                selec = thisID;
+                bindSelec = id;
+
+                bindingInfo.binding = true;
+
+                var screen = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0xFF000000);
+                screen.alpha = 0.5;
+                add(screen);
+
+                // 50 80 50
+
+                var topText = getFormattedText('Rebinding Key:', 50);
+                var midText = getFormattedText(formattedBinds[control], 80);
+                var bottomText = getFormattedText('- Press any key to Bind -', 50);
+
+                var i = -150;
+                for (text in [bottomText, midText, topText])
+                {
+                    text.screenCenter();
+                    text.y -= i;
+
+                    add(text);
+
+                    i += 150;
+                }
+
+                bindingInfo.sprites = [screen, topText, midText, bottomText];
+                for (sprite in bindingInfo.sprites)
+                    sprite.cameras = [camFront];
+            }
+
+            me.sprites.push(bind);
+            spritesToRemove.push(bind);
+
+            mid = true;
+        }
+
+        var backingSprite = new FlxSprite(label.x - 2, label.y - 2).makeGraphic(bindEndPos - 22, label.height + 4, 0xFF000000);
+        backingSprite.alpha = 0.5;
+        backingSprite.cameras = [camOptions];
+        spritesToRemove.push(backingSprite);
+
+        add(backingSprite);
+
+        add(label);
+        for (bind in me.sprites)
+            add(bind);
+
+        me.label = label;
+
+        controlSprites.push(me);
+        arrayOrder++;
+    }
+
+    maxCamScroll = 775;
+}
+
+var optionsDatabase = [
+    {
+        name: 'downScroll',
+        type: 'bool'
+    },
+    {
+        name: 'middleScroll',
+        type: 'bool'
+    },
+    {
+        name: 'ghostTapping',
+        type: 'bool'
+    },
+    {
+        name: 'noReset',
+        type: 'bool'
+    },
+    {
+        name: 'hitsoundVolume',
+        type: 'float',
+        min: 0,
+        max: 1,
+        step: 0.1
+    },
+    {
+        name: 'noteOffset',
+        type: 'int',
+        min: -500,
+        max: 500,
+        step: 1
+    },
+    {
+        name: 'ratingOffset',
+        type: 'int',
+        min: -30,
+        max: 30,
+        step: 1
+    },
+    {
+        name: 'sickWindow',
+        type: 'int',
+        min: 15,
+        max: 45,
+        step: 1
+    },
+    {
+        name: 'goodWindow',
+        type: 'int',
+        min: 15,
+        max: 90,
+        step: 1
+    },
+    {
+        name: 'badWindow',
+        type: 'int',
+        min: 15,
+        max: 135,
+        step: 1
+    },
+    {
+        name: 'safeFrames',
+        type: 'float',
+        min: 2,
+        max: 10,
+        step: 0.1
+    },
+    {
+        name: 'showFPS',
+        type: 'bool'
+    },
+    {
+        name: 'flashing',
+        type: 'bool'
+    },
+    {
+        name: 'autoPause',
+        type: 'bool'
+    },
+    {
+        name: 'camZooms',
+        type: 'bool'
+    },
+    {
+        name: 'hideHud',
+        type: 'bool'
+    },
+    {
+        name: 'discordRPC',
+        type: 'bool'
+    },
+    {
+        name: 'healthBarAlpha',
+        type: 'float',
+        min: 0,
+        max: 1,
+        step: 0.1
+    },
+    {
+        name: 'antialiasing',
+        type: 'bool'
+    },
+    {
+        name: 'lowQuality',
+        type: 'bool'
+    },
+    {
+        name: 'shaders',
+        type: 'bool'
+    },
+    {
+        name: 'framerate',
+        type: 'int',
+        min: 30,
+        max: 240,
+        step: 1
+    }
+];
+
+var gameplayOptions = [
+    'downScroll',
+    'middleScroll',
+    'ghostTapping',
+    'noReset',
+    'hitsoundVolume',
+    'noteOffset',
+    'ratingOffset',
+    'sickWindow',
+    'goodWindow',
+    'badWindow',
+    'safeFrames'
+];
+
+var visualOptions = [
+    'showFPS',
+    'flashing',
+    'autoPause',
+    'camZooms',
+    'hideHud',
+    'discordRPC',
+    'healthBarAlpha'
+];
+
+var graphicOptions = [
+    'antialiasing',
+    'lowQuality',
+    'shaders',
+    'framerate'
+];
+
+var formattedOptions = [
+    'downScroll' => 'Downscroll',
+    'middleScroll' => 'Middlescroll',
+    'ghostTapping' => 'Ghost Tapping',
+    'noReset' => 'No Reset',
+    'hitsoundVolume' => 'Hitsound Volume',
+    'noteOffset' => 'Note Offset',
+    'ratingOffset' => 'Rating Offset',
+    'sickWindow' => 'Sick Window',
+    'goodWindow' => 'Good Window',
+    'badWindow' => 'Bad Window',
+    'safeFrames' => 'Safe Frames',
+    'showFPS' => 'Show FPS',
+    'flashing' => 'Flashing',
+    'autoPause' => 'Auto Pause',
+    'camZooms' => 'Cam Zooms',
+    'hideHud' => 'Hide HUD',
+    'discordRPC' => 'Discord RPC',
+    'healthBarAlpha' => 'Healthbar Alpha'
+    'antialiasing' => 'Antialiasing',
+    'lowQuality' => 'Low Quality',
+    'shaders' => 'Shaders',
+    'framerate' => 'Framerate'
+];
+
+
+var descriptions = [
+    'downScroll' => 'Notes travel downwards',
+    'middleScroll' => 'Note strums are centered',
+    'ghostTapping' => 'Tapping is allowed during downtime',
+    'noReset' => 'Reset button is disabled',
+    'hitsoundVolume' => 'Volume of note hitsounds',
+    'noteOffset' => 'Global MS Offset',
+    'ratingOffset' => 'MS Offset for note ratings',
+    'sickWindow' => 'MS Window for Sick hits',
+    'goodWindow' => 'MS Window for Good hits',
+    'badWindow' => 'MS Window for Bad hits',
+    'safeFrames' => '# of frames safe from hitting early / late',
+    'showFPS' => 'FPS & MEM Counter is visible',
+    'flashing' => 'Flashing lights enabled',
+    'autoPause' => 'Game pauses when unfocused',
+    'camZooms' => 'Camera zooms in gameplay',
+    'hideHud' => 'Hide HUD in game',
+    'discordRPC' => 'Use Discord Rich Presence',
+    'healthBarAlpha' => 'Opacity of the healthbar'
+    'antialiasing' => 'Antialiasing is applied to sprites,\nmore mem usage',
+    'lowQuality' => 'Remove extra details',
+    'shaders' => 'Shaders are enabled where used',
+    'framerate' => 'The program\'s refresh rate'
+];
+
+function boolTextFormat(bool)
+{
+    if (bool)
+        return 'YES';
+
+    return 'NO';
+}
+
+var descBox;
+var descText;
+
+function setupOptions(page)
+{
+    optionSprites = [];
+
+    var arrayToUse = [];
+    switch(page)
+    {
+        case 'gameplay':
+            arrayToUse = gameplayOptions;
+
+        case 'visuals & ui':
+            arrayToUse = visualOptions;
+
+        case 'graphics':
+            arrayToUse = graphicOptions;
+    }
+
+    descBox = new FlxSprite();
+    descBox.alpha = 0;
+    descText = getFormattedText('', 38);
+    descText.alignment = 'center';
+
+    var totalHeight = 0;
+    for (option in arrayToUse)
+    {
+        var data = getOptionDataByName(option);
+
+        var me = {type: data.type, sprites: []}
+
+        var label = getFormattedText(formattedOptions[option].toUpperCase(), 36);
+        label.color = pageCols[page];
+        label.setPosition(25, 25 + totalHeight);
+
+        var backing = new InteractableSprite(0, label.y - 4).makeGraphic(camOptions.width, label.height + 8);
+        backing.alpha = 0;
+        backing.setCursor = false;
+
+        backing.onHover = ()->
+        {
+            descText.text = descriptions[option];
+            descText.x = FlxG.width / 2 - descText.width / 2;
+            descText.y = FlxG.height * 0.9 - descText.height / 2;
+
+            descBox.setPosition(descText.x - 2, descText.y - 2);
+            descBox.makeGraphic(descText.width + 4, descText.height + 4, 0xFF000000);
+
+            for (item in [descText, descBox])
+            {
+                FlxTween.cancelTweensOf(item);
+                FlxTween.tween(item, {alpha: 1}, 0.4, {ease: FlxEase.expoOut});
+            }
+        }
+
+        backing.onExit = ()->
+        {
+            for (item in [descText, descBox])
+            {
+                FlxTween.cancelTweensOf(item);
+                FlxTween.tween(item, {alpha: 0}, 0.4, {ease: FlxEase.expoOut});
+            }
+        }
+
+        spritesToRemove.push(backing);
+        spritesToRemove.push(label);
+
+        totalHeight += label.height + 25;
+
+        var curPref = Reflect.field(ClientPrefs.data, option);
+
+        switch(data.type)
+        {
+            case 'bool':
+                var display = new InteractableSprite(label.x + label.width + 100, label.y).loadGraphic(generateTextBitmapData(boolTextFormat(Reflect.field(ClientPrefs.data, option)), 36));
+
+                display.onClick = ()->
+                {
+                    Reflect.setProperty(ClientPrefs.data, option, !Reflect.field(ClientPrefs.data, option));
+
+                    display.loadGraphic(generateTextBitmapData(boolTextFormat(Reflect.field(ClientPrefs.data, option)), 36));
+
+                    switch(option)
+                    {
+                        case 'showFPS':
+                            Main.fpsVar.visible = Reflect.field(ClientPrefs.data, option);
+                    }
+                }
+
+                display.onHover = ()-> 
+                { 
+                    display.color = 0xFFA2A2A2; 
+                    curSprite = display;
+                }
+                display.onExit = ()-> { display.color = 0xFFFFFFFF; }
+
+                spritesToRemove.push(display);
+
+                endPos = display.x + display.width + 10;
+
+                me.sprites.push(display);
+
+            case 'int', 'float':
+                var leftArrow = new InteractableSprite(label.x + label.width + 80, label.y).loadGraphic(generateTextBitmapData('<', 36));
+
+                var displayText = getFormattedText(curPref, 36);
+                displayText.setPosition(leftArrow.x + leftArrow.width + 10, leftArrow.y);
+
+                var rightArrow = new InteractableSprite(displayText.x + displayText.width + 10, label.y).loadGraphic(generateTextBitmapData('>', 36));
+
+                leftArrow.onHover = ()-> 
+                { 
+                    leftArrow.color = 0xFFA2A2A2; 
+                    curSprite = leftArrow;
+                }
+                rightArrow.onHover = ()-> 
+                { 
+                    rightArrow.color = 0xFFA2A2A2; 
+                    curSprite = rightArrow;
+                }
+                leftArrow.onExit = ()-> { leftArrow.color = 0xFFFFFFFF; }
+                rightArrow.onExit = ()-> { rightArrow.color = 0xFFFFFFFF; }
+
+                leftArrow.onClick = ()->
+                {
+                    var value = Reflect.field(ClientPrefs.data, option);
+
+                    value -= data.step;
+                    if (value <= data.min)
+                        value = data.min;
+
+                    // had weird float precision errors making really small numbers close to 0
+                    // so, clamp decimal to the lowest 10th
+                    value *= 10;
+                    value = Std.int(value);
+                    value /= 10;
+
+                    Reflect.setProperty(ClientPrefs.data, option, value);
+                    displayText.text = value;
+
+                    rightArrow.x = displayText.x + displayText.width + 10;
+
+                    switch(option)
+                    {
+                        case 'framerate':
+                            updateFPS();
+                    }
+                }
+
+                rightArrow.onClick = ()->
+                {
+                    var value = Reflect.field(ClientPrefs.data, option);
+
+                    value += data.step;
+                    if (value >= data.max)
+                        value = data.max;
+
+                    Reflect.setProperty(ClientPrefs.data, option, value);
+                    displayText.text = value;
+
+                    rightArrow.x = displayText.x + displayText.width + 10;
+
+                    switch(option)
+                    {
+                        case 'framerate':
+                            updateFPS();
+                    }
+                }
+
+                spritesToRemove.push(leftArrow);
+                spritesToRemove.push(displayText);
+                spritesToRemove.push(rightArrow);
+
+                me.sprites.push(leftArrow);
+                me.sprites.push(rightArrow);
+        }
+
+        optionSprites.push(me);
+    }
+
+    for (sprite in spritesToRemove)
+    {
+        sprite.cameras = [camOptions];
+        add(sprite);
+    }
+
+    spritesToRemove.push(descBox);
+    spritesToRemove.push(descText);
+
+    descBox.cameras = [camFront];
+    descText.cameras = [camFront];
+
+    add(descBox);
+    add(descText);
+
+    maxCamScroll = totalHeight - 160;
+}
+
+function updateFPS()
+{
+    FlxG.updateFramerate = ClientPrefs.data.framerate;
+	FlxG.drawFramerate = ClientPrefs.data.framerate;
+}
+
+function getOptionDataByName(name)
+{
+    for (option in optionsDatabase)
+        if (option.name == name)
+            return option;
+
+    return null;
+}
+
+var pageData = [
+    {func: createControls, param: null},
+    {func: setupOptions, param: 'gameplay'},
+    {func: setupOptions, param: 'visuals & ui'},
+    {func: setupOptions, param: 'graphics'}
+];
+
+function changeMenu(amt)
+{
+    curPage += amt;
+
+    if (curPage >= pages.length)
+        curPage = 0;
+    if (curPage < 0)
+        curPage = pages.length - 1;
+
+    var i = -1;
+    for (page in pages)
+    {
+        i++;
+
+        var selected = i == curPage;
+        
+        var sprite = titleSprites[i];
+        sprite.visible = selected;
+
+        if (!selected)
+            continue;
+
+        FlxTween.cancelTweensOf(sprite.scale);
+
+        sprite.scale.set(0.7, 0.7);
+        FlxTween.tween(sprite.scale, {x: 0.6, y: 0.6}, 1, {ease: FlxEase.expoOut});
+    }
+
+    for (item in spritesToRemove)
+        item.destroy();
+
+    FlxTween.cancelTweensOf(camOptions.scroll);
+    FlxTween.tween(camOptions.scroll, {y: 0}, 1, {ease: FlxEase.expoOut});
+
+    var data = pageData[curPage];
+    data.func(data.param);
+
+    FlxG.save.data.hcOptionsIndex = curPage;
+    FlxG.save.flush();
+}
+
+function addUI()
+{
+    for (page in pages)
+    {
+        var sprite = new FlxSprite().loadSparrow('custom_states/options', page);
+        sprite.animation.addByPrefix('idle', 'idle', 8, true);
+        sprite.animation.play('idle');
+
+        sprite.scale.set(0.6, 0.6);
+        sprite.updateHitbox();
+
+        sprite.screenCenter();
+        sprite.y -= 200;
+
+        sprite.visible = pages[curPage] == page;
+
+        titleSprites.push(sprite);
+    }
+
+    lArrow = new InteractableSprite();
+    lArrow.frames = Paths.modsSparrow('custom_states/options', 'left-arrow');
+    lArrow.animation.addByPrefix('idle', 'left-arrow', 8, true);
+    lArrow.animation.addByPrefix('use', 'use', 18, false);
+    lArrow.animation.play('idle');
+
+    lArrow.scale.set(0.6, 0.6);
+    lArrow.updateHitbox();
+
+    lArrow.screenCenter();
+    lArrow.y -= 200;
+    lArrow.x -= 150;
+
+    lArrow.onClick = ()->
+    {
+        lArrow.animation.play('use', true);
+
+        if (finishedAnim.left)
+        {
+            lArrow.x -= ARROW_X_OFFSET;
+            lArrow.y -= ARROW_Y_OFFSET;
+        }
+
+        finishedAnim.left = false;
+
+        lArrow.animation.finishCallback = ()->
+        {
+            lArrow.animation.play('idle');
+            lArrow.animation.finishCallback = null;
+
+            lArrow.x += ARROW_X_OFFSET;
+            lArrow.y += ARROW_Y_OFFSET;
+
+            finishedAnim.left = true;
+        }
+
+        changeMenu(-1);
+    }
+
+    rArrow = new InteractableSprite();
+    rArrow.frames = Paths.modsSparrow('custom_states/options', 'right-arrow');
+    rArrow.animation.addByPrefix('idle', 'right-arrow', 8, true);
+    rArrow.animation.addByPrefix('use', 'use', 18, false);
+    rArrow.animation.play('idle');
+
+    rArrow.scale.set(0.6, 0.6);
+    rArrow.updateHitbox();
+
+    rArrow.screenCenter();
+    rArrow.y -= 200;
+    rArrow.x += 150;
+
+    rArrow.onClick = ()->
+    {
+        rArrow.animation.play('use', true);
+
+        if (finishedAnim.right)
+        {
+            rArrow.x -= ARROW_X_OFFSET;
+            rArrow.y -= ARROW_Y_OFFSET;
+        }
+
+        finishedAnim.right = false;
+
+        rArrow.animation.finishCallback = ()->
+        {
+            rArrow.x += ARROW_X_OFFSET;
+            rArrow.y += ARROW_Y_OFFSET;
+
+            rArrow.animation.play('idle');
+            rArrow.animation.finishCallback = null;
+
+            finishedAnim.right = true;
+        }
+
+        changeMenu(1);
+    }
+
+    box = new FlxSprite().load(Paths.stateImage('options', 'box'));
+    box.scale.set(0.7, 0.7);
+    box.updateHitbox();
+    box.screenCenter();
+
+    box.y += 50;
+
+    optionsText = new FlxSprite().loadSparrow('custom_states/options', 'options');
+    optionsText.animation.addByPrefix('idle', 'options', 8, true);
+    optionsText.animation.play('idle');
+
+    optionsText.scale.set(0.6, 0.6);
+    optionsText.updateHitbox();
+
+    optionsText.screenCenter();
+    optionsText.y -= 300;
+
+    add(box);
+
+    add(lArrow);
+    add(rArrow);
+
+    for (sprite in titleSprites)
+        add(sprite);
+
+    add(optionsText);
+
+    camOptions = new FlxCamera();
+    camOptions.bgColor = 0x00000000;
+    camOptions.setPosition(box.x, box.y + 135);
+
+    camOptions.width = box.width;
+    camOptions.height = box.height - 165;
+
+    camFront = new FlxCamera();
+    camFront.bgColor = 0x00000000;
+
+    FlxG.cameras.add(camOptions, false);
+    FlxG.cameras.add(camFront, false);
+
+    changeMenu(0);
+}
+
+function generateTextBitmapData(string, fontSize)
+{
+    var text = getFormattedText(string, fontSize);
+    text.drawFrame(true);
+
+    return FlxGraphic.fromBitmapData(text.framePixels);
+}
+
+function getFormattedText(string, fontSize)
+{
+    var text = new FlxText(0, 0, -1, string);
+    text.setFormat(Paths.modsFont('roboto'), fontSize);
+    text.cameras = [camOptions];
+    
+    text.borderStyle = FlxTextBorderStyle.OUTLINE;
+    text.borderSize = 4;
+    text.borderColor = 0xFF000000;
+
+    return text;
+}
+
+function getBindTextPos(text, id)
+{
+    return id == 0 ? (FlxG.width / 2 - text.width / 2) : (bindEndPos - text.width);
+}
+
+function tweenMouse(x, y, camCheck)
+{
+    tweening = true;
+
+    FlxTween.cancelTweensOf(mPos);
+    FlxTween.tween(mPos, {x: x, y: y}, 0.5, {ease: FlxEase.expoOut, onUpdate: (_)->
+    {
+        Lib.application.window.warpMouse(mPos.x, mPos.y - (camCheck ? camOptions.scroll.y - camOptions.y : 0));
+    }, onComplete: (t)->
+    {
+        tweening = false;
+    }});
+}
+
+function goBack()
+{
+    transitioning = true;
+
+    spritesToRemove.push(lArrow);
+    spritesToRemove.push(rArrow);
+    spritesToRemove.push(box);
+    spritesToRemove.push(optionsText);
+
+    for (sprite in titleSprites)
+        spritesToRemove.push(sprite);
+
+    for (sprite in spritesToRemove)
+        sprite.destroy();
+
+    screen.destroy();
+
+    LoadingState.loadAndSwitchCustomState('MasterEditorMenu');
+
+    ClientPrefs.saveSettings();
 }

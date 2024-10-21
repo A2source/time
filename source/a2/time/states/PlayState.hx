@@ -3099,6 +3099,19 @@ class PlayState extends MusicBeatState
 		if (rtxFile == null)
 		{
 			rtxResetButton.disabled = true;
+
+			for (name in charNames)
+			{
+				var ref = char(name).rimLightShader;
+
+				ref.setFloatArray('overlayColor', [0, 0, 0, 0]);
+				ref.setFloatArray('satinColor', [0, 0, 0, 0]);
+				ref.setFloatArray('innerShadowColor', [0, 0, 0, 0]);
+
+				ref.setFloat('innerShadowAngle', 0);
+				ref.setFloat('innerShadowDistance', 0);
+			}
+
 			return;
 		}
 
@@ -3174,17 +3187,22 @@ class PlayState extends MusicBeatState
 				continue;
 			}
 
+			var angle = ref.getFloat('innerShadowAngle');
+			var dist = ref.getFloat('innerShadowDistance');
+
 			var curFile:CharacterRimLightFile =
 			{
 				satinCol: ref.getFloatArray('satinColor'),
 				innerCol: ref.getFloatArray('innerShadowColor'),
 				overlayCol: ref.getFloatArray('overlayColor'),
 
-				angle: ref.getFloat('innerShadowAngle'),
-				dist: ref.getFloat('innerShadowDistance'),
+				angle: angle == null ? 0 : angle,
+				dist: dist == null ? 0 : dist,
 
 				name: name
 			}
+
+			trace(angle, dist);
 
 			data.lights.push(curFile);
 		}

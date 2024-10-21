@@ -2,6 +2,9 @@ package a2.time.objects;
 
 import flixel.FlxG;
 
+import openfl.ui.Mouse;
+import openfl.ui.MouseCursor;
+
 class InteractableSprite extends DynamicSprite
 {
     public var onHover:Dynamic;
@@ -13,13 +16,24 @@ class InteractableSprite extends DynamicSprite
     public var onClick:Dynamic;
     public var camIndex:Int = 0;
 
+    public var cursor:MouseCursor = BUTTON;
+    public var setCursor:Bool = true;
+
     override public function update(dt:Float)
     {
+        super.update(dt);
+
+        if (!isOnScreen(cameras[camIndex]))
+            return;
+
         if (!FlxG.mouse.overlaps(this, cameras[camIndex]))
         {
             if (justHovered)
             {
                 justHovered = false;
+
+                if (setCursor)
+                    Mouse.cursor = ARROW;
 
                 if (onExit != null)
                     onExit();
@@ -36,6 +50,9 @@ class InteractableSprite extends DynamicSprite
                 onHover();
         }
 
+        if (setCursor)
+            Mouse.cursor = cursor;
+
         if (whileHovered != null)
             whileHovered();
 
@@ -46,5 +63,13 @@ class InteractableSprite extends DynamicSprite
             return;
 
         onClick();
+    }
+
+    override public function destroy()
+    {
+        if (setCursor)
+            Mouse.cursor = ARROW;
+
+        super.destroy();
     }
 }

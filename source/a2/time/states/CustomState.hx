@@ -9,10 +9,16 @@ import a2.time.substates.CustomSubState;
 
 import a2.time.objects.InteractableSprite;
 
+import flixel.addons.effects.FlxTrailArea;
+import flixel.effects.particles.FlxEmitter;
+import flixel.effects.particles.FlxParticle;
+import flixel.util.FlxDestroyUtil;
+
 import flixel.FlxG;
 import flixel.FlxObject;
 import flixel.FlxSubState;
 import flixel.math.FlxPoint;
+import flixel.math.FlxAngle;
 import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 import flixel.util.FlxTimer;
@@ -32,7 +38,6 @@ import flixel.FlxState;
 import flixel.addons.display.FlxGridOverlay;
 import flixel.addons.effects.FlxTrailArea;
 import openfl.filters.ShaderFilter;
-import flixel.math.FlxPoint;
 import a2.time.objects.song.Conductor.BPMChangeEvent;
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 import flixel.addons.transition.FlxTransitionableState;
@@ -118,6 +123,7 @@ class CustomState extends MusicBeatState
 		interp.variables.set("makeTransition", a2.time.states.IntroState.makeTransition);
 		interp.variables.set("Path", haxe.io.Path);
 		interp.variables.set("Std", Std);
+		interp.variables.set("Sys", Sys);
 		interp.variables.set("FileSystem", sys.FileSystem);
 		interp.variables.set("File", sys.io.File);
 		interp.variables.set("Controls", a2.time.util.Controls);
@@ -152,6 +158,17 @@ class CustomState extends MusicBeatState
 		interp.variables.set("CustomSubState", CustomSubState);
 
 		interp.variables.set('InteractableSprite', InteractableSprite);
+		interp.variables.set('FlxGraphic', FlxGraphic);
+
+		interp.variables.set('FlxAngle', FlxAngle);
+
+		interp.variables.set('Mouse', openfl.ui.Mouse);
+
+		interp.variables.set('cursorARROW', openfl.ui.MouseCursor.ARROW);
+		interp.variables.set('cursorAUTO', openfl.ui.MouseCursor.AUTO);
+		interp.variables.set('cursorBUTTON', openfl.ui.MouseCursor.BUTTON);
+		interp.variables.set('cursorHAND', openfl.ui.MouseCursor.HAND);
+		interp.variables.set('cursorIBEAM', openfl.ui.MouseCursor.IBEAM);
 
 		interp.variables.set('privateAccess', (func:Dynamic) ->
 		{
@@ -163,6 +180,11 @@ class CustomState extends MusicBeatState
 		});
 
 		interp.variables.set('Date', Date);
+
+		interp.variables.set('FlxTrailArea', FlxTrailArea);
+		interp.variables.set('FlxEmitter', FlxEmitter);
+		interp.variables.set('FlxParticle', FlxParticle);
+		interp.variables.set('FlxDestroyUtil', FlxDestroyUtil);
 
 		interp.variables.set('ClientPrefs', a2.time.util.ClientPrefs);
 		interp.variables.set("MusicBeatState", a2.time.states.MusicBeatState);
