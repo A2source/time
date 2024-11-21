@@ -1,3 +1,11 @@
+var back;
+var floor;
+var light1;
+var light2;
+var curtains;
+var screen;
+var spotlight;
+
 function start(song)
 {
     var elements = [];
@@ -66,7 +74,7 @@ function onEvent(name, v1, v2, v3)
 
             smoke.flipX = !right;
             smoke.alpha = 0;
-            FlxTween.tween(smoke, {alpha: 0.6}, 3, {ease: FlxEase.expoOut});
+            FlxTween.tween(smoke, {alpha: 0.6}, 3, {ease: FlxEase.expoOut}, 'smoke ' + i + ' alpha');
             smoke.velocity.x = right ? -10 : 10;
             smokes.push(smoke);
         }
@@ -86,7 +94,7 @@ function onEvent(name, v1, v2, v3)
             {
                 remove(smoke);
                 smoke.destroy();
-            }});
+            }}, 'smoke ' + smoke.x + ' out');
         }
 
         smokes = [];

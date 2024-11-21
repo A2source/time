@@ -1,7 +1,7 @@
 package a2.time.objects;
 
 import a2.time.objects.TimeSprite;
-import a2.time.util.Paths;
+import a2.time.Paths;
 
 class DynamicSprite extends TimeSprite 
 {

@@ -1,8 +1,8 @@
 package a2.time.states;
 
 import a2.time.util.Controls;
-import a2.time.util.Paths;
-import a2.time.util.HscriptManager;
+import a2.time.Paths;
+import a2.time.objects.managers.HscriptManager;
 
 import a2.time.states.PlayState;
 import a2.time.substates.CustomSubState;
@@ -113,7 +113,6 @@ class CustomState extends MusicBeatState
 		interp.variables.set("CharacterEditorState", a2.time.states.editors.CharacterEditorState);
 		interp.variables.set("pi", Math.PI);
 		interp.variables.set("curMusicName", Main.curMusicName);
-		interp.variables.set("Highscore", a2.time.objects.song.Highscore);
 		interp.variables.set("Conductor", a2.time.objects.song.Conductor);
 		interp.variables.set("HealthIcon", a2.time.objects.gameplay.HealthIcon);
 		interp.variables.set("FlxTransitionableState", flixel.addons.transition.FlxTransitionableState);
@@ -128,7 +127,7 @@ class CustomState extends MusicBeatState
 		interp.variables.set("File", sys.io.File);
 		interp.variables.set("Controls", a2.time.util.Controls);
 		interp.variables.set("flixelSave", FlxG.save);
-		interp.variables.set("Paths", a2.time.util.Paths);
+		interp.variables.set("Paths", a2.time.Paths);
 		interp.variables.set("CoolUtil", a2.time.util.CoolUtil);
 		interp.variables.set("Math", Math);
 		interp.variables.set("FlxCamera", FlxCamera);
@@ -148,7 +147,6 @@ class CustomState extends MusicBeatState
 		interp.variables.set("Song", a2.time.objects.song.Song);
 		interp.variables.set("Reflect", Reflect);
 		interp.variables.set("PlayState", a2.time.states.PlayState);
-		interp.variables.set("WeekData", a2.time.objects.song.WeekData);
 		interp.variables.set("DiscordClient", a2.time.util.DiscordClient);
 		interp.variables.set("controls", a2.time.util.Controls.instance);
 		interp.variables.set("FlxObject", FlxObject);
@@ -229,7 +227,6 @@ class CustomState extends MusicBeatState
 		interp.variables.set('ValueType', Type.ValueType);
 
 		interp.variables.set("Character", a2.time.objects.gameplay.Character);
-		interp.variables.set("Boyfriend", a2.time.objects.gameplay.Boyfriend);
 
 		interp.variables.set('OUTLINE', FlxTextBorderStyle.OUTLINE);
 

@@ -3,7 +3,9 @@ var songLength = 0;
 var timer;
 function postStart(song)
 {
-    timer = new FlxText(0, (ClientPrefs.data.downScroll ? 110 : -35));
+    trace(ClientPrefs.data.downScroll);
+    
+    timer = new FlxText(0, game.strumLine.y + (ClientPrefs.data.downScroll ? 110 : -35));
     timer.setFormat(Paths.modsFont('vcr'), 20, 0xFFFFFFFF, 'center', FlxTextBorderStyle.OUTLINE, 0xFF000000);
     timer.borderSize = 3;
     timer.cameras = [game.camHUD];
@@ -18,7 +20,7 @@ function stepHit(step)
 
     songLength = FlxG.sound.music.length;
 
-    FlxTween.tween(timer, {alpha: 1}, 1, {ease: FlxEase.expoOut});
+    FlxTween.tween(timer, {alpha: 1 / game.playbackRate}, 1, {ease: FlxEase.expoOut}, 'timer in');
 }
 
 var done = false;
@@ -30,7 +32,7 @@ function update(dt)
     var calc = songLength - (Conductor.songPosition - ClientPrefs.data.noteOffset);
 
     timer.text = FlxStringUtil.formatTime(Math.floor(calc / 1000), false);
-    timer.x = game.playerStrums.members[1].x + 110 - timer.width / 2;
+    timer.x = game.playerStrums.members[1].x + (game.playerStrums.members[2].x - game.playerStrums.members[1].x) - timer.width / 2;
 
     if (timer.text == '0:00')
         done = true;

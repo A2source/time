@@ -12,7 +12,9 @@ function onMiss(dir, note)
     game.vocals.volume = 0;
 
     noteMiss(note);
-    gameFeedback(dir);
+
+    if (note != null)
+        gameFeedback(dir);
         
     game.hscriptManager.setAll('combo', combo);
 }

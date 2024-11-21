@@ -7,14 +7,13 @@ import haxe.Json;
 import haxe.format.JsonParser;
 import a2.time.objects.song.Song;
 
-import a2.time.util.Paths;
+import a2.time.Paths;
 
 using StringTools;
 
 typedef StageFile = 
 {
 	var defaultZoom:Float;
-	var isPixelStage:Bool;
 
 	var boyfriend:Array<Dynamic>;
 	var girlfriend:Array<Dynamic>;

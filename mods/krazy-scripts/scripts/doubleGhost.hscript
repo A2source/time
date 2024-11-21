@@ -19,10 +19,11 @@ function runGhost(note, isDad)
 
     if (char.prevDir != -1)
     {
-        var animToSing = SING_ANIMATIONS[char.prevDir] + char.animSuffix;
+        var animToSing = SING_ANIMATIONS[char.prevDir];
         if (animToSing != '')
             char.playTrailAnim(true, animToSing, true);
     }
+    
     char.prevDir = note.noteData;
 
     FlxTimer.wait(0.03, ()->

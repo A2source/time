@@ -1,8 +1,8 @@
 package a2.time.substates;
 
 import a2.time.states.CustomState;
-import a2.time.util.Paths;
-import a2.time.util.HscriptManager;
+import a2.time.Paths;
+import a2.time.objects.managers.HscriptManager;
 
 import hscript.Interp;
 

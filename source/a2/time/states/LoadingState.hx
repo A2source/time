@@ -2,7 +2,7 @@ package a2.time.states;
 
 import a2.time.objects.song.StageData;
 import a2.time.util.ClientPrefs;
-import a2.time.util.Paths;
+import a2.time.Paths;
 
 import lime.app.Promise;
 import lime.app.Future;

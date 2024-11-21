@@ -23,7 +23,7 @@ import js.html.FileSystem;
 import js.html.File;
 #end
 
-import a2.time.util.Paths;
+import a2.time.Paths;
 
 using StringTools;
 class AtlasFrameMaker extends FlxFramesCollection

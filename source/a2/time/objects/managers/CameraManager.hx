@@ -1,4 +1,4 @@
-package a2.time.objects.gameplay;
+package a2.time.objects.managers;
 
 import a2.time.util.ClientPrefs;
 

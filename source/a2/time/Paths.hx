@@ -1,4 +1,4 @@
-package a2.time.util;
+package a2.time;
 
 import animateatlas.AtlasFrameMaker;
 import flixel.math.FlxPoint;
@@ -662,6 +662,35 @@ class Paths
 	}
 
 	/*
+	 * Custom Strum Skins
+	 */
+
+	static public function customStrumSkinFolder(key:String, modDirectory:String = Main.MOD_NAME)
+	{
+		return mods('custom_strumskins/$key', modDirectory);
+	}
+
+	static public function customStrumSkinFile(name:String, key:String, ext:String, modDirectory:String = Main.MOD_NAME)
+	{
+		return modsFile('custom_strumskins/$name', key, ext, modDirectory);
+	}
+
+	static public function customStrumSkinJson(key:String, modDirectory:String = Main.MOD_NAME)
+	{
+		return customStrumSkinFile(key, key, 'json', modDirectory);
+	}
+
+	static public function customStrumSkinPNG(key:String, modDirectory:String = Main.MOD_NAME)
+	{
+		return customStrumSkinFile(key, key, 'png', modDirectory);
+	}
+
+	static public function customStrumSkinXML(key:String, modDirectory:String = Main.MOD_NAME)
+	{
+		return customStrumSkinFile(key, key, 'xml', modDirectory);
+	}
+
+	/*
 	 * our util
 	 */
 
@@ -716,7 +745,7 @@ class Paths
 		var path:String = 'modsList.txt';
 		if(FileSystem.exists(path))
 		{
-			var list:Array<String> = CoolUtil.coolTextFile(path);
+			var list:Array<String> = a2.time.util.CoolUtil.coolTextFile(path);
 			for (i in list)
 			{
 				var dat = i.split("|");

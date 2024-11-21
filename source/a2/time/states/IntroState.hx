@@ -1,11 +1,10 @@
 package a2.time.states;
 
-import a2.time.objects.song.Highscore;
 import a2.time.states.CustomState;
 import a2.time.util.ClientPrefs;
 import a2.time.util.Discord;
 import a2.time.util.Discord.DiscordClient;
-import a2.time.util.Paths;
+import a2.time.Paths;
 
 import flixel.FlxG;
 import flixel.addons.transition.FlxTransitionSprite.GraphicTransTileDiamond;
@@ -52,7 +51,7 @@ class IntroState extends MusicBeatState
 
 	override public function create():Void
 	{
-		a2.time.util.Paths.clearStoredMemory();
+		a2.time.Paths.clearStoredMemory();
 		
 		#if windows
 		a2.time.util.Discord.DiscordClient.initialize();
@@ -71,10 +70,8 @@ class IntroState extends MusicBeatState
 
 		ClientPrefs.loadPrefs();
 
-		Highscore.load();
-
 		trace('should be running startup now.');
 
-		new a2.time.util.HscriptManager(null).addScript('startup', Paths.mods('', Main.MOD_NAME), 'onStartup', 'hscript').callAll('create', []);
+		new a2.time.objects.managers.HscriptManager(null).addScript('startup', Paths.mods('', Main.MOD_NAME), 'onStartup', 'hscript').callAll('create', []);
 	}
 }

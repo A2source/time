@@ -1,10 +1,9 @@
 package a2.time.objects.gameplay;
 
 import flixel.FlxSprite;
-import openfl.utils.Assets as OpenFlAssets;
 
 import a2.time.util.ClientPrefs;
-import a2.time.util.Paths;
+import a2.time.Paths;
 
 using StringTools;
 
@@ -12,7 +11,8 @@ class HealthIcon extends FlxSprite
 {
 	public var sprTracker:FlxSprite;
 	private var isPlayer:Bool = false;
-	private var char:String = '';
+	
+	public var character:String = '';
 
 	public function new(char:String = 'bf', isPlayer:Bool = false)
 	{
@@ -34,7 +34,7 @@ class HealthIcon extends FlxSprite
 	private var iconOffsets:Array<Float> = [0, 0, 0];
 	public function change(char:String, suffix:String = '') 
 	{
-		if(this.char != char) 
+		if(character != char) 
 		{
 			var iconGraphic:Dynamic = null;
 			for (mod in Paths.getModDirectories())
@@ -78,11 +78,11 @@ class HealthIcon extends FlxSprite
 				animation.add(char, [0, 1], 0, false, isPlayer);
 
 			animation.play(char);
-			this.char = char;
+			character = char;
 
 			antialiasing = ClientPrefs.data.antialiasing;
 
-			if(char.endsWith('-pixel'))
+			if(character.endsWith('-pixel'))
 				antialiasing = false;
 		}
 	}
@@ -90,11 +90,8 @@ class HealthIcon extends FlxSprite
 	override function updateHitbox()
 	{
 		super.updateHitbox();
+
 		offset.x = iconOffsets[0];
 		offset.y = iconOffsets[1];
-	}
-
-	public function getCharacter():String {
-		return char;
 	}
 }

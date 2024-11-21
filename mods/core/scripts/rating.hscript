@@ -112,8 +112,6 @@ function onEndSong()
 
     percent = accuracy;
     if(Math.isNaN(percent)) percent = 0;
-
-    Highscore.saveScore(SONG.song, score, game.storyDifficulty, percent);
 }
 
 // osu! mania accuracy calc

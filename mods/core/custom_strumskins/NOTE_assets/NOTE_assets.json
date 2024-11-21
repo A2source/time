@@ -1,0 +1,124 @@
+{
+	"notes": {
+		"solid": {
+			"d": "blue0",
+			"l": "purple0",
+			"r": "red0",
+			"u": "green0"
+		},
+		"sus": {
+			"d": {
+				"e": "blue hold end",
+				"p": "blue hold piece"
+			},
+			"l": {
+				"e": "pruple end hold",
+				"p": "purple hold piece"
+			},
+			"r": {
+				"e": "red hold end",
+				"p": "red hold piece"
+			},
+			"u": {
+				"e": "green hold end",
+				"p": "green hold piece"
+			}
+		}
+	},
+	"offsets": {
+		"d": {
+			"g": {
+				"x": 0,
+				"y": 0
+			},
+			"h": {
+				"x": 0,
+				"y": 0
+			},
+			"i": {
+				"x": 0,
+				"y": 0
+			},
+			"p": {
+				"x": 0,
+				"y": 0
+			}
+		},
+		"l": {
+			"g": {
+				"x": 0,
+				"y": 0
+			},
+			"h": {
+				"x": 0,
+				"y": 0
+			},
+			"i": {
+				"x": 0,
+				"y": 0
+			},
+			"p": {
+				"x": 0,
+				"y": 0
+			}
+		},
+		"r": {
+			"g": {
+				"x": 0,
+				"y": 0
+			},
+			"h": {
+				"x": 0,
+				"y": 0
+			},
+			"i": {
+				"x": 0,
+				"y": 0
+			},
+			"p": {
+				"x": 0,
+				"y": 0
+			}
+		},
+		"u": {
+			"g": {
+				"x": 0,
+				"y": 0
+			},
+			"h": {
+				"x": 0,
+				"y": 0
+			},
+			"i": {
+				"x": 0,
+				"y": 0
+			},
+			"p": {
+				"x": 0,
+				"y": 0
+			}
+		}
+	},
+	"anims": {
+		"d": {
+			"h": "down confirm",
+			"i": "arrowDOWN",
+			"p": "down press"
+		},
+		"l": {
+			"h": "left confirm",
+			"i": "arrowLEFT",
+			"p": "left press"
+		},
+		"r": {
+			"h": "right confirm",
+			"i": "arrowRIGHT",
+			"p": "right press"
+		},
+		"u": {
+			"h": "up confirm",
+			"i": "arrowUP",
+			"p": "up press"
+		}
+	}
+}

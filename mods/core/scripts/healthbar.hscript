@@ -187,7 +187,7 @@ function postScoreCalc(note)
             onComplete: function(twn) {
                 scoreTextTween = null;
             }
-        });
+        }, 'score text tween');
     }
 }
 

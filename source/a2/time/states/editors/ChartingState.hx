@@ -47,7 +47,7 @@ import a2.time.objects.song.Conductor.BPMChangeEvent;
 import a2.time.objects.song.Section.SongSection;
 import a2.time.objects.song.Song;
 import a2.time.objects.song.Song.SwagSong;
-import a2.time.objects.song.StrumNote;
+import a2.time.objects.gameplay.StrumNote;
 import a2.time.objects.song.StageData;
 import a2.time.objects.gameplay.Character;
 import a2.time.objects.gameplay.Note;
@@ -55,7 +55,7 @@ import a2.time.objects.gameplay.Note.CustomNoteFile;
 import a2.time.objects.gameplay.Note.NoteFile;
 import a2.time.objects.gameplay.HealthIcon;
 import a2.time.util.CoolUtil;
-import a2.time.util.Paths;
+import a2.time.Paths;
 
 import flixel.util.typeLimit.OneOfTwo;
 
@@ -3762,7 +3762,7 @@ If you have any questions about the editor, ask me!';
 
 		icon.change(name);
 
-		if (name != charIndicator.getCharacter())
+		if (name != charIndicator.character)
 		{
 			FlxTween.cancelTweensOf(indicator_isPlayer);
 

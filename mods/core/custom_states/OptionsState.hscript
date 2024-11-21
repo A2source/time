@@ -60,16 +60,16 @@ function create()
 
     curPage = FlxG.save.data.optionsIndex;
 
+    FlxG.mouse.visible = true;
+
     addUI();
 }
 
-var bindEndPos = FlxG.width / 1.175;
+var bindEndPos = 720 / 1.175;
 var bindingInfo = {
     binding: false,
     sprites: []
 }
-
-var mPos = {x: FlxG.width / 2, y: FlxG.height / 2}
 
 var holdTimer = 0;
 var HOLD_THRESHOLD = 0.3;
@@ -78,7 +78,6 @@ var turboCounter = 0;
 var TURBO_SPEED = 0.025;
 var doTurbo = false;
 
-var tweening = false;
 function update(dt)
 {
     if (bindingInfo.binding)
@@ -86,8 +85,6 @@ function update(dt)
         updateBinding(dt);
         return;
     }
-
-    if (FlxG.mouse.justMoved && !tweening) FlxTween.cancelTweensOf(mPos);
 
     if (controls.UI_UP_P) genericVerticalSelect(-1);
     if (controls.UI_DOWN_P) genericVerticalSelect(1);
@@ -106,7 +103,12 @@ function update(dt)
                     curSprite.onClick();
         }
     }
-    if (controls.BACK && !transitioning) goBack();
+
+    if (controls.BACK && !transitioning && skipped)
+    {
+        tweenMouseOff();
+        goBack();
+    }
 
     // ------------------------------------------------------------------
 
@@ -171,7 +173,7 @@ function genericVerticalSelect(amt)
     {
         curSprite = null;
 
-        tweenMouse(rArrow.x + 30, rArrow.y + 50, false);
+        tweenMouse(rArrow.x + 30, rArrow.y + 50);
     }
 
     switch(pages[curPage])
@@ -199,7 +201,7 @@ function genericVerticalSelect(amt)
                 FlxTween.tween(camOptions.scroll, {y: sprite.y - 100}, 0.5, {ease: FlxEase.expoOut});
             }
 
-            tweenMouse(bindSelec == 0 ? FlxG.width / 2 + camOptions.x : bindEndPos + camOptions.x - 5, sprite.y + sprite.height / 2, true);
+            tweenMouse(bindSelec == 0 ? FlxG.width / 2 + camOptions.x : bindEndPos + camOptions.x - 5, sprite.y + sprite.height / 2, camOptions);
 
         case 'gameplay', 'visuals & ui', 'graphics':
             if (selec > optionSprites.length)
@@ -223,7 +225,7 @@ function genericVerticalSelect(amt)
                 FlxTween.tween(camOptions.scroll, {y: sprite.y - 100}, 0.5, {ease: FlxEase.expoOut});
             }
 
-            tweenMouse(sprite.x + sprite.width + 30, sprite.y + sprite.height - 25, true);
+            tweenMouse(sprite.x + sprite.width + 30, sprite.y + sprite.height - 25, camOptions);
     }
 }
 
@@ -1134,21 +1136,7 @@ function getFormattedText(string, fontSize)
 
 function getBindTextPos(text, id)
 {
-    return id == 0 ? (FlxG.width / 2 - text.width / 2) : (bindEndPos - text.width);
-}
-
-function tweenMouse(x, y, camCheck)
-{
-    tweening = true;
-
-    FlxTween.cancelTweensOf(mPos);
-    FlxTween.tween(mPos, {x: x, y: y}, 0.5, {ease: FlxEase.expoOut, onUpdate: (_)->
-    {
-        Lib.application.window.warpMouse(mPos.x, mPos.y - (camCheck ? camOptions.scroll.y - camOptions.y : 0));
-    }, onComplete: (t)->
-    {
-        tweening = false;
-    }});
+    return id == 0 ? (720 / 2 - text.width / 2) : (bindEndPos - text.width);
 }
 
 function goBack()

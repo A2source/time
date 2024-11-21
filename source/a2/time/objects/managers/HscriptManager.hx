@@ -1,4 +1,4 @@
-package a2.time.util;
+package a2.time.objects.managers;
 
 import openfl.Lib;
 
@@ -9,7 +9,7 @@ import sys.io.File;
 import sys.FileSystem;
 
 import a2.time.states.CustomState;
-import a2.time.util.Paths;
+import a2.time.Paths;
 
 using StringTools;
 

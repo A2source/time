@@ -2,7 +2,7 @@ package a2.time.objects.ui;
 
 import a2.time.util.CoolUtil;
 import a2.time.util.ClientPrefs;
-import a2.time.util.Paths;
+import a2.time.Paths;
 
 import flixel.FlxG;
 import flixel.FlxSprite;

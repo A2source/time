@@ -13,9 +13,10 @@ function start(song)
     msText.alpha = 0;
     add(msText);
 
-    alphaTween = FlxTween.tween(msText, {alpha: 0}, 0);
+    alphaTween = FlxTween.tween(msText, {alpha: 0}, 0, {}, 'fade ms text');
 }
 
+var total = 0;
 function postScoreCalc(note, data)
 {
     if (data.rating == null)
@@ -37,20 +38,22 @@ function postScoreCalc(note, data)
     rating.velocity.y = -200;
     rating.acceleration.y = 450;
 
-    FlxTween.tween(rating.scale, {x: 1.2, y: 0}, tweenTime - 0.01, {ease: FlxEase.backIn, startDelay: delayTime});
+    FlxTween.tween(rating.scale, {x: 1.2, y: 0}, tweenTime - 0.01, {ease: FlxEase.backIn, startDelay: delayTime}, 'rating scale ' + total);
     FlxTween.tween(rating, {alpha: 0}, tweenTime, {startDelay: delayTime, 
         onComplete: (twn)->
         {
             rating.destroy();
             remove(rating);
-        }});
+        }}, 'rating alpha ' + total);
 
     alphaTween.cancel();
 
     msText.text = '(' + data.noteDiff + ' ms.)';
     msText.alpha = 1;
 
-    alphaTween = FlxTween.tween(msText, {alpha: 0}, tweenTime, {startDelay: delayTime});
+    alphaTween = FlxTween.tween(msText, {alpha: 0}, tweenTime, {startDelay: delayTime}, 'ms text out');
+
+    total++;
 
     if (combo < 10)
         return;
@@ -72,13 +75,13 @@ function postScoreCalc(note, data)
         sprite.velocity.y = -100;
         sprite.acceleration.y = 250;
 
-        FlxTween.tween(sprite.scale, {x: 1.2, y: 0}, tweenTime - 0.01, {ease: FlxEase.backIn, startDelay: delayTime});
+        FlxTween.tween(sprite.scale, {x: 1.2, y: 0}, tweenTime - 0.01, {ease: FlxEase.backIn, startDelay: delayTime}, 'digit ' + i + ' scale');
         FlxTween.tween(sprite, {alpha: 0}, tweenTime, {startDelay: delayTime, 
             onComplete: (twn)->
             {
                 sprite.destroy();
                 remove(sprite);
-            }});
+            }}, 'digit ' + i + ' out');
 
         i++;
     }

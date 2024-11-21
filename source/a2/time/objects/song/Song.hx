@@ -7,7 +7,7 @@ import a2.time.objects.gameplay.Note.EventNote;
 import a2.time.states.LoadingState;
 import a2.time.states.editors.ChartingState;
 import a2.time.states.PlayState;
-import a2.time.util.Paths;
+import a2.time.Paths;
 
 import haxe.Json;
 import haxe.DynamicAccess;

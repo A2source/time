@@ -4,7 +4,7 @@ import a2.time.objects.gameplay.Character;
 import a2.time.objects.gameplay.Character.CharacterMetadata;
 import a2.time.objects.gameplay.HealthIcon;
 import a2.time.util.ClientPrefs;
-import a2.time.util.Paths;
+import a2.time.Paths;
 import a2.time.util.Discord.DiscordClient;
 import a2.time.util.UIShortcuts as UiS;
 

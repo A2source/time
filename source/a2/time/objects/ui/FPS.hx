@@ -61,7 +61,7 @@ class FPS extends Sprite
 
 		text.selectable = false;
 		text.mouseEnabled = false;
-		text.defaultTextFormat = new TextFormat("_sans", 12, color);
+		text.defaultTextFormat = new TextFormat(openfl.utils.Assets.getFont('assets/fonts/pixel.otf').fontName, 8, color);
 		addChild(text);
 		
 		currentFPS = 0;

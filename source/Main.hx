@@ -104,7 +104,7 @@ class Main extends Sprite
 		a2.time.util.Controls.instance = new a2.time.util.Controls();
 
 		#if !mobile
-		fpsVar = new FPS(10, 3, 0xFFFFFF);
+		fpsVar = new FPS(3, 3, 0xFFFFFF);
 		addChild(fpsVar);
 
 		Lib.current.stage.align = "tl";
