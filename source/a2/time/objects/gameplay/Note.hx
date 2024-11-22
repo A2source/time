@@ -84,6 +84,7 @@ class Note extends FlxSprite
 	public var isSustainNote:Bool = false;
 	public var noteType(default, set):String = null;
 
+	public var isEventNote:Bool = false;
 	public var eventName:String = '';
 	public var eventLength:Int = 0;
 	public var eventData:Array<EventNote> = [];
@@ -184,30 +185,45 @@ class Note extends FlxSprite
 		super();
 
 		mustPress = mustHit;
+		isEventNote = noteData == -1;
 
-		var game:PlayState = PlayState.instance;
-		parentStrumNote = mustPress ? game.playerStrums.members[noteData % 4] : game.opponentStrums.members[noteData % 4];
-		parentStrumNote.associatedNotes.push(this);
-
-		var noteSkinData:StrumSkinNoteAnimationNames = cast parentStrumNote.skinData.notes;
-
-		switch(noteData % 4)
+		if (!inEditor)
 		{
-			case 0: 
-				solidStrumSkinName = cast noteSkinData.solid.l;
-				susStrumSkinData = cast noteSkinData.sus.l;
+			var game:PlayState = PlayState.instance;
+			parentStrumNote = mustPress ? game.playerStrums.members[noteData % 4] : game.opponentStrums.members[noteData % 4];
+			parentStrumNote.associatedNotes.push(this);
+		}
+		else
+		{
+			if (!isEventNote)
+			{
+				@:privateAccess parentStrumNote = ChartingState.instance.strumLineNotes.members[noteData % 4];
+				parentStrumNote.associatedNotes.push(this);
+			}
+		}
 
-			case 1: 
-				solidStrumSkinName = cast noteSkinData.solid.d;
-				susStrumSkinData = cast noteSkinData.sus.d;
+		if (!isEventNote)
+		{
+			var noteSkinData:StrumSkinNoteAnimationNames = cast parentStrumNote.skinData.notes;
 
-			case 2: 
-				solidStrumSkinName = cast noteSkinData.solid.u;
-				susStrumSkinData = cast noteSkinData.sus.u;
+			switch(noteData % 4)
+			{
+				case 0: 
+					solidStrumSkinName = cast noteSkinData.solid.l;
+					susStrumSkinData = cast noteSkinData.sus.l;
 
-			case 3: 
-				solidStrumSkinName = cast noteSkinData.solid.r;
-				susStrumSkinData = cast noteSkinData.sus.r;
+				case 1: 
+					solidStrumSkinName = cast noteSkinData.solid.d;
+					susStrumSkinData = cast noteSkinData.sus.d;
+
+				case 2: 
+					solidStrumSkinName = cast noteSkinData.solid.u;
+					susStrumSkinData = cast noteSkinData.sus.u;
+
+				case 3: 
+					solidStrumSkinName = cast noteSkinData.solid.r;
+					susStrumSkinData = cast noteSkinData.sus.r;
+			}
 		}
 
 		this.func = null;

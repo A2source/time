@@ -82,6 +82,8 @@ typedef NoteCopyPayload =
 @:access(openfl.media.Sound.__buffer)
 class ChartingState extends MusicBeatState
 {
+	public static var instance:ChartingState;
+
 	public static var noteTypeDataBase:Array<CustomNoteFile> =
 	[
 		{name: '', desc: 'The default note.', texture: ''},
@@ -373,6 +375,8 @@ If you have any questions about the editor, ask me!';
 	public var mouseQuant:Bool = false;
 	override function create()
 	{
+		instance = this;
+
 		lastData = 
 		{
 			section: 0,
@@ -453,6 +457,21 @@ If you have any questions about the editor, ask me!';
 
 		if(curSec >= _song.sections.length) curSec = _song.sections.length - 1;
 
+		strumLine = new FlxSprite(0, 50).makeGraphic(Std.int(GRID_SIZE * 5), 4);
+		add(strumLine);
+
+		strumLineNotes = new FlxTypedGroup<StrumNote>();
+		for (i in 0...4)
+		{
+			var note:StrumNote = new StrumNote(GRID_SIZE * (i + 1), strumLine.y, i, 0);
+			note.setGraphicSize(GRID_SIZE, GRID_SIZE);
+			note.updateHitbox();
+			note.playAnim('static', true);
+			strumLineNotes.add(note);
+			note.scrollFactor.set(1, 1);
+		}
+		add(strumLineNotes);
+
 		addSection();
 
 		currentSongName = _song.song;
@@ -516,9 +535,6 @@ If you have any questions about the editor, ask me!';
 
 		quantText.origin.set(0, quantText.height / 2);
 
-		strumLine = new FlxSprite(0, 50).makeGraphic(Std.int(GRID_SIZE * 5), 4);
-		add(strumLine);
-
 		charIndicator = new HealthIcon(characterList[curCharIndex]);
 		charIndicator.scale.set(1.5, 1.5);
 		charIndicator.setPosition(10, FlxG.height - charIndicator.height - 10);
@@ -559,18 +575,6 @@ If you have any questions about the editor, ask me!';
 		quant.xAdd = -32;
 		quant.yAdd = 8;
 		add(quant);
-
-		strumLineNotes = new FlxTypedGroup<StrumNote>();
-		for (i in 0...4)
-		{
-			var note:StrumNote = new StrumNote(GRID_SIZE * (i + 1), strumLine.y, i, 0);
-			note.setGraphicSize(GRID_SIZE, GRID_SIZE);
-			note.updateHitbox();
-			note.playAnim('static', true);
-			strumLineNotes.add(note);
-			note.scrollFactor.set(1, 1);
-		}
-		add(strumLineNotes);
 
 		camPos = new FlxObject(0, 0, 1, 1);
 		camPos.setPosition(strumLine.x + CAM_OFFSET, strumLine.y);
@@ -2362,12 +2366,13 @@ If you have any questions about the editor, ask me!';
 
 	var eventsDropDown:haxe.ui.components.DropDown;
 	var eventDesc:haxe.ui.containers.ScrollView;
+	var eventDescContent:haxe.ui.components.Label;
 
 	var eventSelectedText:haxe.ui.components.Label;
 
-	var val1Input:haxe.ui.components.TextField;
-	var val2Input:haxe.ui.components.TextField;
-	var val3Input:haxe.ui.components.TextField;
+	var val1Input:haxe.ui.components.TextArea;
+	var val2Input:haxe.ui.components.TextArea;
+	var val3Input:haxe.ui.components.TextArea;
 	function addEventsHaxeUI():Void
 	{
 		var formatBox = new haxe.ui.containers.VBox();
@@ -2388,8 +2393,9 @@ If you have any questions about the editor, ask me!';
 			{
 				if (file.endsWith('txt') && !eventPushedMap.exists(file))
 				{
-					eventPushedMap.set(file, true);
-					eventStuff.set(file, File.getContent(Paths.eventTxt(file.split('.txt')[0], mod)));
+					var split:String = file.split('.txt')[0];
+					eventPushedMap.set(split, true);
+					eventStuff.set(split, File.getContent(Paths.eventTxt(split, mod)));
 				}
 			}
 		}
@@ -2398,7 +2404,7 @@ If you have any questions about the editor, ask me!';
 
 		var dropdownBox = new haxe.ui.containers.VBox();
 
-		var eventDescContent = new haxe.ui.components.Label();
+		eventDescContent = new haxe.ui.components.Label();
 		eventDescContent.text = eventStuff[''];
 
 		eventDesc = new haxe.ui.containers.ScrollView();
@@ -2529,8 +2535,9 @@ If you have any questions about the editor, ask me!';
 		dropdownBox.addComponent(eventDesc);
 		UiS.addHR(7, dropdownBox);
 
-		val1Input = new haxe.ui.components.TextField();
+		val1Input = new haxe.ui.components.TextArea();
 		val1Input.placeholder = 'Value 1...';
+		val1Input.height = 50;
 		val1Input.onChange = (e) ->
 		{
 			if (!selectingEvent)
@@ -2544,8 +2551,9 @@ If you have any questions about the editor, ask me!';
 
 		UiS.addSpacer(0, 10, dropdownBox);
 
-		val2Input = new haxe.ui.components.TextField();
+		val2Input = new haxe.ui.components.TextArea();
 		val2Input.placeholder = 'Value 2...';
+		val2Input.height = 50;
 		val2Input.onChange = (e) ->
 		{
 			if (!selectingEvent)
@@ -2559,8 +2567,9 @@ If you have any questions about the editor, ask me!';
 
 		UiS.addSpacer(0, 10, dropdownBox);
 
-		val3Input = new haxe.ui.components.TextField();
+		val3Input = new haxe.ui.components.TextArea();
 		val3Input.placeholder = 'Value 3...';
+		val3Input.height = 50;
 		val3Input.onChange = (e) ->
 		{
 			if (!selectingEvent)
@@ -3818,7 +3827,7 @@ If you have any questions about the editor, ask me!';
 		eventsDropDown.selectedItem = {text: selected};
 
 		if(eventStuff.exists(selected))
-			eventDesc.text = eventStuff[selected];
+			eventDescContent.text = eventStuff[selected];
 		
 		val1Input.text = eventReference[selectedEventIndex].value1;
 		val2Input.text = eventReference[selectedEventIndex].value2;
@@ -3838,6 +3847,11 @@ If you have any questions about the editor, ask me!';
 		otherRenderedNotes.clear();
 		otherRenderedSustains.clear();
 		otherRenderedIcons.clear();
+
+		// clear notes of each strum
+		if (strumLineNotes != null)
+			for (strum in strumLineNotes.members)
+				strum.associatedNotes = [];
 
 		if (_song.sections[curSec].changeBPM && _song.sections[curSec].bpm > 0)
 			Conductor.changeBPM(_song.sections[curSec].bpm);
@@ -4264,10 +4278,10 @@ If you have any questions about the editor, ask me!';
 			trace(start, end);
 
 		if (Reflect.hasField(note, 'ms'))
-			return end >= Math.ceil(note.ms) && Math.ceil(note.ms) >= start;
+			return end > Math.ceil(note.ms) && Math.ceil(note.ms) >= start;
 
 		if (Reflect.hasField(note, 'strumTime'))
-			return end >= Math.ceil(note.strumTime) && Math.ceil(note.strumTime) >= start;
+			return end > Math.ceil(note.strumTime) && Math.ceil(note.strumTime) >= start;
 
 		return false;
 	}
