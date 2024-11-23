@@ -34,35 +34,16 @@ class CoolUtil
 
 	public static var difficulties:Array<String> = [];
 
-	inline public static function quantize(f:Float, snap:Float){
+	inline public static function quantize(f:Float, snap:Float)
+	{
 		// changed so this actually works lol
 		var m:Float = Math.fround(f * snap);
 		trace(snap);
 		return (m / snap);
 	}
-	
-	public static function getDifficultyFilePath(num:Null<Int> = null)
+
+	inline public static function boundTo(value:Float, min:Float, max:Float):Float 
 	{
-		if(num == null) num = PlayState.storyDifficulty;
-
-		var fileSuffix:String = difficulties[num];
-		if(fileSuffix != defaultDifficulty)
-		{
-			fileSuffix = '-' + fileSuffix;
-		}
-		else
-		{
-			fileSuffix = '';
-		}
-		return fileSuffix;
-	}
-
-	public static function difficultyString():String
-	{
-		return difficulties[PlayState.storyDifficulty].toUpperCase();
-	}
-
-	inline public static function boundTo(value:Float, min:Float, max:Float):Float {
 		return Math.max(min, Math.min(max, value));
 	}
 

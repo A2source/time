@@ -2,7 +2,14 @@ var combo = 0;
 
 function onMiss(dir, note)
 {
-    checkInstakill();
+    if (game.practiceMode)
+        return;
+
+    if (game.instakillOnMiss)
+    {
+        game.health = 0;
+        return;
+    }
 
     combo = 0;
     
@@ -12,9 +19,7 @@ function onMiss(dir, note)
     game.vocals.volume = 0;
 
     noteMiss(note);
-
-    if (note != null)
-        gameFeedback(dir);
+    gameFeedback(dir);
         
     game.hscriptManager.setAll('combo', combo);
 }
@@ -69,6 +74,20 @@ function update(dt)
 {
     if (game.health >= 2)
         game.health = 2;
+
+    if (!ClientPrefs.data.noReset && controls.RESET && !game.inCutscene && game.startedCountdown && !game.endingSong)
+		game.health = 0;
+
+    if (game.health > 0)
+        return;
+
+    trace('dead');
+
+    game.pauseGame();
+
+    // var pause = new CustomSubState('GameOverSubState', null);
+    // pause.hscriptManager.setAll('game', game);
+	// game.openSubState(pause);
 }
 
 function gameFeedback(dir)
@@ -81,13 +100,4 @@ function gameFeedback(dir)
 
     if (guy.hasMissAnimations)
         guy.playAnim(SING_ANIMATIONS[Std.int(Math.abs(dir))] + '-miss', true);
-}
-
-function checkInstakill()
-{
-    if (!game.instakillOnMiss)
-        return;
-
-    game.vocals.volume = 0;
-    game.doDeathCheck(true);
 }

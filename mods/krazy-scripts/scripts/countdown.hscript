@@ -1,0 +1,35 @@
+var strings = ['ready', 'set', 'go'];
+
+function start(song)
+{
+    for (sprite in strings)
+        spr = new FlxSprite().load(Paths.modsImage(sprite, 'krazy-scripts'));
+}
+
+var introSounds = ['3', '2', '1', 'Go'];
+var angle = false;
+function onCountdownTick(num)
+{
+    FlxG.sound.play(Paths.getModsSound('intro' + introSounds[num], 'krazy-scripts'), 0.7);
+    trace(num);
+
+    if (num - 1 < 0)
+        return;
+
+    var sprite = new FlxSprite().load(Paths.modsImage(strings[num - 1], 'krazy-scripts'));
+    sprite.cameras = [camHUD];
+    sprite.screenCenter();
+    add(sprite);
+
+    sprite.alpha = 0;
+    sprite.angle = angle ? 7 : -7;
+    FlxTween.tween(sprite.scale, {x: 0.6, y: 0.6}, Conductor.crochet * 0.0009, {ease: FlxEase.expoOut}, 'intro ' + num + ' scale');
+    FlxTween.tween(sprite, {alpha: 1}, Conductor.crochet * 0.0009, {ease: FlxEase.expoOut}, 'intro ' + num + ' in');
+    FlxTween.tween(sprite, {alpha: 0, y: sprite.y + 20}, Conductor.crochet * 0.002, {ease: FlxEase.expoIn, startDelay: Conductor.stepCrochet * 0.002, 
+    onComplete: (t)->
+    {
+        sprite.destroy();
+    }}, 'intro ' + num + ' kill');
+
+    angle = !angle;
+}

@@ -114,6 +114,11 @@ class Main extends Sprite
 			fpsVar.visible = ClientPrefs.data.showFPS;
 		#end
 
+		if (FlxG.save.data.timeVolume == null)
+            FlxG.save.data.timeVolume = 10;
+
+        FlxG.sound.volume = FlxG.save.data.timeVolume;
+
 		#if html5
 		FlxG.autoPause = false;
 		FlxG.mouse.visible = false;

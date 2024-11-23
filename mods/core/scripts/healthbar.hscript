@@ -158,7 +158,7 @@ function updateIconScale(dt)
         icon.scale.set(mult, mult);
         icon.updateHitbox();
 
-        icon.origin.set(icon.width / 2, icon.height / 2);
+        icon.origin.set(icon.width, icon.height / 2);
     }
 }
 

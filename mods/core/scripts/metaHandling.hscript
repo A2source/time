@@ -1,0 +1,4 @@
+function start(song)
+{
+    PlayState.postSongState = 'MasterEditorMenu';
+}

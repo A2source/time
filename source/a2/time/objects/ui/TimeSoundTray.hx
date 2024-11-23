@@ -97,5 +97,7 @@ class TimeSoundTray extends FlxSoundTray
 
         for (i in 0..._bars.length)
             _bars[i].visible = i < globalVolume;
+
+        FlxG.save.data.timeVolume = FlxG.sound.volume;
     }
 }

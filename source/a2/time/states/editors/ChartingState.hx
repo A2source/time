@@ -3099,6 +3099,8 @@ If you have any questions about the editor, ask me!';
 
 	function updateUIText(dt:Float)
 	{
+		zoomTxt.y = a2.time.util.ClientPrefs.data.showFPS ? 10 + Main.fpsVar.height : 5;
+
 		var curBeat = Std.parseInt(Std.string(curDecBeat).substring(0,4));
 		var textBumpAmt:Float = 1.2;
 

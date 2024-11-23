@@ -87,6 +87,8 @@ import hscript.ClassDeclEx;
 import haxe.Json;
 import tjson.TJSON;
 
+import openfl.system.Capabilities;
+
 using StringTools;
 
 class CustomState extends MusicBeatState
@@ -274,6 +276,10 @@ class CustomState extends MusicBeatState
 
 		interp.variables.set('blockInput', MusicBeatState.instance.blockInput);
 		interp.variables.set('this', CustomState.instance);
+
+		interp.variables.set("screenResolutionX", Capabilities.screenResolutionX);
+		interp.variables.set("screenResolutionY", Capabilities.screenResolutionY);
+		interp.variables.set("Capabilities", Capabilities);
 
 		return interp;
 	}
