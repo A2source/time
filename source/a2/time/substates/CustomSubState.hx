@@ -4,7 +4,14 @@ import a2.time.states.CustomState;
 import a2.time.Paths;
 import a2.time.objects.managers.HscriptManager;
 
+import flixel.FlxCamera;
+import flixel.FlxG;
+import flixel.tweens.FlxTween;
+import flixel.tweens.FlxEase;
+
 import hscript.Interp;
+
+import openfl.Lib;
 
 class CustomSubState extends MusicBeatSubstate
 {
@@ -16,6 +23,9 @@ class CustomSubState extends MusicBeatSubstate
 
 	public var hscriptManager:HscriptManager;
 
+	public static var mPos:{x:Float, y:Float} = {x: FlxG.width / 2, y: FlxG.height / 2}
+	public static var tweening:Bool = false;
+
     function injectInterp(interp:Interp)
 	{
 		interp.variables.set('add', instance.add);
@@ -23,6 +33,10 @@ class CustomSubState extends MusicBeatSubstate
 		interp.variables.set('insert', instance.insert);
         interp.variables.set('replace', instance.replace);
         interp.variables.set('close', instance.close);
+
+		interp.variables.set('tweening', CustomSubState.tweening);
+		interp.variables.set('mPos', CustomSubState.mPos);
+		interp.variables.set('tweenMouse', CustomSubState.tweenMouse);
 
         interp.variables.set('parent', parentState);
 	}
@@ -53,6 +67,29 @@ class CustomSubState extends MusicBeatSubstate
 		if (parentState != null)
         	@:privateAccess parentState.hscriptManager.callAll('onOpenSubState', []);
     }
+
+	public static function tweenMouse(x:Float, y:Float, ?camera:FlxCamera = null, ?time:Float = 0.5)
+	{
+		tweening = true;
+
+		FlxTween.cancelTweensOf(mPos);
+		FlxTween.tween(mPos, {x: x, y: y}, time, {ease: FlxEase.expoOut, onUpdate: (_)->
+		{
+			var desiredX:Float = mPos.x;
+			var desiredY:Float = mPos.y;
+
+			if (camera != null)
+			{
+				desiredX += (camera.scroll.x - camera.x);
+				desiredY += (camera.scroll.y - camera.y);
+			}
+			
+			Lib.application.window.warpMouse(Std.int(desiredX), Std.int(desiredY));
+		}, onComplete: (t)->
+		{
+			tweening = false;
+		}});
+	}
     
     function onClose()
     {
@@ -65,6 +102,8 @@ class CustomSubState extends MusicBeatSubstate
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
+		if (FlxG.mouse.justMoved && !tweening) FlxTween.cancelTweensOf(mPos);
+
 		hscriptManager.callAll('update', [elapsed]);
 	}
 
