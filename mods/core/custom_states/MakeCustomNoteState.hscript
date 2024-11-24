@@ -1,8 +1,3 @@
-var defaultScript = 'function start(song)
-{
-
-}';
-
 function create()
 {
     FlxG.mouse.visible = true;
@@ -36,10 +31,10 @@ function create()
 
     UiS.addHR(7, view);
 
-    UiS.addLabel('Note texture (images/)', view);
+    UiS.addLabel('Note texture name', view);
     var textureInput = new TextField();
     textureInput.width = 200;
-    textureInput.placeholder = 'Leave blank for default';
+    textureInput.placeholder = 'Leave blank to copy strum';
     view.addComponent(textureInput);
 
     UiS.addHR(7, view);

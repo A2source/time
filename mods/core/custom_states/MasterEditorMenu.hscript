@@ -3,7 +3,9 @@ buttons = [
     'Chart Editor',
     'Character Editor',
     'Create Stage',
-    'Create Notetype'
+    'Create Notetype',
+    'Convert Chart',
+    'Edit Strumskins'
 ];
 
 uiButtons = [];
@@ -13,13 +15,17 @@ stateNames = [
     new ChartingState(),
     new CharacterEditorState('bf', false),
     'MakeStageState',
-    'MakeCustomNoteState'
+    'MakeCustomNoteState',
+    'ChartConvertState',
+    'EditStrumskinState'
 ];
 
 isCustomState = [
     true,
     false,
     false,
+    true,
+    true,
     true,
     true
 ];
@@ -49,8 +55,17 @@ function create()
     view.addComponent(formatBox);
     UiS.addSpacer(0, 75, formatBox);
 
+    var buttonsBox = new HBox();
+    var curButtonCol = new VBox();
+
     for (i in 0...buttons.length)
     {
+        if (i % 5 == 0)
+        {
+            buttonsBox.addComponent(curButtonCol);
+            curButtonCol = new VBox();
+        }
+
         var button = getButton(buttons[i]);
         button.onClick = (e)->
         {
@@ -60,11 +75,14 @@ function create()
                 LoadingState.loadAndSwitchState(stateNames[i]);
         }
 
-        formatBox.addComponent(button);
-        UiS.addSpacer(0, 25, formatBox);
+        curButtonCol.addComponent(button);
+        UiS.addSpacer(0, 25, curButtonCol);
 
         uiButtons.push(button);
     }
+
+    buttonsBox.addComponent(curButtonCol);
+    formatBox.addComponent(buttonsBox);
 
     UiS.addSpacer(0, 25, formatBox);
     UiS.addLabel('Set Working Mod Directory', formatBox);

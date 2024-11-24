@@ -31,7 +31,8 @@ class StrumNote extends FlxSprite
 	public var curSkinDir:String = '';
 
 	public var skinData:StrumNoteSkinFile;
-	private var curOffsetData:StrumDirectionOffsets;
+	public var curData:StrumDirectionAnimations;
+	public var curOffsetData:StrumDirectionOffsets;
 
 	public var associatedNotes:Array<Note> = [];
 
@@ -48,10 +49,10 @@ class StrumNote extends FlxSprite
 		scrollFactor.set();
 	}
 
-	public function reloadStrumSkin(skin:String = DEFAULT_STRUM_SKIN_NAME, skinModDirectory:String = Main.MOD_NAME)
+	public function reloadStrumSkin(skin:String = DEFAULT_STRUM_SKIN_NAME, skinModDirectory:String = Main.MOD_NAME, forceLoad:Bool = false)
 	{
 		// if skin is exactly the same, return
-		if (skin == curSkin && skinModDirectory == curSkinDir)
+		if (skin == curSkin && skinModDirectory == curSkinDir && !forceLoad)
 			return;
 
 		curSkin = skin;
@@ -63,7 +64,7 @@ class StrumNote extends FlxSprite
 		skinData = cast haxe.Json.parse(File.getContent(Paths.customStrumSkinJson(skin, skinModDirectory)));
 		frames = Paths.modsSparrow('custom_strumskins/$skin', skin, skinModDirectory);
 
-		var curData:StrumDirectionAnimations = {i: '', p: '', h: ''};
+		curData = {i: '', p: '', h: ''};
 		switch(noteData % 4)
 		{
 			case 0: 
@@ -102,6 +103,12 @@ class StrumNote extends FlxSprite
 				continue;
 
 			note.reloadNoteTexture();
+		}
+
+		@:privateAccess
+		{
+			if (PlayState.instance != null && PlayState.instance.hscriptManager != null)
+				PlayState.instance.hscriptManager.callAll('onStrumSkinReload', [this, associatedNotes, skin, skinModDirectory]);
 		}
 	}
 

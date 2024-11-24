@@ -1,0 +1,517 @@
+var notes = [];
+var holds = [];
+var ends = [];
+
+var strums = [];
+
+var curSkin;
+
+var dirs = ['Left...', 'Down...', 'Up...', 'Right...'];
+var cols = [0xFFFF00FF, 0xFF0000FF, 0xFF00FF00, 0xFFFF0000];
+var pressAnim = true;
+
+var staticAnimTexts = [];
+
+var view;
+
+var staticAnimsBox;
+var pressedAnimsBox;
+var confirmAnimsBox;
+
+var solidAnimsBox;
+var holdAnimsBox;
+var endAnimsBox;
+
+var generalOffsetsBox;
+var staticOffsetsBox;
+var pressedOffsetsBox;
+var confirmOffsetsBox;
+
+var updatedChangesText;
+
+function create()
+{
+    FlxG.mouse.visible = true;
+
+    if (FlxG.save.data.timeSelectedStrum == null)
+        FlxG.save.data.timeSelectedStrum = DEFAULT_STRUM_SKIN_NAME;
+
+    curSkin = FlxG.save.data.timeSelectedStrum;
+
+    updatedChangesText = new FlxText(5);
+    updatedChangesText.size = 16;
+    updatedChangesText.text = 'Updated changes!';
+    updatedChangesText.y = FlxG.height - updatedChangesText.height - 5;
+    updatedChangesText.alpha = 0;
+    add(updatedChangesText);
+
+    // STRUMS
+    for (i in 0...4)
+    {
+        var dummy = new StrumNote(675, 550, i, 0);
+        dummy.postAddedToGroup();
+        strums.push(dummy);
+
+        dummy.alpha = 0;
+        dummy.y -= 10;
+
+        FlxTween.tween(dummy, {y: dummy.y + 10, alpha: 1}, 1, {ease: FlxEase.expoOut, startDelay: 1 + i * 0.1});
+
+        add(dummy);
+    }
+
+    Conductor.crochet = 30;
+    Conductor.stepCrochet = 120;
+    Conductor.bpm = 100;
+    Conductor.songSpeed = 1;
+
+    for (type in ['solid', 'piece', 'end'])
+        for (i in 0...4)
+        {
+            var strum = strums[i];
+            switch(type)
+            {
+                case 'solid': notes.push(getNote(i, null, false, strum.y - strum.height * 1.5));
+                case 'piece': holds.push(getNote(i, notes[i], true, notes[i].y - strum.height));
+                case 'end': ends.push(getNote(i, holds[i], true, holds[i].y - strum.height * 1.5));
+            }
+        }
+
+    reloadFrames();
+
+    view = new ScrollView();
+    view.height = FlxG.height - 150;
+
+    box = new HBox();
+    push = new VBox();
+
+    UiS.addSpacer(25, 0, box);
+    UiS.addSpacer(0, 50, push);
+
+    box.addComponent(push);
+    push.addComponent(view);
+
+    var source = getDataSource();
+    for (path in FileSystem.readDirectory(Paths.mods('custom_strumskins', WORKING_MOD_DIRECTORY)))
+        source.add({text: path});
+
+    UiS.addHeader('Edit Strumskin', view);
+
+    var init = false;
+
+    var skinDropDown = new haxe.ui.components.DropDown();
+    skinDropDown.dataSource = source;
+    skinDropDown.searchable = true;
+    skinDropDown.searchPrompt = 'Choose skin...';
+    skinDropDown.width = 150;
+    skinDropDown.selectedItem = {text: curSkin};
+    skinDropDown.onChange = ()->
+    {
+        if (!init)
+        {
+            init = true;
+            return;
+        }
+
+        if (skinDropDown.selectedItem == null)
+            return;
+
+        curSkin = skinDropDown.selectedItem.text;
+        FlxG.save.data.timeSelectedStrum = curSkin;
+        FlxG.save.flush();
+
+        LoadingState.loadAndSwitchCustomState('EditStrumskinState');
+    }
+    view.addComponent(skinDropDown);
+
+    // STRUM ANIMS
+    UiS.addHeader('Strum Anims', view);
+
+    UiS.addLabel('Static', view);
+    staticAnimsBox = new HBox();
+    for (i in 0...4)
+    {
+        var text = getDirText(i);
+        text.text = strums[i].curData.i;
+        staticAnimsBox.addComponent(text);
+    }
+    view.addComponent(staticAnimsBox);
+    UiS.addSpacer(0, 4, view);
+
+    UiS.addLabel('Pressed', view);
+
+    var testPress = new CheckBox();
+    testPress.selected = true;
+    testPress.text = 'Test This';
+    view.addComponent(testPress);
+
+    pressedAnimsBox = new HBox();
+    for (i in 0...4)
+    {
+        var text = getDirText(i);
+        text.text = strums[i].curData.p;
+        pressedAnimsBox.addComponent(text);
+    }
+    view.addComponent(pressedAnimsBox);
+    UiS.addSpacer(0, 4, view);
+
+    UiS.addLabel('Confirm', view);
+
+    var testConfirm = new CheckBox();
+    testConfirm.selected = false;
+    testConfirm.text = 'Test This';
+    view.addComponent(testConfirm);
+
+    confirmAnimsBox = new HBox();
+    for (i in 0...4)
+    {
+        var text = getDirText(i);
+        text.text = strums[i].curData.h;
+        confirmAnimsBox.addComponent(text);
+    }
+    view.addComponent(confirmAnimsBox);
+    UiS.addSpacer(0, 4, view);
+    // STRUM ANIMS
+
+    testPress.onClick = ()->
+    {
+        testConfirm.selected = !testPress.selected;
+        pressAnim = testPress.selected;
+    }
+
+    testConfirm.onClick = ()->
+    {
+        testPress.selected = !testConfirm.selected;
+        pressAnim = testPress.selected;
+    }
+
+    // NOTE ANIMS
+    UiS.addHeader('Note Anims', view);
+
+    UiS.addLabel('Solid', view);
+    solidAnimsBox = new HBox();
+    for (i in 0...4)
+    {
+        var text = getDirText(i);
+        text.text = notes[i].solidStrumSkinName;
+        solidAnimsBox.addComponent(text);
+    }
+    view.addComponent(solidAnimsBox);
+    UiS.addSpacer(0, 4, view);
+
+    UiS.addLabel('Hold', view);
+    holdAnimsBox = new HBox();
+    for (i in 0...4)
+    {
+        var text = getDirText(i);
+        text.text = holds[i].susStrumSkinData.p;
+        holdAnimsBox.addComponent(text);
+    }
+    view.addComponent(holdAnimsBox);
+    UiS.addSpacer(0, 4, view);
+
+    UiS.addLabel('Hold End', view);
+    endAnimsBox = new HBox();
+    for (i in 0...4)
+    {
+        var text = getDirText(i);
+        text.text = ends[i].susStrumSkinData.e;
+        endAnimsBox.addComponent(text);
+    }
+    view.addComponent(endAnimsBox);
+    UiS.addSpacer(0, 4, view);
+    // NOTE ANIMS
+
+    // STRUM OFFSETS
+    UiS.addHeader('Strum Offsets', view);
+
+    UiS.addLabel('General', view);
+    generalOffsetsBox = new HBox();
+    for (i in 0...4)
+    {
+        var steps = getOffsetSteppers(i);
+        for (x in 0...2)
+        {
+            steps[x].pos = x == 0 ? strums[i].curOffsetData.g.x : strums[i].curOffsetData.g.y;
+            generalOffsetsBox.addComponent(steps[x]);
+        }
+    }
+    view.addComponent(generalOffsetsBox);
+    UiS.addSpacer(0, 4, view);
+
+    UiS.addLabel('Static', view);
+    staticOffsetsBox = new HBox();
+    for (i in 0...4)
+    {
+        var steps = getOffsetSteppers(i);
+        for (x in 0...2)
+        {
+            steps[x].pos = x == 0 ? strums[i].curOffsetData.i.x : strums[i].curOffsetData.i.y;
+            staticOffsetsBox.addComponent(steps[x]);
+        }
+    }
+    view.addComponent(staticOffsetsBox);
+    UiS.addSpacer(0, 4, view);
+
+    UiS.addLabel('Pressed', view);
+    pressedOffsetsBox = new HBox();
+    for (i in 0...4)
+    {
+        var steps = getOffsetSteppers(i);
+        for (x in 0...2)
+        {
+            steps[x].pos = x == 0 ? strums[i].curOffsetData.p.x : strums[i].curOffsetData.p.y;
+            pressedOffsetsBox.addComponent(steps[x]);
+        }
+    }
+    view.addComponent(pressedOffsetsBox);
+    UiS.addSpacer(0, 4, view);
+
+    UiS.addLabel('Confirm', view);
+    confirmOffsetsBox = new HBox();
+    for (i in 0...4)
+    {
+        var steps = getOffsetSteppers(i);
+        for (x in 0...2)
+        {
+            steps[x].pos = x == 0 ? strums[i].curOffsetData.h.x : strums[i].curOffsetData.h.y;
+            confirmOffsetsBox.addComponent(steps[x]);
+        }
+    }
+    view.addComponent(confirmOffsetsBox);
+    UiS.addSpacer(0, 4, view);
+    // STRUM OFFSETS
+
+    UiS.addHR(1, view);
+
+    var saveButton = new Button();
+    saveButton.text = 'Update';
+    saveButton.onClick = ()->
+    {
+        privateAccess(()->
+        {
+            var data = {
+                notes: {
+                    solid: {
+                        l: solidAnimsBox._children[0].text,
+                        d: solidAnimsBox._children[1].text,
+                        u: solidAnimsBox._children[2].text,
+                        r: solidAnimsBox._children[3].text
+                    },
+
+                    sus: {
+                        l: {
+                            p: holdAnimsBox._children[0].text,
+                            e: endAnimsBox._children[0].text
+                        },
+
+                        d: {
+                            p: holdAnimsBox._children[1].text,
+                            e: endAnimsBox._children[1].text
+                        },
+
+                        u: {
+                            p: holdAnimsBox._children[2].text,
+                            e: endAnimsBox._children[2].text
+                        },
+
+                        r: {
+                            p: holdAnimsBox._children[3].text,
+                            e: endAnimsBox._children[3].text
+                        }
+                    },
+                },
+
+                offsets: {
+                    l: {
+                        g: {
+                            x: generalOffsetsBox._children[0].pos,
+                            y: generalOffsetsBox._children[1].pos
+                        },
+                        i: {
+                            x: staticOffsetsBox._children[0].pos,
+                            y: staticOffsetsBox._children[1].pos
+                        },
+                        p: {
+                            x: pressedOffsetsBox._children[0].pos,
+                            y: pressedOffsetsBox._children[1].pos
+                        },
+                        h: {
+                            x: confirmOffsetsBox._children[0].pos,
+                            y: confirmOffsetsBox._children[1].pos
+                        }
+                    },
+
+                    d: {
+                        g: {
+                            x: generalOffsetsBox._children[2].pos,
+                            y: generalOffsetsBox._children[3].pos
+                        },
+                        i: {
+                            x: staticOffsetsBox._children[2].pos,
+                            y: staticOffsetsBox._children[3].pos
+                        },
+                        p: {
+                            x: pressedOffsetsBox._children[2].pos,
+                            y: pressedOffsetsBox._children[3].pos
+                        },
+                        h: {
+                            x: confirmOffsetsBox._children[2].pos,
+                            y: confirmOffsetsBox._children[3].pos
+                        }
+                    },
+
+                    u: {
+                        g: {
+                            x: generalOffsetsBox._children[4].pos,
+                            y: generalOffsetsBox._children[5].pos
+                        },
+                        i: {
+                            x: staticOffsetsBox._children[4].pos,
+                            y: staticOffsetsBox._children[5].pos
+                        },
+                        p: {
+                            x: pressedOffsetsBox._children[4].pos,
+                            y: pressedOffsetsBox._children[5].pos
+                        },
+                        h: {
+                            x: confirmOffsetsBox._children[4].pos,
+                            y: confirmOffsetsBox._children[5].pos
+                        }
+                    },
+
+                    r: {
+                        g: {
+                            x: generalOffsetsBox._children[6].pos,
+                            y: generalOffsetsBox._children[7].pos
+                        },
+                        i: {
+                            x: staticOffsetsBox._children[6].pos,
+                            y: staticOffsetsBox._children[7].pos
+                        },
+                        p: {
+                            x: pressedOffsetsBox._children[6].pos,
+                            y: pressedOffsetsBox._children[7].pos
+                        },
+                        h: {
+                            x: confirmOffsetsBox._children[6].pos,
+                            y: confirmOffsetsBox._children[7].pos
+                        }
+                    }
+                },
+
+                anims: {
+                    l: {
+                        h: confirmAnimsBox._children[0].text,
+                        i: staticAnimsBox._children[0].text,
+                        p: pressedAnimsBox._children[0].text
+                    },
+
+                    d: {
+                        h: confirmAnimsBox._children[1].text,
+                        i: staticAnimsBox._children[1].text,
+                        p: pressedAnimsBox._children[1].text
+                    },
+
+                    u: {
+                        h: confirmAnimsBox._children[2].text,
+                        i: staticAnimsBox._children[2].text,
+                        p: pressedAnimsBox._children[2].text
+                    },
+
+                    r: {
+                        h: confirmAnimsBox._children[3].text,
+                        i: staticAnimsBox._children[3].text,
+                        p: pressedAnimsBox._children[3].text
+                    }
+                }
+            }
+
+            var path = Paths.customStrumSkinFolder(curSkin, WORKING_MOD_DIRECTORY) + '/' + curSkin + '.json';
+
+            var rawData = stringifyJson(data, '\t');
+            File.saveContent(path, rawData);
+
+            reloadFrames();
+
+            FlxTween.cancelTweensOf(updatedChangesText);
+            updatedChangesText.alpha = 1;
+            FlxTween.tween(updatedChangesText, {alpha: 0}, 1, {ease: FlxEase.expoOut, startDelay: 0.4});
+        });
+    }
+    view.addComponent(saveButton);
+
+    Screen.addComponent(box);
+}
+
+function getDirText(i)
+{
+    var text = new TextField();
+    text.width = 100;
+    text.placeholder = dirs[i];
+    text.color = cols[i];
+    return text;
+}
+
+function getOffsetSteppers(i)
+{
+    var returns = [];
+    for (x in 0...2)
+    {
+        var step = new haxe.ui.components.NumberStepper();
+        step.step = 1;
+        step.width = 65;
+        step.min = -999;
+        step.max = 999;
+        step.color = cols[i];
+
+        returns.push(step);
+    }
+
+    return returns;
+}
+
+
+function reloadFrames()
+{
+    for (strum in strums)
+        strum.reloadStrumSkin(curSkin, WORKING_MOD_DIRECTORY, true);
+}
+
+function getNote(i, prevNote, sus, y)
+{
+    var strum = strums[i];
+
+    var note = new Note(999, i, prevNote, sus, true, false, strum);
+
+    note.x = strum.x;
+    note.y = y;
+
+    note.alpha = 0;
+    note.y -= 10;
+
+    FlxTween.tween(note, {y: note.y + 10, alpha: 1}, 1, {ease: FlxEase.expoOut, startDelay: 1 + i * 0.1});
+
+    add(note);
+    return note;
+}
+
+function update(dt)
+{
+    if (this.blockInput)
+        return;
+
+    if (controls.NOTE_LEFT_P) strums[0].playAnim(pressAnim ? 'pressed' : 'confirm');
+    if (controls.NOTE_LEFT_R) strums[0].playAnim('static');
+
+    if (controls.NOTE_DOWN_P) strums[1].playAnim(pressAnim ? 'pressed' : 'confirm');
+    if (controls.NOTE_DOWN_R) strums[1].playAnim('static');
+
+    if (controls.NOTE_UP_P) strums[2].playAnim(pressAnim ? 'pressed' : 'confirm');
+    if (controls.NOTE_UP_R) strums[2].playAnim('static');
+
+    if (controls.NOTE_RIGHT_P) strums[3].playAnim(pressAnim ? 'pressed' : 'confirm');
+    if (controls.NOTE_RIGHT_R) strums[3].playAnim('static');
+
+    if (controls.BACK) LoadingState.loadAndSwitchCustomState('MasterEditorMenu');
+}

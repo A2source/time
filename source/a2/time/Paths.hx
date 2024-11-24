@@ -612,19 +612,29 @@ class Paths
 	 * Custom Notes
 	 */
 
-	public static function noteFile(key:String, ext:String, modDirectory:String = Main.MOD_NAME)
+	public static function customNoteFile(name:String, key:String, ext:String, modDirectory:String = Main.MOD_NAME)
 	{
-		return modsFile('custom_notetypes', key, ext, modDirectory);
+		return modsFile('custom_notetypes/$name', key, ext, modDirectory);
 	}
 
-	public static function noteScript(key:String, modDirectory:String = Main.MOD_NAME)
+	public static function customNoteImage(key:String, modDirectory:String = Main.MOD_NAME)
 	{
-		return noteFile(key, 'hscript', modDirectory);
+		return customNoteFile(key, key, 'hscript', modDirectory);
 	}
 
-	public static function noteJson(key:String, modDirectory:String = Main.MOD_NAME)
+	public static function customNoteXml(key:String, modDirectory:String = Main.MOD_NAME)
 	{
-		return noteFile(key, 'json', modDirectory);
+		return customNoteFile(key, key, 'hscript', modDirectory);
+	}
+
+	public static function customNoteScript(key:String, modDirectory:String = Main.MOD_NAME)
+	{
+		return customNoteFile(key, key, 'hscript', modDirectory);
+	}
+
+	public static function customNoteJson(key:String, modDirectory:String = Main.MOD_NAME)
+	{
+		return customNoteFile(key, key, 'json', modDirectory);
 	}
 
 	/*
@@ -680,12 +690,12 @@ class Paths
 		return customStrumSkinFile(key, key, 'json', modDirectory);
 	}
 
-	static public function customStrumSkinPNG(key:String, modDirectory:String = Main.MOD_NAME)
+	static public function customStrumSkinImage(key:String, modDirectory:String = Main.MOD_NAME)
 	{
 		return customStrumSkinFile(key, key, 'png', modDirectory);
 	}
 
-	static public function customStrumSkinXML(key:String, modDirectory:String = Main.MOD_NAME)
+	static public function customStrumSkinXml(key:String, modDirectory:String = Main.MOD_NAME)
 	{
 		return customStrumSkinFile(key, key, 'xml', modDirectory);
 	}

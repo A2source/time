@@ -2051,7 +2051,7 @@ class PlayState extends MusicBeatState
 					{
 						for (mod in Paths.getModDirectories())
 						{
-							var script:String = Paths.noteScript(note.t, mod);
+							var script:String = Paths.customNoteScript(note.t, mod);
 							if (script != null)
 								hscriptManager.addScriptFromPath(script);
 						}

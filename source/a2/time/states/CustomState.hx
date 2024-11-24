@@ -192,9 +192,9 @@ class CustomState extends MusicBeatState
 		interp.variables.set('ClientPrefs', a2.time.util.ClientPrefs);
 		interp.variables.set("MusicBeatState", a2.time.states.MusicBeatState);
 		interp.variables.set("Note", a2.time.objects.gameplay.Note);
+		interp.variables.set("StrumNote", a2.time.objects.gameplay.StrumNote);
 		interp.variables.set("Section", a2.time.objects.song.Section);
 		interp.variables.set("ColorSwap", a2.time.shader.ColorSwap);
-		interp.variables.set("Song", a2.time.objects.song.Song);
 		interp.variables.set("FlxFlicker", FlxFlicker);
 		interp.variables.set("FlxGroup", flixel.group.FlxGroup);
 		interp.variables.set("FlxTrailArea", FlxTrailArea);
@@ -206,6 +206,7 @@ class CustomState extends MusicBeatState
 		interp.variables.set("FlxBackdrop", flixel.addons.display.FlxBackdrop);
 		interp.variables.set("Json", haxe.Json);
 		interp.variables.set("stringifyJson", function(object:Dynamic, ?space:String) { return haxe.Json.stringify(object, space); });
+		interp.variables.set("parseJson", function(text:String) { return haxe.Json.parse(text); });
 		interp.variables.set("FlxSound", FlxSound);
 		interp.variables.set("FlxGridOverlay", FlxGridOverlay);
 		interp.variables.set("FlxG", FlxG);
@@ -244,6 +245,18 @@ class CustomState extends MusicBeatState
 		interp.variables.set("ALERT_TITLE", Main.ALERT_TITLE);
 		interp.variables.set('MOD_NAME', Main.MOD_NAME);
 		interp.variables.set('WORKING_MOD_DIRECTORY', Paths.WORKING_MOD_DIRECTORY);
+		interp.variables.set('CHART_VERSION_STRING', a2.time.objects.song.Song.CHART_VERSION_STRING);
+		interp.variables.set('DEFAULT_STRUM_SKIN_NAME', a2.time.objects.gameplay.StrumNote.DEFAULT_STRUM_SKIN_NAME);
+
+		interp.variables.set('getMap', function()
+		{
+			return new Map<Dynamic, Dynamic>();
+		});
+
+		interp.variables.set('getMap2', function()
+		{
+			return new Map<Dynamic, Map<Dynamic, Dynamic>>();
+		});
 
 		interp.variables.set("Interp", Interp);
 		interp.variables.set("ParserEx", ParserEx);
@@ -256,12 +269,19 @@ class CustomState extends MusicBeatState
 		interp.variables.set('mPos', CustomState.mPos);
 		interp.variables.set('tweenMouse', CustomState.tweenMouse);
 
+		// i was doing this interp because i thought i had to to make it work
+		// but i dont
+		// haxeui works even by just accessing the long paths directly in hscript
+		// like i was alr doing in source
+		// lol
 		interp.variables.set('Button', haxe.ui.components.Button);
+		interp.variables.set('Label', haxe.ui.components.Label);
 		interp.variables.set('TextField', haxe.ui.components.TextField);
 		interp.variables.set('TextArea', haxe.ui.components.TextArea);
 		interp.variables.set('HorizontalSlider', haxe.ui.components.HorizontalSlider);
 		interp.variables.set('VerticalSlider', haxe.ui.components.VerticalSlider);
 		interp.variables.set('CheckBox', haxe.ui.components.CheckBox);
+		interp.variables.set('DropDown', haxe.ui.components.DropDown);
 
 		interp.variables.set('Type', Type);
 		interp.variables.set('Array', Array);
@@ -276,6 +296,7 @@ class CustomState extends MusicBeatState
 		{
 			return new haxe.ui.data.ArrayDataSource<Dynamic>();
 		});
+		interp.variables.set('Dialogs', haxe.ui.containers.dialogs.Dialogs);
 
 		interp.variables.set('FocusManager', haxe.ui.focus.FocusManager);
 
@@ -348,7 +369,7 @@ class CustomState extends MusicBeatState
 		hscriptManager.callAll('update', [elapsed]);
 
 		// reset the state
-		if (FlxG.keys.justPressed.ONE) LoadingState.loadAndSwitchCustomState(stateName, modDirectory);
+		if (FlxG.keys.justPressed.ONE && !this.blockInput) LoadingState.loadAndSwitchCustomState(stateName, modDirectory);
 	}
 
 	override function beatHit()

@@ -140,8 +140,8 @@ class Note extends FlxSprite
 	public var ignoreNote:Bool = false;
 
 	public var parentStrumNote:StrumNote;
-	private var solidStrumSkinName:String;
-	private var susStrumSkinData:StrumNote.SustainNotePieceAnimationNames;
+	public var solidStrumSkinName:String;
+	public var susStrumSkinData:StrumNote.SustainNotePieceAnimationNames;
 
 	public var isHoldEnd:Bool = false;
 
@@ -180,7 +180,8 @@ class Note extends FlxSprite
 		return value;
 	}
 
-	public function new(strumTime:Float, noteData:Int, ?prevNote:Note, ?sustainNote:Bool = false, ?inEditor:Bool = false, mustHit:Bool = false)
+	var forcedStrum:Bool = false;
+	public function new(strumTime:Float, noteData:Int, ?prevNote:Note, ?sustainNote:Bool = false, ?inEditor:Bool = false, mustHit:Bool = false, forceStrum:StrumNote = null)
 	{
 		super();
 
@@ -195,11 +196,19 @@ class Note extends FlxSprite
 		}
 		else
 		{
-			if (!isEventNote)
+			if (!isEventNote && forceStrum == null)
 			{
 				@:privateAccess parentStrumNote = ChartingState.instance.strumLineNotes.members[noteData % 4];
 				parentStrumNote.associatedNotes.push(this);
 			}
+		}
+
+		if (forceStrum != null)
+		{
+			parentStrumNote = forceStrum;
+			forceStrum.associatedNotes.push(this);
+
+			forcedStrum = true;
 		}
 
 		if (!isEventNote)
@@ -302,7 +311,7 @@ class Note extends FlxSprite
 		{
 			Paths.VERBOSE = false;
 
-			var path = Paths.noteJson(name, mod);
+			var path = Paths.customNoteJson(name, mod);
 			if (path == null)
 				continue;
 
@@ -361,7 +370,7 @@ class Note extends FlxSprite
 		if(animName != null)
 			animation.play(animName, true);
 
-		if(!inEditor)
+		if(!inEditor || forcedStrum)
 			return;
 
 		setGraphicSize(ChartingState.GRID_SIZE, ChartingState.GRID_SIZE);
@@ -467,5 +476,5 @@ class Note extends FlxSprite
 			alpha = 0.3;
 	}
 
-	public override function toString():String return '(Strum Time: $strumTime | Data: $noteData | Type: $noteType ${eventData.length > 0 ? '| Event Data: $eventData' : ''})';
+	public override function toString():String return '(Strum Time: $strumTime | Data: $noteData | Type: $noteType | Sustain: $isSustainNote ${eventData.length > 0 ? '| Event Data: $eventData' : ''})';
 }

@@ -1,37 +1,33 @@
 {
-	"notes": {
-		"solid": {
-			"d": "blue0",
-			"l": "purple0",
-			"r": "red0",
-			"u": "green0"
+	"anims": {
+		"r": {
+			"p": "right press",
+			"h": "right confirm",
+			"i": "arrowRIGHT"
 		},
-		"sus": {
-			"d": {
-				"e": "blue hold end",
-				"p": "blue hold piece"
-			},
-			"l": {
-				"e": "pruple end hold",
-				"p": "purple hold piece"
-			},
-			"r": {
-				"e": "red hold end",
-				"p": "red hold piece"
-			},
-			"u": {
-				"e": "green hold end",
-				"p": "green hold piece"
-			}
+		"d": {
+			"p": "down press",
+			"h": "down confirm",
+			"i": "arrowDOWN"
+		},
+		"l": {
+			"p": "left press",
+			"h": "left confirm",
+			"i": "arrowLEFT"
+		},
+		"u": {
+			"p": "up press",
+			"h": "up confirm",
+			"i": "arrowUP"
 		}
 	},
 	"offsets": {
-		"d": {
-			"g": {
+		"r": {
+			"h": {
 				"x": 0,
 				"y": 0
 			},
-			"h": {
+			"p": {
 				"x": 0,
 				"y": 0
 			},
@@ -39,17 +35,35 @@
 				"x": 0,
 				"y": 0
 			},
+			"g": {
+				"x": 0,
+				"y": 0
+			}
+		},
+		"d": {
+			"h": {
+				"x": 1,
+				"y": 0
+			},
 			"p": {
+				"x": 0,
+				"y": 0
+			},
+			"i": {
+				"x": 0,
+				"y": 0
+			},
+			"g": {
 				"x": 0,
 				"y": 0
 			}
 		},
 		"l": {
-			"g": {
-				"x": 0,
-				"y": 0
-			},
 			"h": {
+				"x": -1,
+				"y": -3
+			},
+			"p": {
 				"x": 0,
 				"y": 0
 			},
@@ -57,35 +71,17 @@
 				"x": 0,
 				"y": 0
 			},
-			"p": {
-				"x": 0,
-				"y": 0
-			}
-		},
-		"r": {
 			"g": {
-				"x": 0,
-				"y": 0
-			},
-			"h": {
-				"x": 0,
-				"y": 0
-			},
-			"i": {
-				"x": 0,
-				"y": 0
-			},
-			"p": {
 				"x": 0,
 				"y": 0
 			}
 		},
 		"u": {
-			"g": {
+			"h": {
 				"x": 0,
 				"y": 0
 			},
-			"h": {
+			"p": {
 				"x": 0,
 				"y": 0
 			},
@@ -93,32 +89,36 @@
 				"x": 0,
 				"y": 0
 			},
-			"p": {
+			"g": {
 				"x": 0,
 				"y": 0
 			}
 		}
 	},
-	"anims": {
-		"d": {
-			"h": "down confirm",
-			"i": "arrowDOWN",
-			"p": "down press"
+	"notes": {
+		"sus": {
+			"r": {
+				"p": "red hold piece",
+				"e": "red hold end"
+			},
+			"d": {
+				"p": "blue hold piece",
+				"e": "blue hold end"
+			},
+			"l": {
+				"p": "purple hold piece",
+				"e": "pruple end hold"
+			},
+			"u": {
+				"p": "green hold piece",
+				"e": "green hold end"
+			}
 		},
-		"l": {
-			"h": "left confirm",
-			"i": "arrowLEFT",
-			"p": "left press"
-		},
-		"r": {
-			"h": "right confirm",
-			"i": "arrowRIGHT",
-			"p": "right press"
-		},
-		"u": {
-			"h": "up confirm",
-			"i": "arrowUP",
-			"p": "up press"
+		"solid": {
+			"r": "red0",
+			"d": "blue0",
+			"l": "purple0",
+			"u": "green0"
 		}
 	}
 }

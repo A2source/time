@@ -104,11 +104,8 @@ function update(dt)
         }
     }
 
-    if (controls.BACK && !transitioning && skipped)
-    {
-        tweenMouseOff();
+    if (controls.BACK && !transitioning)
         goBack();
-    }
 
     // ------------------------------------------------------------------
 

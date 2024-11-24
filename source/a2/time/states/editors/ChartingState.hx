@@ -721,7 +721,7 @@ If you have any questions about the editor, ask me!';
 		for (mod in mods)
 			for (file in FileSystem.readDirectory(Paths.mods('custom_notetypes', mod)))
 			{
-				var check = Paths.noteJson(file.split('.json')[0], mod);
+				var check = Paths.customNoteJson(file.split('.json')[0], mod);
 				if (check == null)
 					continue;
 
@@ -952,6 +952,8 @@ If you have any questions about the editor, ask me!';
 
 			var dummySong:SwagSong = 
 			{
+				version: Song.CHART_VERSION_STRING,
+
 				song: name,
 				stage: 'stage',
 
@@ -970,8 +972,6 @@ If you have any questions about the editor, ask me!';
 				players: ['bf'],
 				opponents: ['dad'],
 				autoGF: 'gf',
-
-				countdownType: 'normal',
 
 				validScore: false
 			};
@@ -1793,9 +1793,6 @@ If you have any questions about the editor, ask me!';
 	function getCopyLastString(char:String, amt:Int)
 	{
 		var mode = cutSection.selected ? 'Cut' : 'Copy';
-
-		if (char == characterList[curCharIndex] && amt == 0)
-			copyLastButton.disabled = true;
 
 		if (copyLastButton.disabled && amt != 0)
 			copyLastButton.disabled = false;
@@ -4400,6 +4397,8 @@ If you have any questions about the editor, ask me!';
 
 		var mainJson:SwagSong = 
 		{
+			version: Song.CHART_VERSION_STRING,
+
 			song: _song.song,
 			stage: _song.stage,
 
@@ -4418,8 +4417,6 @@ If you have any questions about the editor, ask me!';
 			players: _song.players,
 			opponents: _song.opponents,
 			autoGF: _song.autoGF,
-
-			countdownType: _song.countdownType,
 
 			validScore: _song.validScore,
 		};
