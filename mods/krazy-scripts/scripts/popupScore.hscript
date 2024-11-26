@@ -1,5 +1,5 @@
-var tweenTime = Conductor.crochet * 0.0009;
-var delayTime = Conductor.crochet * 0.002;
+var tweenTime = 0.2;
+var delayTime = 0.8;
 
 var msText;
 var alphaTween;

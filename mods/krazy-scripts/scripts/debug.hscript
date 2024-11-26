@@ -1,0 +1,32 @@
+function start(song)
+{
+    // game.botplay = true;
+}
+
+function update(dt)
+{
+    var evil = game.getCurDad();
+
+    Main.fpsVar.customValues.push('\n' + '---- ' +  SONG.song + ' (' + game.formatSongDifficulty(PlayState.difficulty) + ') ----');
+    Main.fpsVar.customValues.push(formatString([curSection, curBeat, curStep], false));
+    Main.fpsVar.customValues.push(formatString([Std.int(Conductor.songPosition), Conductor.bpm + ' bpm'], false));
+
+    Main.fpsVar.customValues.push('\n' + 'Focus: ' + game.charNames[charFocus] + ' (' + charFocus + ')');
+
+    Main.fpsVar.customValues.push('\n' + 'Botplay: ' + game.botplay);
+    Main.fpsVar.customValues.push(formatString([evil.curAnimName, evil.hitSustainNote, evil.holdTimer], true));
+
+    if (FlxG.keys.justPressed.B) game.botplay = !game.botplay;
+}
+
+function formatString(values, newLine)
+{
+    var string = newLine ? '\n' : '';
+
+    for (i in 0...values.length - 1)
+        string +=  values[i] + ' - ';
+
+    string += values[values.length - 1];
+
+    return string;
+}

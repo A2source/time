@@ -395,6 +395,9 @@ class Character extends TimeSprite
 		shadowChar.flipY = !flipY;
 
 		simpleShadow.visible = visible && simpleShadows;
+
+		trailChar.visible = visible;
+		trailChar.flipY = flipY;
 	}
 
 	override function update(dt:Float)
@@ -416,7 +419,7 @@ class Character extends TimeSprite
 			dance();
 		}
 
-		if (animation.curAnim.name.startsWith('sing'))
+		if (animation.curAnim.name.startsWith('sing') && !hitSustainNote)
 			holdTimer += dt * 0.9;
 
 		if (holdTimer >= Conductor.stepCrochet * (0.0011 / (FlxG.sound.music != null ? FlxG.sound.music.pitch : 1)) * singDuration)
@@ -509,6 +512,9 @@ class Character extends TimeSprite
 
 	public function playAnim(AnimName:String, Force:Bool = false, Reversed:Bool = false, Frame:Int = 0):Void
 	{
+		if (hitSustainNote)
+			return;
+
 		updateShadow(AnimName, Force, Reversed, Frame);
 
 		specialAnim = false;

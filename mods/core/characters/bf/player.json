@@ -65,7 +65,12 @@
 				5,
 				-356
 			],
-			"indices": [0,1,2,3],
+			"indices": [
+				0,
+				1,
+				2,
+				3
+			],
 			"fps": 24,
 			"anim": "singLEFT-loop",
 			"loop": true,
@@ -77,7 +82,12 @@
 				-47,
 				-355
 			],
-			"indices": [0,1,2,3],
+			"indices": [
+				0,
+				1,
+				2,
+				3
+			],
 			"fps": 24,
 			"anim": "singRIGHT-loop",
 			"loop": true,
@@ -89,7 +99,12 @@
 				-47,
 				-320
 			],
-			"indices": [0,1,2,3],
+			"indices": [
+				0,
+				1,
+				2,
+				3
+			],
 			"fps": 24,
 			"anim": "singUP-loop",
 			"loop": true,
@@ -101,7 +116,12 @@
 				-25,
 				-399
 			],
-			"indices": [0,1,2,3],
+			"indices": [
+				0,
+				1,
+				2,
+				3
+			],
 			"fps": 24,
 			"anim": "singDOWN-loop",
 			"loop": true,
@@ -222,6 +242,18 @@
 			"anim": "singRIGHT-loop",
 			"loop": true,
 			"name": "BF NOTE RIGHT0",
+			"sheet": "bf"
+		},
+		{
+			"offsets": [
+				-2,
+				-346
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "hey",
+			"loop": false,
+			"name": "BF HEY!!",
 			"sheet": "bf"
 		}
 	],

@@ -143,7 +143,7 @@ class Note extends FlxSprite
 	public var solidStrumSkinName:String;
 	public var susStrumSkinData:StrumNote.SustainNotePieceAnimationNames;
 
-	public var isHoldEnd:Bool = false;
+	public var isHoldEnd:Bool = true;
 
 	private function set_multSpeed(value:Float):Float 
 	{
@@ -287,7 +287,7 @@ class Note extends FlxSprite
 			if (prevNote.isSustainNote)
 			{
 				prevNote.animation.play(colArray[prevNote.noteData % 4] + 'hold');
-				isHoldEnd = true;
+				prevNote.isHoldEnd = false;
 
 				prevNote.scale.y *= Conductor.stepCrochet / 100 * 1.05;
 				if(PlayState.instance != null)
@@ -296,8 +296,11 @@ class Note extends FlxSprite
 				prevNote.updateHitbox();
 			}
 		} 
-		else if(!isSustainNote) 
+		else if(!isSustainNote)
+		{
+			isHoldEnd = false; 
 			earlyHitMult = 1;
+		}
 		
 		x += offsetX;
 	}

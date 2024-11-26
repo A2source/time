@@ -444,6 +444,7 @@ class PlayState extends MusicBeatState
 		interp.variables.set('SONG', SONG);
 
 		interp.variables.set("songLength", songLength);
+		interp.variables.set("curSection", 0);
 		interp.variables.set("curStep", 0);
 		interp.variables.set("curBeat", 0);
 		interp.variables.set("camHUD", camHUD);
@@ -2877,7 +2878,7 @@ class PlayState extends MusicBeatState
 					if (person.holdTimer < Conductor.stepCrochet * (0.0011 / FlxG.sound.music.pitch) * person.singDuration)
 						continue;
 					
-					if (person.animation.curAnim.name.startsWith('sing'))
+					if (person.animation.curAnim.name.startsWith('sing') || person.animation.timeScale == 0)
 						continue;
 
 					person.dance();
@@ -3170,12 +3171,12 @@ class PlayState extends MusicBeatState
 					if(dad.name.startsWith('gf')) 
 					{ //Tutorial GF is actually Dad! The GF is an imposter!! ding ding ding ding ding ding ding, dindinding, end my suffering
 
-						dad.playAnim('cheer', true);
+						dad.playAnim('hey', true);
 						dad.specialAnim = true;
 					} 
 					else if (gf != null) 
 					{
-						gf.playAnim('cheer', true);
+						gf.playAnim('hey', true);
 						gf.specialAnim = true;
 					}
 				}
@@ -3694,16 +3695,32 @@ class PlayState extends MusicBeatState
 	{
 		char.hitSustainNote = note.isSustainNote;
 		animToPlay += char.animSuffix;
-		
-		if (((char.hitSustainNote && char.prevDirKeep == note.noteData) || !note.isSustainNote || char.prevDirKeep == -1))
-			if (!note.isHoldEnd)
-			{
-				char.playAnim(animToPlay, true);
-				char.holdTimer = 0;
 
-				if (note.tail.length > 0)
-					char.animation.pause();
-			}
+		char.holdTimer = 0;
+
+		if (!note.isSustainNote)
+			char.playAnim(animToPlay, true);
+		else if (note.isSustainNote && note.isHoldEnd && char.prevDirKeep == note.noteData)
+		{
+			char.animation.finish();
+			char.hitSustainNote = false;
+
+			char.playAnim(animToPlay, true);
+		}
+
+		if (char.hitSustainNote)
+		{
+			char.hitSustainNote = false;
+
+			var hasLoop:Bool = char.hasLoopAnim(animToPlay);
+
+			if (hasLoop && !char.animEndsWith('-loop'))
+				char.playAnim(animToPlay + '-loop', true);
+			else if (!hasLoop)
+				char.animation.pause();
+
+			char.hitSustainNote = true;
+		}
 
 		if (!note.isSustainNote)
 			char.prevDirKeep = note.noteData;
@@ -3783,7 +3800,7 @@ class PlayState extends MusicBeatState
 			if (char.animation.curAnim.name.startsWith('sing'))
 				continue;
 
-			if (char.stunned)
+			if (char.stunned || char.animation.timeScale == 0)
 				continue;
 
 			if (char.animation.curAnim.name == 'idle' && char.animation.curAnim.looped)
@@ -3793,7 +3810,7 @@ class PlayState extends MusicBeatState
 				continue;
 
 			char.dance();
-			hscriptManager.callAll('bfDance', []);
+			hscriptManager.callAll('charDance', [char]);
 		}
 
 		lastBeatHit = curBeat;
@@ -3822,6 +3839,7 @@ class PlayState extends MusicBeatState
 		}
 
 		hscriptManager.callAll('sectionHit', [curSection]);
+		hscriptManager.setAll('curSection', curSection);
 	}
 
 	function StrumPlayAnim(isDad:Bool, id:Int, time:Float) 

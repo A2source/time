@@ -7,11 +7,11 @@ function start(song)
 }
 
 var introSounds = ['3', '2', '1', 'Go'];
+
 var angle = false;
 function onCountdownTick(num)
 {
     FlxG.sound.play(Paths.getModsSound('intro' + introSounds[num], 'krazy-scripts'), 0.7);
-    trace(num);
 
     if (num - 1 < 0)
         return;

@@ -98,6 +98,8 @@ function gameFeedback(dir)
 
     FlxG.sound.play(Paths.soundRandom('missnote', 1, 3), FlxG.random.float(0.1, 0.2));
 
+    guy.hitSustainNote = false;
+
     if (guy.hasMissAnimations)
         guy.playAnim(SING_ANIMATIONS[Std.int(Math.abs(dir))] + '-miss', true);
 }

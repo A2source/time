@@ -36,7 +36,6 @@ class FPS extends Sprite
 	public static var showFPS:Bool = true;
 	public static var showMemPeak:Bool = true;
 
-	private var cacheCount:Int;
 	private var currentTime:Float;
 	private var times:Array<Float>;
 
@@ -66,7 +65,6 @@ class FPS extends Sprite
 		
 		currentFPS = 0;
 
-		cacheCount = 0;
 		currentTime = 0;
 		highestMem = 0;
 		times = [];
@@ -78,6 +76,10 @@ class FPS extends Sprite
 		});
 		#end
 	}
+
+	// allows you to add custom lines to the display with a script.
+	// refreshes each frame, values must be pushed on update
+	public var customValues:Array<String> = [];
 
 	var PADDING:Int = 4;
 	private #if !flash override #end function __enterFrame(d:Float):Void
@@ -99,42 +101,42 @@ class FPS extends Sprite
 		if(currentMem > highestMem)
 			highestMem = currentMem;
 
-		if (currentCount != cacheCount)
+		text.text = '';
+		if(showFPS)
+			text.text += '$currentFPS FPS\n';
+
+		if(showMem)
 		{
-			text.text = '';
-			if(showFPS)
-				text.text += "FPS: " + currentFPS + "\n";
-
-			if(showMem)
+			var desiredMem = currentMem;
+			var suffix = ' MB';
+			if (desiredMem > 1000)
 			{
-				var desiredMem = currentMem;
-				var suffix = " MB\n";
-				if (desiredMem > 1000)
-				{
-					desiredMem = FlxMath.roundDecimal(desiredMem / 1000, 2);
-					suffix = " GB\n";
-				}
-				text.text += "Mem: " + desiredMem + suffix;
+				desiredMem = FlxMath.roundDecimal(desiredMem / 1000, 2);
+				suffix = ' GB';
 			}
-
-			if(showMemPeak)
-			{
-				var desiredMem = highestMem;
-				var suffix = " MB\n";
-				if (desiredMem > 1000)
-				{
-					desiredMem = FlxMath.roundDecimal(desiredMem / 1000, 2);
-					suffix = " GB\n";
-				}
-				text.text += "Peak Mem: " + desiredMem + suffix;
-			}
-
-			cacheCount = currentCount;
+			text.text += '$desiredMem$suffix Mem\n';
 		}
+
+		if(showMemPeak)
+		{
+			var desiredMem = highestMem;
+			var suffix = ' MB';
+			if (desiredMem > 1000)
+			{
+				desiredMem = FlxMath.roundDecimal(desiredMem / 1000, 2);
+				suffix = ' GB';
+			}
+			text.text += '$desiredMem$suffix Peak\n';
+		}
+
+		for (value in customValues)
+			text.text += '$value\n';
 
 		text.x = Std.int(PADDING / 2);
 
 		bg.scaleX = text.textWidth + PADDING * 2;
 		bg.scaleY = text.textHeight + PADDING;
+
+		customValues = [];
 	}
 }

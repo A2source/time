@@ -64,6 +64,30 @@
 			"loop": false,
 			"name": "GF Dancing Beat",
 			"sheet": "gf"
+		},
+		{
+			"offsets": [
+				149,
+				-102
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "sad",
+			"loop": false,
+			"name": "gf sad",
+			"sheet": "gf"
+		},
+		{
+			"offsets": [
+				153,
+				-82
+			],
+			"indices": [],
+			"fps": 24,
+			"anim": "hey",
+			"loop": false,
+			"name": "GF Cheer",
+			"sheet": "gf"
 		}
 	],
 	"position": [
