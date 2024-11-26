@@ -309,6 +309,8 @@ class CustomState extends MusicBeatState
 		interp.variables.set("screenResolutionY", Capabilities.screenResolutionY);
 		interp.variables.set("Capabilities", Capabilities);
 
+		interp.variables.set('reset', resetCustomState);
+
 		return interp;
 	}
 
@@ -369,7 +371,12 @@ class CustomState extends MusicBeatState
 		hscriptManager.callAll('update', [elapsed]);
 
 		// reset the state
-		if (FlxG.keys.justPressed.ONE && !this.blockInput) LoadingState.loadAndSwitchCustomState(stateName, modDirectory);
+		if (FlxG.keys.justPressed.ONE && !this.blockInput) resetCustomState();
+	}
+
+	private static function resetCustomState()
+	{
+		LoadingState.loadAndSwitchCustomState(stateName, modDirectory);
 	}
 
 	override function beatHit()

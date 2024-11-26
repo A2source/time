@@ -72,6 +72,8 @@ class IntroState extends MusicBeatState
 
 		trace('should be running startup now.');
 
-		new a2.time.objects.managers.HscriptManager(null).addScript('startup', Paths.mods('', Main.MOD_NAME), 'onStartup', 'hscript').callAll('create', []);
+		var manager = new a2.time.objects.managers.HscriptManager(null);
+		manager.addScript('startup', Paths.mods('', Main.MOD_NAME), 'onStartup', 'hscript');
+		manager.callAll('create', []);
 	}
 }

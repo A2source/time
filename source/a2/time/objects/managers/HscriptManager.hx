@@ -30,7 +30,7 @@ class HscriptManager
 		return (file.endsWith('.hscript') || file.endsWith('.hxs') || file.endsWith('.skibidi'));
 	}
 
-    public function addScript(scriptName:String, path:String, fileName:String, ext:String):HscriptManager
+    public function addScript(scriptName:String, path:String, fileName:String, ext:String):Interp
     {
 		var parser = new ParserEx();
 
@@ -39,7 +39,7 @@ class HscriptManager
         if (!check)
         {
             Lib.application.window.alert('Hscript file "$fullPath" not found.', Main.ALERT_TITLE);
-            return this;
+            return null;
         }
 
 		var program = parser.parseString(File.getContent(fullPath));
@@ -47,7 +47,7 @@ class HscriptManager
 		var modDirectory:String = path.split('mods/')[1];
 		modDirectory = modDirectory.split('/')[0];
 
-		var interp = CustomState.getBasicInterp('$modDirectory/$fileName');
+		var interp = CustomState.getBasicInterp('$path/$fileName');
 
 		if (exists(scriptName))
 			scriptName += Date.now();
@@ -58,13 +58,15 @@ class HscriptManager
 		interp.execute(program);
 		states.set(scriptName, interp);
 
-		return this;
+		interp.nameInHscriptManager = scriptName;
+
+		return interp;
 	}
 
-    public function addScriptFromPath(path:String, ?file:String = '')
+    public function addScriptFromPath(path:String, ?file:String = ''):Interp
 	{
 		if (path == null || file == null)
-			return;
+			return null;
 
 		if (file != '')
 		{
@@ -73,7 +75,7 @@ class HscriptManager
 				var fileName:String = file.split('.')[0];
 				var ext:String = file.split('.')[1];
 
-				addScript(fileName, path, fileName, ext);
+				return addScript(fileName, path, fileName, ext);
 			}
 		}
 		else
@@ -91,9 +93,11 @@ class HscriptManager
 				var fileName:String = fileStuff[0];
 				var ext:String = fileStuff[1];
 
-				addScript(fileName, croppedPath, fileName, ext);
+				return addScript(fileName, croppedPath, fileName, ext);
 			}
 		}
+
+		return null;
 	}
 
 	public function addScriptsFromFolder(path:String)

@@ -490,10 +490,11 @@ class PlayState extends MusicBeatState
 
 		// callbacks
 		interp.variables.set("start", function (song) {});
-		interp.variables.set("beatHit", function (beat) {});
-		interp.variables.set("update", function (elapsed) {});
-		interp.variables.set("endUpdate", function (elapsed) {});
 		interp.variables.set("stepHit", function(step) {});
+		interp.variables.set("beatHit", function (beat) {});
+		interp.variables.set("sectiontHit", function (section) {});
+		interp.variables.set("update", function (dt) {});
+		interp.variables.set("postUpdate", function (dt) {});
 
 		interp.variables.set('spawnNoteSplash', function(x, y, data) {});
 
@@ -2781,11 +2782,11 @@ class PlayState extends MusicBeatState
 	var startedCountdown:Bool = false;
 	var canPause:Bool = true;
 
-	override public function update(elapsed:Float)
+	override public function update(dt:Float)
 	{
-		super.update(elapsed);
+		super.update(dt);
 		
-		hscriptManager.callAll('update', [elapsed]);
+		hscriptManager.callAll('update', [dt]);
 
 		checkFunctionKeys();
 
@@ -2801,7 +2802,7 @@ class PlayState extends MusicBeatState
 			playbackRate = timescaleSlider.pos;
 
 		// wow :o
-		camManager.update(elapsed, playbackRate);
+		camManager.update(dt, playbackRate);
 
 	 	clock = Sys.cpuTime();
 
@@ -2838,10 +2839,10 @@ class PlayState extends MusicBeatState
 		if (camManager.zoom.zooming)
 		{
 			if (camManager.zoom.gameZooming)
-				FlxG.camera.zoom = FlxMath.lerp(camManager.defaultZoom, FlxG.camera.zoom, CoolUtil.boundTo(1 - (elapsed * 3.125 * camManager.zoom.decay * playbackRate), 0, 1));
+				FlxG.camera.zoom = FlxMath.lerp(camManager.defaultZoom, FlxG.camera.zoom, CoolUtil.boundTo(1 - (dt * 3.125 * camManager.zoom.decay * playbackRate), 0, 1));
 			
-			camHUD.zoom = FlxMath.lerp(1, camHUD.zoom, CoolUtil.boundTo(1 - (elapsed * 3.125 * camManager.zoom.decay * playbackRate), 0, 1));
-			camOther.zoom = FlxMath.lerp(1, camOther.zoom, CoolUtil.boundTo(1 - (elapsed * 3.125 * camManager.zoom.decay * playbackRate), 0, 1));
+			camHUD.zoom = FlxMath.lerp(1, camHUD.zoom, CoolUtil.boundTo(1 - (dt * 3.125 * camManager.zoom.decay * playbackRate), 0, 1));
+			camOther.zoom = FlxMath.lerp(1, camOther.zoom, CoolUtil.boundTo(1 - (dt * 3.125 * camManager.zoom.decay * playbackRate), 0, 1));
 		}
 
 		if (unspawnNotes[0] != null)
@@ -2900,7 +2901,9 @@ class PlayState extends MusicBeatState
 		}
 		checkEventNote();
 
-		updateEditingMode(elapsed);
+		updateEditingMode(dt);
+
+		hscriptManager.callAll('postUpdate', [dt]);
 	}
 
 	var fakeCrochet:Float = 0;

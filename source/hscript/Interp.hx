@@ -53,6 +53,7 @@ class Interp {
 	#end
 
 	var nameToLog:String;
+	public var nameInHscriptManager:String = '';
 
 	public function new(name:String = 'hscript') {
 		#if haxe3
