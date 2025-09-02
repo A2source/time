@@ -2,7 +2,7 @@
 <project>
 	<!-- _________________________ Application Settings _________________________ -->
 
-	<app title="Friday Night Funkin' - TIME" file="TIME" packageName="com.fnf.time" package="com.fnf.time" main="Main" version="2.0.0" company="[A2]" /> 
+	<app title="Friday Night Funkin' - TIME" file="TIME" packageName="com.fnf.time" package="com.fnf.time" main="Main" version="2.0.1" company="[A2]" /> 
 
 	<!--The flixel preloader is not accurate in Chrome. You can use it regularly if you embed the swf into a html file
 		or you can set the actual size of your file manually at "FlxPreloaderBase-onUpdate-bytesTotal"-->
