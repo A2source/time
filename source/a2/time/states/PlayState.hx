@@ -830,9 +830,7 @@ class PlayState extends MusicBeatState
 	{
 		super.onFocus();
 
-		if (vocals != null)
-			if (prevPlayingFocus) vocals.play();
-		
+		if (prevPlayingFocus) vocals.play();
 		prevPlayingFocus = false;
 
 		hscriptManager.callAll('onFocus', []);
@@ -842,11 +840,8 @@ class PlayState extends MusicBeatState
 	{
 		super.onFocusLost();
 
-		if (vocals != null)
-		{
-			prevPlayingFocus = vocals.playing;
-			vocals.pause();
-		}
+		prevPlayingFocus = vocals.playing;
+		vocals.pause();
 
 		hscriptManager.callAll('onFocusLost', []);
 	}

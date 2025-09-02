@@ -251,7 +251,6 @@ class Character extends TimeSprite
 			@:privateAccess 
 			{
 				var thisAnim = animation._animations.get(anim.name);
-				if (thisAnim == null) continue;
 				thisAnim.loopPoint = anim.loopPoint;
 			}
 		}
@@ -293,9 +292,6 @@ class Character extends TimeSprite
 			simpleShadow.loadGraphic(cast Assets.cacheGraphic('assets/shared/images/simpleShadow.png').content);
 			simpleShadow.alpha = 0;
 			simpleShadow.color = 0xFF000000;
-
-			shadow.animation.copyFrom(animation);
-			trail.animation.copyFrom(animation);
 		}
 
 		setScale(charJson.scale);

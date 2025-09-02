@@ -87,14 +87,14 @@ class ClientPrefs
 		register('lowQuality', false);
 		register('shaders', true);
 		register('framerate', 60);
-		register('camzooms', true);
+		register('camZooms', true);
 		register('hideHud', false);
-		register('offset', 0);
+		register('offset', 0.0);
 
 		register('ghostTapping', true);
 		register('allowReset', true);
 		register('hpAlpha', 1);
-		register('hitsoundVolume', 0);
+		register('hitsoundVolume', 0.0);
 		register('gameplaySettings', {
 			scrollspeed: 1.0,
 			scrolltype: 'multiplicative',
@@ -106,16 +106,18 @@ class ClientPrefs
 			botplay: false
 		});
 
-		register('ratingOffset', 0);
-		register('sickWindow', 45);
-		register('goodWindow', 90);
-		register('badWindow', 135);
-		register('safeFrames', 10);
-		register('noteTailWindow', -10);
+		register('ratingOffset', 0.0);
+		register('sickWindow', 45.0);
+		register('goodWindow', 90.0);
+		register('badWindow', 135.0);
+		register('safeFrames', 10.0);
+		register('noteTailWindow', -10.0);
 
 		register('discordRPC', true);
 
 		loadDefaultKeys();
+
+		save();
 	}
 
 	public static function loadDefaultKeys()
