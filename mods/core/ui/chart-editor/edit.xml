@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Edit" width="200" height="200" top="310" left="5">
+    <hbox width="100%" height="100%">
+        <property-grid width="100%" height="100%">
+            <property-group text="Hovered Data">
+                <property label="Character" styleNames="info-hovered-character" />
+                <property label="Note Data" styleNames="info-hovered-notedata" />
+                <property label="Step" styleNames="info-hovered-step" />
+            </property-group>
+
+            <property-group text="Editor">
+                <property label="Zoom Level" styleNames="info-zoom" />
+                <property label="Snap Level" styleNames="info-snap" />
+                <property label="Playback Rate" styleNames="info-playback" />
+            </property-group>
+        </property-grid>
+    </hbox>
+</panel>

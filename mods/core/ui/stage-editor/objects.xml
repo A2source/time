@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Objects" width="200" height="400" top="315" left="5">
+    <tree-view width="100%" height="100%" styleNames="object-tree" />
+</panel>

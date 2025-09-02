@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="animation name" width="250" top="508" left="1025">
+    <property-grid width="100%">
+        <property label="Tag" styleNames="anim-tag" />
+
+        <property label="FPS" type="number" styleNames="anim-fps" />
+
+        <property-group text="Flip">
+            <property label="X" type="boolean" styleNames="anim-flipx" />
+            <property label="Y" type="boolean" styleNames="anim-flipy" />
+        </property-group>
+
+        <property label="Loop" type="boolean" styleNames="anim-loop" />
+        <property label="Loop Point" type="number" styleNames="anim-looppoint" />
+    </property-grid>
+</panel>

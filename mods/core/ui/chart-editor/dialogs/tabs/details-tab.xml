@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<box text="[SONG_NAME] Details">
+    <vbox>
+        <property-grid width="250">
+            <property label="Needs Voices" type="boolean" value="true" styleNames="metadata-needs-voices" />
+            <property label="BPM" type="number" step="0.01" precision="2" min="1" styleNames="metadata-bpm" />
+            <property label="Speed" type="number" step="0.1" precision="1" min="0.1" styleNames="metadata-speed" />
+
+            <hbox width="100%" padding="5px 0px">
+                <label text="Stage" width="100%" verticalAlign="center" />
+                <rule direction="vertical" horizontalAlign="center" />
+                <hbox width="100%"> 
+                    <button styleNames="stage-source" icon="haxeui-core/styles/shared/search.png" /> 
+                    <label styleNames="stage-name" text="stage" verticalAlign="center" />
+                </hbox>
+            </hbox>
+        </property-grid>
+
+        <section-header text="Players" />
+        <hbox width="250">
+            <scroll-view width="200" height="120" styleNames="players-view" contentLayoutName="horizontal"/>
+            <vbox width="100%" height="100%">
+                <button text="-" width="100%" height="100%" styleNames="players-remove char-button" style="background-color: red; border-color: black;" />
+                <button text="+" width="100%" height="100%" styleNames="players-add char-button" style="background-color: lime; border-color: black;" />
+            </vbox>
+        </hbox>
+
+        <section-header text="Opponents" />
+        <hbox width="250">
+            <scroll-view width="200" height="120" styleNames="opps-view" contentLayoutName="horizontal" />
+            <vbox width="100%" height="100%">
+                <button text="-" width="100%" height="100%" styleNames="opps-remove char-button" style="background-color: red; border-color: black;" />
+                <button text="+" width="100%" height="100%" styleNames="opps-add char-button" style="background-color: lime; border-color: black;" />
+            </vbox>
+        </hbox>
+    </vbox>
+</box>

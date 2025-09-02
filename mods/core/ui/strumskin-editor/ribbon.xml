@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menubar width="100%">
+    <menu text="File">
+        <menuitem text="Open..." styleNames="ribbon-file-open" shortcutText="Ctrl+O" />
+        <menuitem text="New..." styleNames="ribbon-file-new" shortcutText="Ctrl+N" />
+        <menuseparator />
+        <menuitem text="Undo" styleNames="ribbon-file-undo" shortcutText="Ctrl+Z" />
+        <menuitem text="Redo" styleNames="ribbon-file-redo" shortcutText="Ctrl+Y" />
+        <menuseparator />
+        <menuitem text="Save" styleNames="ribbon-file-save" shortcutText="Ctrl+S" />
+        <menuseparator />
+        <menuitem text="Quit" styleNames="ribbon-file-quit" shortcutText="Escape" />
+    </menu>
+
+    <menu text="View" disabled="true">
+        <menuitem text="Toggle UI" styleNames="ribbon-view-toggle-ui" shortcutText="F" />
+        <menuseparator />
+        <menuitem text="Toggle Horizontal Lines" styleNames="ribbon-view-hlines" />
+        <menuitem text="Toggle Vertical Lines" styleNames="ribbon-view-vlines" />
+    </menu>
+</menubar>

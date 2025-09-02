@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<listview width="300" height="400">
+    <item-renderer layout="horizontal" width="100%">
+        <image width="100%" id="image" />
+        <label id="name" verticalAlign="center" horizontalAlign="right" />
+    </item-renderer>
+</listview>

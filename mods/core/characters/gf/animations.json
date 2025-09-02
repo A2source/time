@@ -1,0 +1,71 @@
+{
+	"animations": [
+		{
+			"typeIndex": 0,
+			"fps": 24,
+			"type": "DANCE",
+			"tag": "GF Dancing Beat0",
+			"opponentOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"name": "dance left",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"indices": [
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13
+			]
+		},
+		{
+			"typeIndex": 1,
+			"fps": 24,
+			"type": "DANCE",
+			"tag": "GF Dancing Beat0",
+			"opponentOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"name": "dance right",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"indices": [
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25
+			]
+		}
+	]
+}

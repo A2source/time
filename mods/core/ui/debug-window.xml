@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Debug" height="300">
+    <vbox>
+        <button text="Open Chart Editor" styleNames="open-chart" />
+        <button text="Open Stage Editor" styleNames="open-stage" />
+
+        <hbox>
+            <button text="Open Character Editor" styleNames="open-char" />
+            <option-stepper styleNames="char-stepper" />
+        </hbox>
+
+        <rule />
+
+        <label text="Timescale" />
+        <slider pos="1" min="0" max="5" styleNames="timescale-slider" />
+        <button text="Reset" styleNames="reset-timescale" />
+        <button text="Pause" styleNames="pause-timescale" />
+
+        <rule />
+
+        <checkbox text="Botplay" selected="true" styleNames="botplay" />
+    </vbox>
+</panel>

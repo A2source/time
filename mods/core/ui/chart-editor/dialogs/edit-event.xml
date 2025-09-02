@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vbox>
+    <tabview width="300" height="450" styleNames="tabs" />
+    <hbox width="100%" height="50">
+        <button text="+" width="100%" horizontalAlign="left" styleNames="add-event char-button" style="background-color: lime; border-color: black;" />
+        <button text="-" width="100%" horizontalAlign="right" styleNames="remove-event char-button" style="background-color: red; border-color: black;" />
+    </hbox>
+</vbox>

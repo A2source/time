@@ -1,144 +1,253 @@
 package a2.time.objects.song;
 
+import a2.time.objects.gameplay.Character;
+import a2.time.backend.Paths;
 import a2.time.states.PlayState;
-import a2.time.objects.song.Song.SwagSong;
-import a2.time.objects.gameplay.Note;
-import a2.time.util.ClientPrefs;
-
-/**
- * ...
- * @author
- */
+import a2.time.objects.song.Song.TimeSong;
+import a2.time.objects.gameplay.notes.Note;
+import a2.time.backend.managers.ChartEventManager;
+import a2.time.backend.ClientPrefs;
 
 typedef BPMChangeEvent =
 {
-	var stepTime:Int;
-	var songTime:Float;
+	var step:Int;
+	var ms:Float;
 	var bpm:Float;
 	@:optional var stepCrochet:Float;
 }
 
+typedef CharacterFocusEvent = 
+{
+	var c:String;
+	var ms:Float;
+}
+
 class Conductor
 {
-	public static var bpm:Float = 100;
-	public static var crochet:Float = ((60 / bpm) * 1000); // beats in milliseconds
-	public static var stepCrochet:Float = crochet / 4; // steps in milliseconds
-	public static var songPosition:Float=0;
-	public static var lastSongPos:Float;
-	public static var offset:Float = 0;
+	public static var song:TimeSong;
 
-	//public static var safeFrames:Int = 10;
-	public static var safeZoneOffset:Float = (ClientPrefs.data.safeFrames / 60) * 1000; // is calculated in create(), is safeFrames in milliseconds
+	public static var lastFocus(get, never):CharacterFocusEvent;
+	public static function get_lastFocus():CharacterFocusEvent return getLastFocus(songPosition);
+
+	public static var focus(get, never):String;
+	public static function get_focus():String return lastFocus.c;
+
+	public static var lastChange(get, never):BPMChangeEvent;
+	public static function get_lastChange():BPMChangeEvent return getLastChange(songPosition);
+
+	public static var bpm(get, never):Float;
+	public static function get_bpm():Float return lastChange.bpm;
+	
+	public static var initBPM:Float = 100;
 
 	public static var bpmChangeMap:Array<BPMChangeEvent> = [];
+	public static var charFocusMap:Array<CharacterFocusEvent> = [];
+
+	public static var onBPMRemap:Array<Void->Void> = [];
+	public static var onCharFocusRemap:Array<Void->Void> = [];
+
+	public static var crochet(get, never):Float;
+	public static function get_crochet():Float return stepCrochet * 4;
+
+	public static var stepCrochet(get, never):Float;
+	public static function get_stepCrochet():Float return lastChange.stepCrochet;
+
+	public static var timescale:Float = 1;
+
+	public static var songPosition:Float = 0;
+	public static var lastSongPos:Float;
+
+	public static var offset:Float = 0;
+
+	public static var safeZoneOffset(get, never):Float;
+	public static function get_safeZoneOffset():Float return ClientPrefs.get('safeFrames') / 60 * 1000;
 
 	public function new() {}
 
-	public static function getCrotchetAtTime(time:Float){
-		var lastChange = getBPMFromSeconds(time);
-		return lastChange.stepCrochet*4;
-	}
-
-	public static function getBPMFromSeconds(time:Float){
-		var lastChange:BPMChangeEvent = {
-			stepTime: 0,
-			songTime: 0,
-			bpm: bpm,
-			stepCrochet: stepCrochet
-		}
-		for (i in 0...Conductor.bpmChangeMap.length)
-		{
-			if (time >= Conductor.bpmChangeMap[i].songTime)
-				lastChange = Conductor.bpmChangeMap[i];
-		}
-
-		return lastChange;
-	}
-
-	public static function getBPMFromStep(step:Float){
-		var lastChange:BPMChangeEvent = {
-			stepTime: 0,
-			songTime: 0,
-			bpm: bpm,
-			stepCrochet: stepCrochet
-		}
-		for (i in 0...Conductor.bpmChangeMap.length)
-		{
-			if (Conductor.bpmChangeMap[i].stepTime<=step)
-				lastChange = Conductor.bpmChangeMap[i];
-		}
-
-		return lastChange;
-	}
-
-	public static function beatToSeconds(beat:Float): Float{
-		var step = beat * 4;
-		var lastChange = getBPMFromStep(step);
-		return lastChange.songTime + ((step - lastChange.stepTime) / (lastChange.bpm / 60)/4) * 1000; // TODO: make less shit and take BPM into account PROPERLY
-	}
-
-	public static function getStep(time:Float){
-		var lastChange = getBPMFromSeconds(time);
-		return lastChange.stepTime + (time - lastChange.songTime) / lastChange.stepCrochet;
-	}
-
-	public static function getStepRounded(time:Float){
-		var lastChange = getBPMFromSeconds(time);
-		return lastChange.stepTime + Math.floor(time - lastChange.songTime) / lastChange.stepCrochet;
-	}
-
-	public static function getBeat(time:Float){
-		return getStep(time)/4;
-	}
-
-	public static function getBeatRounded(time:Float):Int{
-		return Math.floor(getStepRounded(time)/4);
-	}
-
-	public static function mapBPMChanges(song:SwagSong)
+	public static function loadSong(name:String):TimeSong
 	{
-		bpmChangeMap = [];
+		Conductor.songPosition = 0;
 
-		var curBPM:Float = song.bpm;
-		var totalSteps:Int = 0;
-		var totalPos:Float = 0;
-		for (i in 0...song.sections.length)
+		song = Song.loadFromJson(name);
+		mapChanges();
+		
+		return song;
+	}
+
+	public static function loadSongFromString(content:String, name:String):TimeSong
+	{
+		song = Song.parseJSONshit(content, name);
+		mapChanges();
+		return song;
+	}
+
+	private static function mapChanges():Void
+	{
+		clearCallbacks();
+
+		mapBPMChanges();
+		mapCharFocus();
+	}
+
+	public static function clearCallbacks():Void
+	{
+		onBPMRemap.resize(0);
+		onCharFocusRemap.resize(0);
+	}
+
+	public static function mapBPMChanges():Void
+	{
+		initBPM = song.bpm;
+		bpmChangeMap.resize(0);
+
+		var steps:Int = 0;
+
+		var prev:{ms:Float, change:EventFile} = {
+			ms: 0,
+			change: {t: ChartEventManager.BPM_CHANGE_EVENT_NAME, e: [{n: 'BPM', v: song.bpm, t: 'FLOAT'}]}
+		}
+		
+		var sortedEvents:Array<{ms:Float, change:EventFile}> = [];
+		ChartEventManager.forEachEvent(song, (ms:Float, change:EventFile) ->
 		{
-			if(song.sections[i].changeBPM && song.sections[i].bpm != curBPM)
+			if (change.t != ChartEventManager.BPM_CHANGE_EVENT_NAME) return;
+			sortedEvents.push({ms: ms, change: change});
+		});
+		if (sortedEvents.length > 0) sortedEvents.sort((a, b) -> { return a.ms < b.ms ? -1 : a.ms == b.ms ? 0 : 1; });
+
+		var init = false;
+		for (change in sortedEvents)
+		{
+			if (!init) 
 			{
-				curBPM = song.sections[i].bpm;
-				var event:BPMChangeEvent = {
-					stepTime: totalSteps,
-					songTime: totalPos,
-					bpm: curBPM,
-					stepCrochet: calculateCrochet(curBPM)/4
-				};
-				bpmChangeMap.push(event);
+				init = true;
+				bpmChangeMap.push({step: 0, ms: 0, bpm: song.bpm, stepCrochet: calculateStepCrochet(song.bpm)});
+			}
+	
+			var bpm = change.change.e[0].v;
+			steps += Std.int((change.ms - prev.ms) / calculateStepCrochet(prev.change.e[0].v));
+	
+			bpmChangeMap.push({
+				step: steps,
+				ms: change.ms,
+				bpm: bpm,
+				stepCrochet: calculateStepCrochet(bpm)
+			});
+	
+			prev = change;
+		}
+
+		if (bpmChangeMap.length > 0) 
+		{
+			var instSong = Paths.mods.song.inst([song.song], Paths.WORKING_MOD_DIRECTORY).content;
+			bpmChangeMap.push({
+				step: steps + Std.int((instSong.length - prev.ms) / bpmChangeMap[0].stepCrochet), 
+				ms: instSong.length, 
+				bpm: initBPM, 
+				stepCrochet: bpmChangeMap[0].stepCrochet
+			});
+		}
+		else bpmChangeMap.push({step: 0, ms: 0, bpm: song.bpm, stepCrochet: calculateStepCrochet(song.bpm)});
+	
+		for (callback in onBPMRemap) callback();
+	}
+
+	public static function mapCharFocus():Void
+	{
+		charFocusMap.resize(0);
+
+		var prev:CharacterFocusEvent = {
+			c: song.players[0],
+			ms: 0
+		}
+		
+		var sortedEvents:Array<CharacterFocusEvent> = [];
+
+		ChartEventManager.forEachEvent(song, (ms:Float, change:EventFile) ->
+		{
+			if (change.t != ChartEventManager.CHAR_FOCUS_EVENT_NAME) return;
+			sortedEvents.push({ms: ms, c: change.e[0].v});
+		});
+		if (sortedEvents.length > 0) sortedEvents.sort((a, b) -> { return a.ms < b.ms ? -1 : a.ms == b.ms ? 0 : 1; });
+
+		var init:Bool = false;
+		for (change in sortedEvents)
+		{
+			if (!init) 
+			{
+				init = true;
+				charFocusMap.push({ms: 0, c: prev.c});
 			}
 
-			var deltaSteps:Int = Math.round(getSectionBeats(song, i) * 4);
-			totalSteps += deltaSteps;
-			totalPos += ((60 / curBPM) * 1000 / 4) * deltaSteps;
+			charFocusMap.push({
+				ms: change.ms,
+				c: change.c
+			});
+	
+			prev = change;
 		}
-		trace("new BPM map BUDDY " + bpmChangeMap);
+		if (sortedEvents.length == 0) charFocusMap.push({ms: 0, c: prev.c});
+
+		for (callback in onCharFocusRemap) callback();
 	}
 
-	static function getSectionBeats(song:SwagSong, section:Int)
+	public static function getCrochet(ms:Float):Float
 	{
-		var val:Null<Float> = null;
-		if(song.sections[section] != null) val = song.sections[section].sectionBeats;
-		return val != null ? val : 4;
+		var lastChange = getLastChange(ms);
+		return lastChange.stepCrochet * 4;
 	}
+	public static function getStepCrochet(ms):Float return getCrochet(ms) / 4;
 
-	inline public static function calculateCrochet(bpm:Float){
-		return (60/bpm)*1000;
-	}
-
-	public static function changeBPM(newBpm:Float)
+	public static function getLastChange(ms:Float):BPMChangeEvent
 	{
-		bpm = newBpm;
+		if (bpmChangeMap.length == 1) return bpmChangeMap[0];
 
-		crochet = calculateCrochet(bpm);
-		stepCrochet = crochet / 4;
+		var change:BPMChangeEvent = {step: 0, ms: 0, bpm: initBPM, stepCrochet: calculateStepCrochet(initBPM)}
+		for (event in bpmChangeMap) if (ms >= event.ms) change = event;
+		return change;
 	}
+	public static function getLastChangeStep(step:Float):BPMChangeEvent
+	{
+		if (bpmChangeMap.length == 1) return bpmChangeMap[0];
+
+		var change:BPMChangeEvent = {step: 0, ms: 0, bpm: initBPM, stepCrochet: calculateStepCrochet(initBPM)}
+		for (event in bpmChangeMap) if (step >= event.step) change = event;
+		return change;
+	}
+
+	public static function getLastFocus(ms:Float):CharacterFocusEvent
+	{
+		if (charFocusMap.length == 1) return charFocusMap[0];
+
+		var change:CharacterFocusEvent = {ms: 0, c: song.players[0]}
+		for (event in charFocusMap) if (ms >= event.ms) change = event;
+		return change;
+	}
+	
+	public static var decStep(get, never):Float;
+	public static function get_decStep():Float return getStep(songPosition);
+
+	public static var step(get, never):Int;
+	public static function get_step():Int return Math.floor(getStep(songPosition));
+
+	public static function getStep(ms:Float):Float
+	{
+		var prev:BPMChangeEvent = getLastChange(ms);
+		return prev.step + ((ms - prev.ms) / prev.stepCrochet);
+	}
+	public static function getStepI(ms:Float):Int return Math.floor(getStep(ms));
+
+	public static function getMS(step:Float):Float
+	{
+		var prev:BPMChangeEvent = getLastChangeStep(step);
+		return prev.ms + (step - prev.step) * prev.stepCrochet;
+	}
+
+	public static function getBeat(ms:Float):Float return getStep(ms) / 4;
+	public static function getBeatI(ms:Float):Int return Math.floor(getStepI(ms) / 4);
+
+	static function getSectionBeats(song:TimeSong, section:Int):Int return 4;
+	
+	inline public static function calculateCrochet(bpm:Float):Float return (60 / bpm) * 1000;
+	inline public static function calculateStepCrochet(bpm:Float):Float return calculateCrochet(bpm) / 4;
 }

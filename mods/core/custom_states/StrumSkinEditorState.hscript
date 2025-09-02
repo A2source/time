@@ -1,0 +1,813 @@
+// this code is so shit i'll fix it later
+// 2.5 type shi
+
+var ribbon = Screen.addComponent(UiS.buildXml(['strumskin-editor/ribbon']));
+
+var offsetPanel = Screen.addComponent(UiS.buildXml(['strumskin-editor/offsets']));
+var o_Data = UiS.get('data-text', offsetPanel);
+var o_Offset = UiS.get('offset-view', offsetPanel);
+var o_X = UiS.get('x-stepper', offsetPanel);
+var o_Y = UiS.get('y-stepper', offsetPanel);
+var o_StrumGap = UiS.get('gap-stepper', offsetPanel);
+var o_Scale = UiS.get('scale-stepper', offsetPanel);
+
+var animPanel = Screen.addComponent(UiS.buildXml(['strumskin-editor/animations']));
+var a_Select = UiS.get('anim-view', animPanel);
+var a_FPS = UiS.get('fps-stepper', animPanel);
+var a_Tag = UiS.get('xml-tag', animPanel);
+
+var tailPanel = Screen.addComponent(UiS.buildXml(['strumskin-editor/rendering']));
+var t_SampleStart = UiS.get('sample-start-stepper', tailPanel);
+var t_SampleCutoff = UiS.get('sample-cutoff-stepper', tailPanel);
+var t_TailFlip = UiS.get('tail-flip-stepper', tailPanel);
+
+var camStrums;
+var camManager; 
+var curSkin;
+
+var saveWindowTitle = Lib.application.window.title;
+
+var selecSprite; var strums = [];
+var curSelec = 0; var selecNotes = false;
+
+var curData = {}
+
+var curWidth = 0; var curHeight = 0;
+var curSelecX = 0; var curSelecY = 0;
+
+function load()
+{
+    curSkin = ClientPrefs.register('timeCurrentStrumSkin', 'NOTE_assets');
+
+    var skinBatch = {
+        name: concat(['Loading "', curSkin, '" Skin Assets...']),
+        jobs: [
+            {
+                method: Paths.mods.strumskin.json,
+                keys: [curSkin]
+            },
+            {
+                method: Paths.mods.strumskin.atlas,
+                keys: [curSkin]
+            }
+        ],
+        dir: WORKING_MOD_DIRECTORY
+    }
+
+    var editorBatch = {
+        name: 'Loading Editor Assets...',
+        jobs: [
+            {
+                method: Paths.mods.ui.xml,
+                keys: ['strumskin-editor/animations']
+            },
+            {
+                method: Paths.mods.ui.xml,
+                keys: ['strumskin-editor/offsets']
+            },
+            {
+                method: Paths.mods.ui.xml,
+                keys: ['strumskin-editor/rendering']
+            },
+            {
+                method: Paths.mods.ui.xml,
+                keys: ['strumskin-editor/ribbon']
+            }
+        ]
+    }
+
+    LoadingState.initializeLoadingScreen([skinBatch, editorBatch], { state: 'StrumSkinEditorState' });
+}
+
+function create()
+{
+    DiscordClient.changePresence({state: 'Strum Skin Editor'});
+    FlxG.mouse.visible = true;
+
+    curSkin = ClientPrefs.register('timeCurrentStrumSkin', 'NOTE_assets');
+
+    camManager = new CameraManager([
+        {name: 'strums', follow: true, bgColor: 0xFF333333},
+        {name: 'ui', follow: false},
+        {name: 'notif', follow: false}
+    ], 1);
+    camManager.inEditor = true;
+    camManager.minZoom = 0.05;
+    camManager.maxZoom = 1.5;
+
+    camStrums = camManager.cams[0].cam;
+
+    createSkinStuff();
+    setupUI(); 
+    moveFPS(ribbon.height);
+
+    setWindowTitle();
+}
+
+function onChangedSaved() { setWindowTitle(); }
+function onSave() { saveSkinProxy(); }
+
+function onLeaveState() 
+{
+    Lib.application.window.title = saveWindowTitle;
+    Conductor.clearCallbacks();
+}
+
+function setWindowTitle()
+{
+    var base = saveWindowTitle + ' Strum Skin Editor - ' + curSkin;
+    if (UndoManager.unsaved) base += '*';
+
+    Lib.application.window.title = base;
+}
+
+function updateSkins()
+{
+    for (strum in strums)
+        strum.loadSkin({skin: curSkin, mod: WORKING_MOD_DIRECTORY}, curData);
+}
+
+function setupUI()
+{
+    UiS.get('ribbon-file-open', ribbon).onClick = openOpenSkinDialog;
+    UiS.get('ribbon-file-new', ribbon).onClick = openNewSkinDialog;
+    UiS.get('ribbon-file-undo', ribbon).onClick = UndoManager.performUndo;
+    UiS.get('ribbon-file-redo', ribbon).onClick = UndoManager.performRedo;
+    UiS.get('ribbon-file-save', ribbon).onClick = UndoManager.performSave;
+    UiS.get('ribbon-file-quit', ribbon).onClick = quitEditor;
+
+    ribbon.onMenuOpened = (e) ->
+    {
+        moveFPS(ribbon.height + e.target.height);
+    }
+    ribbon.onMenuClosed = (e) -> { moveFPS(ribbon.height); }
+
+    o_Data.text = 'Data: 0';
+    o_Offset.onChange = offsetSelectOnChange();
+    o_X.onChange = positionOnChange;
+    o_Y.onChange = positionOnChange;
+
+    if (Reflect.hasField(curData, 'strumGap')) o_StrumGap.pos = curData.strumGap;
+    o_StrumGap.onChange = (e) -> { Reflect.setProperty(curData, 'strumGap', o_StrumGap.pos); }
+
+    //
+    if (Reflect.hasField(curData, 'scale')) o_Scale.pos = curData.scale;
+    else o_Scale.pos = STRUM_DEFAULT_SCALE;
+
+    o_Scale.onChange = (e) -> 
+    { 
+        Reflect.setProperty(curData, 'scale', o_Scale.pos);
+        updateSkins();
+        positionStrums();
+    }
+    //
+
+    a_Select.selectedIndex = 0;
+    a_Select.onChange = (e) ->
+    {
+        setOffsetsOnSelect();
+        setAnimOnSelect();
+    }
+
+    a_FPS.pos = curData.anims.strums.l.i.fps;
+    a_FPS.onChange = (e) ->
+    {
+        if (a_FPS.pos == null) return;
+        setSelectedFPS(a_FPS.pos);
+
+        updateSkins();
+    }
+
+    a_Tag.text = curData.anims.strums.l.i.tag;
+    a_Tag.onChange = (e) ->
+    {
+        if (a_Tag.text == null) return;
+        setSelectedTag(a_Tag.text);
+
+        updateSkins();
+    }
+
+    var renderer = strums[0].tailRenderer;
+    t_SampleStart.pos = renderer.start;
+    t_SampleCutoff.pos = renderer.cutoff;
+
+    if (curData.tailRenderer == null) curData.tailRenderer = renderer;
+
+    t_SampleStart.onChange = (e) ->
+    {
+        curData.tailRenderer.start = t_SampleStart.pos;
+        updateSkins();
+    }
+
+    t_SampleCutoff.onChange = (e) ->
+    {
+        curData.tailRenderer.cutoff = t_SampleCutoff.pos;
+        updateSkins();
+    }
+
+    if (curData.flipTail == null) curData.flipTail = SCROLL_DIRECTION_DOWN;
+
+    t_TailFlip.selectedItem = getFlipButtonItem();
+    t_TailFlip.onChange = (e) ->
+    {
+        switch(curData.flipTail)
+        {
+            case SCROLL_DIRECTION_DOWN: curData.flipTail = SCROLL_DIRECTION_UP;
+            case SCROLL_DIRECTION_UP: curData.flipTail = SCROLL_DIRECTION_DOWN;
+        }
+
+        t_TailFlip.selectedItem = getFlipButtonItem();
+
+        updateSkins();
+    }
+
+    o_Offset.dataSource = getOffsetSource(); o_Offset.selectedIndex = 0;
+    a_Select.dataSource = getStrumAnimSource();
+
+    offsetPanel.x = 5; offsetPanel.y = 9999; 
+    animPanel.y = offsetPanel.y; tailPanel.y = offsetPanel.y;
+    FlxTimer.wait(0.5, () -> 
+    { 
+        offsetPanel.y = FlxG.height - offsetPanel.height - 5;
+
+        animPanel.x = FlxG.width - animPanel.width - 5;
+        animPanel.y = FlxG.height - animPanel.height - 5;
+
+        tailPanel.x = animPanel.x - tailPanel.width - 5;
+        tailPanel.y = FlxG.height - tailPanel.height - 5;
+    });
+
+    UiS.registerDraggable(offsetPanel);
+    UiS.registerDraggable(animPanel);
+    UiS.registerDraggable(tailPanel);
+}
+
+function offsetSelectOnChange()
+{
+    if (o_Offset.selectedItem == null) return;
+
+    var offset = getSelectedOffset();
+    if (offset == null) return;
+
+    o_X.pos = offset.x;
+    o_Y.pos = offset.y;
+
+    updateSkins();
+}
+
+function positionOnChange()
+{
+    var anim = a_Select.selectedItem.text;
+    if (anim == 'Tail Body' || anim == 'Tail Cap') tweenNoteAlpha(0.25);
+
+    setSelectedOffset(o_X.pos, o_Y.pos); 
+}
+
+function tweenNoteAlpha(v)
+{
+    for (strum in strums)
+    {
+        for (note in strum.notes.members)
+        {
+            FlxTween.cancelTweensOf(note);
+            FlxTween.tween(note, {alpha: v}, 0.5, {ease: FlxEase.expoOut, onComplete: (t) ->
+            {
+                if (v == 1) return;
+
+                FlxTimer.wait(0.6, () -> { tweenNoteAlpha(1); });
+            }});
+        }
+    }
+}
+
+var DIRS = ['l', 'd', 'u', 'r'];
+function getSelectedOffset()
+{
+    if (!Reflect.hasField(curData, 'offsets')) return null;
+
+    if (selecNotes) 
+    {
+        switch(o_Offset.selectedItem.text)
+        {
+            case 'Global': 
+                switch(a_Select.selectedItem.text)
+                {
+                    case 'Solid': return curData.offsets.notes.g;
+                    case 'Tail Body', 'Tail Cap': return curData.offsets.tails.g;
+                }
+                
+            case 'Selected':
+                switch(a_Select.selectedItem.text)
+                {
+                    case 'Solid': return getDirOffset(curSelec, true, false);
+                    case 'Tail Body', 'Tail Cap': return getDirOffset(curSelec, true, true);
+                }
+        }
+    }
+    else 
+    {
+        switch(o_Offset.selectedItem.text)
+        {
+            case 'Global': return curData.offsets.strums.g;
+            case 'General': return getDirOffset(curSelec, false).g;
+            case 'Selected': 
+                switch(a_Select.selectedItem.text)
+                {
+                    case 'Idle': return getDirOffset(curSelec, false).i;
+                    case 'Press': return getDirOffset(curSelec, false).p;
+                    case 'Confirm': return getDirOffset(curSelec, false).c;
+                }
+        }
+    }
+
+    return null;
+}
+
+function setSelectedOffset(x, y) 
+{
+    var offset = getSelectedOffset();
+    if (offset == null) return;
+
+    offset.x = x;
+    offset.y = y;
+
+    updateSkins();
+}
+
+function getSelectedAnim() 
+{
+    if (!Reflect.hasField(curData, 'anims')) return null;
+
+    switch(a_Select.selectedItem.text)
+    {
+        case 'Idle': return getDirAnims(curSelec, false).i;
+        case 'Press': return getDirAnims(curSelec, false).p;
+        case 'Confirm': return getDirAnims(curSelec, false).c;
+
+        case 'Solid': return getDirAnims(curSelec, true, false);
+        case 'Tail Body': return getDirAnims(curSelec, true, true).b;
+        case 'Tail Cap': return getDirAnims(curSelec, true, true).c;
+    }
+
+    return null;
+}
+
+function setSelectedAnim(tag, fps) 
+{
+    var anim = getSelectedAnim();
+    if (anim == null) return;
+
+    anim.tag = tag;
+    anim.fps = fps;
+
+    updateSkins();
+}
+
+function getSelectedTag() { return getSelectedAnim().tag; }
+function setSelectedTag(tag) { setSelectedAnim(tag, a_FPS.pos); }
+
+function getSelectedFPS() { return getSelectedAnim().fps; }
+function setSelectedFPS(fps) { setSelectedAnim(a_Tag.text, fps); }
+
+// reflect wasn't working for some reason
+// i assume it has to do with the dynamic nature of hscript objects
+function getDirOffset(d, isNotes, ?isTail)
+{
+    if (isNotes)
+    {
+        if (isTail)
+        {
+            switch(DIRS[d])
+            {
+                case 'l': return curData.offsets.tails.l;
+                case 'd': return curData.offsets.tails.d;
+                case 'u': return curData.offsets.tails.u;
+                case 'r': return curData.offsets.tails.r;
+            }
+        }
+        else
+        {
+            switch(DIRS[d])
+            {
+                case 'l': return curData.offsets.notes.l;
+                case 'd': return curData.offsets.notes.d;
+                case 'u': return curData.offsets.notes.u;
+                case 'r': return curData.offsets.notes.r;
+            }
+        }
+    }
+    else
+    {
+        switch(DIRS[d])
+        {
+            case 'l': return curData.offsets.strums.l;
+            case 'd': return curData.offsets.strums.d;
+            case 'u': return curData.offsets.strums.u;
+            case 'r': return curData.offsets.strums.r;
+        }
+    }
+
+    return null;
+}
+
+function getDirAnims(d, isNotes, ?isTail)
+{
+    if (isNotes)
+    {
+        switch(DIRS[d])
+        {
+            case 'l': return isTail ? curData.anims.notes.tail.l : curData.anims.notes.solid.l;
+            case 'd': return isTail ? curData.anims.notes.tail.d : curData.anims.notes.solid.d;
+            case 'u': return isTail ? curData.anims.notes.tail.u : curData.anims.notes.solid.u;
+            case 'r': return isTail ? curData.anims.notes.tail.r : curData.anims.notes.solid.r;
+        }
+    }
+    else
+    {
+        switch(DIRS[d])
+        {
+            case 'l': return curData.anims.strums.l;
+            case 'd': return curData.anims.strums.d;
+            case 'u': return curData.anims.strums.u;
+            case 'r': return curData.anims.strums.r;
+        }
+    }
+
+    return null;
+}
+
+function getStrumAnimSource()
+{
+    var source = getDataSource();
+    for (text in ['Idle', 'Press', 'Confirm']) source.add({text: text});
+
+    a_Select.selectedIndex = a_Select.selectedIndex;
+
+    return source;
+}
+
+function getNoteAnimSource()
+{
+    var source = getDataSource();
+    for (text in ['Solid', 'Tail Body', 'Tail Cap']) source.add({text: text});
+
+    a_Select.selectedIndex = a_Select.selectedIndex;
+
+    return source;
+}
+
+function getOffsetSource()
+{
+    var source = getDataSource();
+    for (text in ['Global', 'General', 'Selected']) 
+        if ((text == 'General' && !selecNotes) || text != 'General')
+            source.add({text: text});
+
+    var shouldChange = a_Select.selectedIndex == 1 && selecNotes;
+    a_Select.selectedIndex = shouldChange ? 0 : a_Select.selectedIndex;
+
+    return source;
+}
+
+function createSkinStuff()
+{
+    // position notes correctly
+    Conductor.songPosition = 0;
+
+    Conductor.bpmChangeMap.resize(0);
+    Conductor.bpmChangeMap.push({step: 0, ms: 0, bpm: 100, stepCrochet: Conductor.calculateStepCrochet(100)});
+
+    var order = [0, 1, 2, 3];
+    for (i in 0...4)
+    {
+        var strum = new StrumNote(order[i], {
+            skin: curSkin, 
+            mod: WORKING_MOD_DIRECTORY
+        });
+
+        var note = new Note({
+            d: order[i],
+            ms: 350,
+            l: 900
+        }, strum, '');
+
+		strum.cameras = [camStrums];
+		strum.noteTails.cameras = [camStrums];
+        strum.notes.cameras = [camStrums];
+
+        strums.push(strum);
+    }
+
+    positionStrums();
+    camManager.focusOnPos(strums[2].x + 25, strums[1].y + 25);
+
+    curData = parseJson(Paths.mods.strumskin.json([curSkin], WORKING_MOD_DIRECTORY).content);
+
+    if (curData.flipTail == null) curData.flipTail = SCROLL_DIRECTION_DOWN;
+    if (Type.typeof(curData.flipTail) == TInt)
+        switch(curData.flipTail)
+        {
+            case 0: curData.flipTail = SCROLL_DIRECTION_UP;
+            case 1: curData.flipTail = SCROLL_DIRECTION_DOWN;
+        }
+
+    var size = strums[0].width * strums[0].scale.x;
+    selecSprite = new FlxSprite().makeGraphic(size, size, 0xAA00FFFF);
+    selecSprite.cameras = [camStrums];
+    add(selecSprite);
+
+    for (strum in strums) { add(strum); add(strum.noteTails); add(strum.notes); }
+}
+
+function positionStrums()
+{
+    // emulate playstate strum placement
+    var curX = PlayState.STRUM_INIT_X;
+
+    for (strum in strums)
+    {
+        strum.x = curX;
+        curX += strum.width * strum.scale.x;
+    }
+}
+
+function getFlipButtonItem()
+{
+    var returnText = 'null';
+
+    if (curData.flipTail == null) returnText = 'DOWN';
+
+    switch(curData.flipTail)
+    {
+        case SCROLL_DIRECTION_DOWN: returnText = 'DOWN';
+        case SCROLL_DIRECTION_UP: returnText = 'UP';
+    }
+
+    return {text: returnText};
+}
+
+function update(dt)
+{
+    updateControls(dt);
+    if (camManager != null) camManager.update(dt);
+}
+
+var CAM_MOVE_AMT = 1000;
+var SCROLL_AMT = 5000; var CAM_ZOOM_AMT = 10;
+var MAX_CAM_ZOOM = 1.25; var MIN_CAM_ZOOM = 0.65;
+var checkImpulse = false;
+function updateControls(dt)
+{
+    if (this.blockInput) return;
+
+    playStrumAnims();
+
+    updateCtrlShortcuts();
+
+    switch(true)
+    {
+        case FlxG.keys.justPressed.ESCAPE: quitEditor(null);
+
+        case FlxG.keys.justPressed.LEFT: changeSelec(-1);
+        case FlxG.keys.justPressed.RIGHT: changeSelec(1);
+
+        case FlxG.keys.justPressed.UP, FlxG.keys.justPressed.DOWN: toggleNoteStrumSelec();
+    }
+
+    updateMouseRight();
+}
+
+function changeSelec(amt) 
+{ 
+    curSelec += amt;
+    if (curSelec < 0) curSelec = 3;
+    if (curSelec > 3) curSelec = 0;
+
+    calculateCurValues();
+
+    selectElement(curSelec, selecNotes);
+}
+
+function toggleNoteStrumSelec() 
+{
+    selecNotes = !selecNotes;
+
+    o_Offset.dataSource = getOffsetSource();
+    if ((o_Offset.selectedItem == null || 
+        o_Offset.selectedItem != null && o_Offset.selectedItem.text == 'General') && 
+        selecNotes) 
+        o_Offset.selectedIndex = 0;
+
+    calculateCurValues();
+    selectElement(curSelec, selecNotes); 
+}
+
+function calculateCurValues()
+{
+    var cur = selecNotes ? strums[curSelec].notes.members[0] : strums[curSelec];
+
+    curWidth = cur.width * cur.scale.x;
+    curHeight = cur.height * cur.scale.x;
+
+    // rip npm
+    var leftPad = (cur.width - curWidth) / 2; 
+    var topPad = (cur.height - curHeight) / 2;
+
+    curSelecX = cur.x + leftPad - cur.offset.x;
+    curSelecY = cur.y + topPad - cur.offset.y;
+}
+
+function playStrumAnims()
+{
+    if (FlxG.keys.pressed.CONTROL) return;
+
+    var anim = getCurrentAnimationName();
+    switch(true)
+    {
+        case controls.NOTE_LEFT_P:  strums[0].playAnimation(anim);
+        case controls.NOTE_DOWN_P:  strums[1].playAnimation(anim);
+        case controls.NOTE_UP_P:  strums[2].playAnimation(anim);
+        case controls.NOTE_RIGHT_P:  strums[3].playAnimation(anim);
+    }
+}
+
+function updateCtrlShortcuts()
+{
+    if (!FlxG.keys.pressed.CONTROL) return;
+
+    switch(true)
+    {
+        case FlxG.keys.justPressed.O: openOpenSkinDialog(null);
+        case FlxG.keys.justPressed.N: openNewSkinDialog(null);
+    }
+}
+
+function updateMouseRight() 
+{
+    if (!FlxG.mouse.justPressedRight) return;
+
+    for (strum in strums)
+    {
+        var doBreak = false;
+        for (note in strum.notes.members)
+        {
+            curWidth = note.width * note.scale.x;
+            curHeight = note.height * note.scale.x;
+
+            var leftPadN = (note.width - curWidth) / 2; 
+            var topPadN = (note.height - curHeight) / 2;
+
+            curSelecX = note.x + leftPadN - note.offset.x;
+            curSelecY = note.y + topPadN - note.offset.y;
+
+            if (!intersectsRect(camManager.mousePosition, curSelecX, curSelecY, 
+                            curWidth, curHeight)) continue;
+
+            selectElement(strum.d, true);
+            doBreak = true;
+        }
+
+        if (doBreak) break;
+
+        curWidth = strum.width * strum.scale.x;
+        curHeight = strum.height * strum.scale.x;
+
+        var leftPad = (strum.width - curWidth) / 2; 
+        var topPad = (strum.height - curHeight) / 2;
+
+        curSelecX = strum.x + leftPad - strum.offset.x;
+        curSelecY = strum.y + topPad - strum.offset.y;
+
+        if (!intersectsRect(camManager.mousePosition, curSelecX, curSelecY, 
+                            curWidth, curHeight)) continue;
+
+        selectElement(strum.d, false);
+    }
+
+    o_Data.text = concat(['Data: ', curSelec]);
+}
+
+function selectElement(d, notes)
+{
+    curSelec = d;
+
+    selecNotes = notes;
+
+    if (selecNotes) a_Select.dataSource = getNoteAnimSource();
+    else a_Select.dataSource = getStrumAnimSource();
+
+    tweenSelec(curSelecX, curSelecY);
+
+    setOffsetsOnSelect();
+    setAnimOnSelect();
+}
+
+function setOffsetsOnSelect()
+{
+    var offset = getSelectedOffset();
+    if (offset == null) return;
+
+    o_X.pos = offset.x;
+    o_Y.pos = offset.y;
+}
+
+function setAnimOnSelect()
+{
+    var anim = getSelectedAnim();
+    if (anim == null) return;
+
+    a_FPS.pos = anim.fps;
+    a_Tag.text = anim.tag;
+}
+
+function getCurrentAnimationName()
+{
+    switch(a_Select.selectedItem.text)
+    {
+        case 'Idle': return STRUM_IDLE;
+        case 'Press': return STRUM_PRESS;
+        case 'Confirm': return STRUM_CONFIRM;
+    }
+
+    return STRUM_IDLE;
+}
+
+function tweenSelec(x, y)
+{
+    FlxTween.cancelTweensOf(selecSprite);
+    FlxTween.tween(selecSprite, {x: x, y: y}, 0.25, {ease: FlxEase.expoOut});
+}
+
+function toggleUI() {}
+
+function openOpenSkinDialog() 
+{
+    var source = getDataSource();
+    for (folder in FileSystem.readDirectory(Paths.folder('custom_strumskins', WORKING_MOD_DIRECTORY)))
+        source.add({text: folder});
+
+    var skinList = new ListView(); skinList.dataSource = source;
+    skinList.width = 200; skinList.height = 500;
+    
+    UiS.openDialog({
+        content: skinList,
+        title: 'Select Skin',
+        buttons: ['Open', '{{cancel}}'],
+        callback: (e) ->
+        {
+            this.blockInput = false;
+
+            switch(e.button)
+            {
+                case '{{cancel}}': return;
+
+                case 'Open':
+                    if (skinList.selectedItem == null) return;
+
+                    FlxG.save.data.timeCurrentStrumSkin = skinList.selectedItem.text;
+                    ClientPrefs.save();
+
+                    reset();
+            }
+        }
+    });
+}
+function openNewSkinDialog() {}
+
+function saveSkinProxy() { saveSkin(null); }
+function saveSkin(e)
+{
+    var path = Paths.mods.strumskin.folder(curSkin, WORKING_MOD_DIRECTORY);
+    File.saveContent(concat([path, '/', curSkin, '.json']), stringifyJson(curData, '\t'));
+
+    UiS.addNotification({
+        title: 'Skin Saved!',
+        offsetPanel: concat(['Strum Skin "', curSkin, '" has been saved to "', path, '"!']),
+        actions: [{
+            text: 'Ok'
+        }, {
+            text: 'Take me there!',
+            callback: (e) -> 
+            {
+                var fullPath = StringTools.replace(Path.join([Sys.getCwd(), path]), '/', '\\');
+			    Sys.command('explorer "' + fullPath + '"');
+            }
+        }],
+        type: NOTIFICATION_SUCCESS,
+        expiryMs: 2750
+    });
+}
+
+function quitEditor(e) 
+{
+    UiS.openQuitDialog({
+        callback: (e) ->
+        {
+            if (!UiS.QUIT_DIALOG_BUTTONS.contains(e.button)) return;
+            if (e.button == UiS.QUIT_DIALOG_BUTTONS[2]) return;
+
+            if (e.button == UiS.QUIT_DIALOG_BUTTONS[0]) saveSkinProxy();
+            LoadingState.switchCustomState('MasterEditorMenu');
+        }
+    });
+}

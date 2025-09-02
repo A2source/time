@@ -1,0 +1,105 @@
+var tweenTime = 0.2;
+var delayTime = 0.8;
+
+var pos = {x: 525, y: 360}
+
+function load()
+{
+    for (rating in ['shit', 'bad', 'good', 'sick'])
+        registerScriptContentToLoad({
+            method: Paths.mods.image,
+            keys: [rating]
+        });
+
+    for (i in 0...10)
+        registerScriptContentToLoad({
+            method: Paths.mods.image,
+            keys: [concat(['num', i])]
+        });
+}
+
+var msText;
+var alphaTween;
+function start(song)
+{
+    msText = new FlxText(570, 390, 0, '', 14);
+    msText.setFormat(DEFAULT_FONT, 14, 0xFFFFFFFF, 'left', BORDER_OUTLINE, 0xFF000000);
+    msText.borderSize = 3;
+    msText.cameras = [cams.hud];
+    msText.color = 0xFFA2A2A2;
+    msText.alpha = 0;
+    add(msText);
+
+    alphaTween = FlxTween.tween(msText, {alpha: 0}, 0, {}, 'fade ms text');
+}
+
+var total = 0;
+function postScoreCalc(note, data)
+{
+    if (data.rating == null) return;
+    if (data.rating == 'miss') return;
+
+    var rating = new FlxSprite().load(Paths.mods.image([data.rating]).content);
+
+    rating.x = pos.x - rating.width / 2;
+    rating.y = pos.y - rating.height / 2;
+
+    rating.cameras = [cams.hud];
+    insert(game.length, rating);
+
+    rating.scale.set(0.7, 0.7);
+    FlxTween.tween(rating.scale, {x: 0.5, y: 0.5}, tweenTime / 2, {ease: FlxEase.expoOut});
+
+    rating.acceleration.x = FlxG.random.int(-20, 20);
+
+    rating.velocity.y = -200;
+    rating.acceleration.y = 450;
+
+    FlxTween.tween(rating.scale, {x: 1.2, y: 0}, tweenTime - 0.01, {ease: FlxEase.backIn, startDelay: delayTime}, 'rating scale ' + total);
+    FlxTween.tween(rating, {alpha: 0}, tweenTime, {startDelay: delayTime, 
+        onComplete: (t)->
+        {
+            rating.destroy();
+            remove(rating);
+        }}, 'rating alpha ' + total);
+
+    alphaTween.cancel();
+
+    msText.text = '(' + data.noteDiff + ' ms.)';
+    msText.alpha = 1;
+
+    alphaTween = FlxTween.tween(msText, {alpha: 0}, tweenTime, {startDelay: delayTime}, 'ms text out');
+
+    total++;
+
+    if (combo < 10) return;
+
+    var comboString = ('' + combo).split('');
+    var i = 0;
+    for (digit in comboString)
+    {
+        var int = Std.parseInt(digit);
+
+        var sprite = new FlxSprite(350 + (40 * i), 380).load(Paths.mods.image(['num' + digit]).content);
+        sprite.cameras = [cams.hud];
+        insert(game.length, sprite);
+
+        sprite.scale.set(0.5, 0.5);
+        FlxTween.tween(sprite.scale, {x: 0.4, y: 0.4}, tweenTime / 2, {ease: FlxEase.expoOut}, 'digit ' + i + ' scale in');
+
+        sprite.acceleration.x = FlxG.random.int(-10, 10);
+
+        sprite.velocity.y = -100;
+        sprite.acceleration.y = 250;
+
+        FlxTween.tween(sprite.scale, {x: 1.2, y: 0}, tweenTime - 0.01, {ease: FlxEase.backIn, startDelay: delayTime}, 'digit ' + i + ' scale');
+        FlxTween.tween(sprite, {alpha: 0}, tweenTime, {startDelay: delayTime, 
+            onComplete: (t)->
+            {
+                sprite.destroy();
+                remove(sprite);
+            }}, 'digit ' + i + ' out');
+
+        i++;
+    }
+}

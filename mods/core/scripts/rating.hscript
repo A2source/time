@@ -1,5 +1,6 @@
 var score = 0;
 var accuracy = 0;
+var combo = 0;
 
 var maxHits = 0;
 
@@ -21,41 +22,37 @@ var BASE_SCORE = 350;
 
 function start(song)
 {
-    for (note in game.unspawnNotes)
-        if (note.mustPress && !note.isSustainNote)
-            maxHits++;
+    for (strum in game.playerStrums) for (note in strum.associatedNotes) maxHits++;
 
     game.hscriptManager.setAll('maxHits', maxHits);
     game.hscriptManager.setAll('tally', tally);
     game.hscriptManager.setAll('accuracy', accuracy);
     game.hscriptManager.setAll('score', score);
+    game.hscriptManager.setAll('combo', combo);
 }
 
-function postStart(song)
+function startPost(song)
 {
     finalizeCalc(null, {rating: null, scoreDiff: 0, noteDiff: 0});
 }
 
-function goodNoteHit(note)
+function onHitNotePost(note, ms)
 {
-    if (note.isSustainNote)
-        return;
-
-    var diff = Math.abs(note.strumTime - Conductor.songPosition + ClientPrefs.data.ratingOffset);
-    diff /= game.playbackRate;
+    var diff = ms;
+    diff /= Conductor.timescale;
     diff = Std.int(diff);
 
     var absDiff = Math.abs(diff);
 
     var noteRating = 'sick';
 
-    if (absDiff > ClientPrefs.data.sickWindow)
+    if (absDiff > ClientPrefs.get('sickWindow'))
         noteRating = 'good';
 
-    if (absDiff > ClientPrefs.data.goodWindow)
+    if (absDiff > ClientPrefs.get('goodWindow'))
         noteRating = 'bad';
 
-    if (absDiff > ClientPrefs.data.badWindow)
+    if (absDiff > ClientPrefs.get('badWindow'))
         noteRating = 'shit';
 
     var scoreToAdd = BASE_SCORE;
@@ -79,17 +76,18 @@ function goodNoteHit(note)
     }
 
     score += scoreToAdd;
+    combo++;
 
     finalizeCalc(note, {rating: noteRating, scoreDiff: scoreToAdd, noteDiff: diff});
 }
 
-function onMiss(dir, note)
+function onMissNote(note)
 {
-    if (!game.practiceMode) score -= 50;
+    if (note == null) return;
 
-    if (note != null)
-        if (!note.isSustainNote)
-            tally.miss++;
+    tally.miss++;
+    score -= 50;
+    combo = 0;
 
     finalizeCalc(null, {rating: 'miss', scoreDiff: -50, noteDiff: 0});
 }
@@ -101,15 +99,13 @@ function finalizeCalc(note, data)
     game.hscriptManager.setAll('accuracy', accuracy);
     game.hscriptManager.setAll('score', score);
     game.hscriptManager.setAll('tally', tally);
+    game.hscriptManager.setAll('combo', combo);
 
     game.hscriptManager.callAll('postScoreCalc', [note, data]);
 }
 
 function onEndSong()
 {
-    if (!SONG.validScore)
-        return;
-
     percent = accuracy;
     if(Math.isNaN(percent)) percent = 0;
 }

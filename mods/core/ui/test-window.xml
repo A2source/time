@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<window title="Test" width="250" height="150">
+    <textfield styleNames="important-text-field" />
+</window>

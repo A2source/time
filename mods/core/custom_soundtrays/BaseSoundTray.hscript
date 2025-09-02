@@ -1,0 +1,38 @@
+var text;
+var timer = new FlxTimer();
+
+function create()
+{
+    var camera = new FlxCamera();
+    camera.bgColor = 0;
+    FlxG.cameras.add(camera);
+
+    text = new FlxText();
+    text.setFormat(DEFAULT_FONT, 52, 0xFFFFFFFF, 'center', BORDER_OUTLINE, 0xFF000000);
+    text.borderSize = 4;
+    text.cameras = [camera];
+    add(text);
+}
+
+function onVolumeChanged(volume, silent)
+{
+    FlxTween.cancelTweensOf(text);
+
+    text.applyMarkup(
+        concat(['<col>', volume * 100, '<col>%']), 
+        [new FlxTextFormatMarkerPair(new FlxTextFormat(colorFromRGBFloat(volume, (10 - (volume * 10)) / 10, 0)), '<col>')]
+    );
+
+    text.screenCenter();
+
+    text.y += 20;
+    text.alpha = 0;
+    text.visible = true;
+    FlxTween.tween(text, {y: text.y - 20, alpha: 1}, 0.6, {ease: FlxEase.elasticOut});
+
+    timer.cancel();
+    timer.start(0.8, (t) -> 
+    {
+        text.visible = false;
+    });
+}

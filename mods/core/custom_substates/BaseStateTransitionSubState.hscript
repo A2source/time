@@ -1,0 +1,28 @@
+var screen;
+
+function create()
+{
+    add(screen = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0xFF000000));
+    
+    switch(BaseState.currentState)
+    {
+        case PlayState: screen.cameras = [cams.top];
+    }
+}
+
+function onTransitionIn()
+{
+    screen.x = FlxG.width;
+    FlxTween.tween(screen, {x: 0}, 0.5, {ease: FlxEase.expoOut, onComplete: () ->
+    {
+        StateTransitionManager.runCallback();
+    }});
+}
+
+function onTransitionOut()
+{
+    FlxTween.tween(screen, {x: -FlxG.width}, 0.5, {ease: FlxEase.expoOut, onComplete: () ->
+    {
+        StateTransitionManager.close();
+    }});
+}

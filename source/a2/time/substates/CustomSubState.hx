@@ -1,15 +1,16 @@
 package a2.time.substates;
 
 import a2.time.states.CustomState;
-import a2.time.Paths;
-import a2.time.objects.managers.HscriptManager;
+import a2.time.backend.Paths;
+import a2.time.backend.managers.HscriptManager;
+import a2.time.backend.managers.StateTransitionManager;
 
 import flixel.FlxCamera;
 import flixel.FlxG;
 import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 
-import hscript.Interp;
+import hscript.InterpEx;
 
 import openfl.Lib;
 
@@ -18,7 +19,7 @@ class CustomSubState extends MusicBeatSubstate
 	public static var instance:CustomSubState;
 
 	private var stateName:String;
-	private var modDirectory:String;
+	private var dir:String;
     private var parentState:CustomState;
 
 	public var hscriptManager:HscriptManager;
@@ -26,8 +27,9 @@ class CustomSubState extends MusicBeatSubstate
 	public static var mPos:{x:Float, y:Float} = {x: FlxG.width / 2, y: FlxG.height / 2}
 	public static var tweening:Bool = false;
 
-    function injectInterp(interp:Interp)
+    function injectInterp(interp:InterpEx)
 	{
+		interp.variables.set('this', instance);
 		interp.variables.set('add', instance.add);
 		interp.variables.set('remove', instance.remove);
 		interp.variables.set('insert', instance.insert);
@@ -41,18 +43,18 @@ class CustomSubState extends MusicBeatSubstate
         interp.variables.set('parent', parentState);
 	}
 
-    public function new(name:String, parent:CustomState, modDir:String = Main.MOD_NAME)
+    public function new(name:String, parent:CustomState, _dir:String = Main.MOD_NAME)
     {
         super();
 
         stateName = name;
-        modDirectory = modDir;
+        dir = _dir;
         parentState = parent;
 
         instance = this;
 
 		hscriptManager = new HscriptManager(injectInterp);
-		hscriptManager.addScriptFromPath(Paths.customState(stateName, modDirectory));
+		hscriptManager.addScriptFromPath(Paths.mods.substate.script([stateName], dir).path);
         hscriptManager.setAll('parentState', parentState);
 
 		closeCallback = onClose;
@@ -63,6 +65,16 @@ class CustomSubState extends MusicBeatSubstate
         super.create();
 
 		hscriptManager.callAll('create', []);
+
+		@:privateAccess
+		{
+			switch(StateTransitionManager.phase)
+			{
+				case PRE_EVERYTHING: // none
+				case TRANSITION_IN: hscriptManager.callAll('onTransitionIn', []);
+				case TRANSITION_OUT: hscriptManager.callAll('onTransitionOut', []);	
+			}
+		}
 
 		if (parentState != null)
         	@:privateAccess parentState.hscriptManager.callAll('onOpenSubState', []);
@@ -99,14 +111,14 @@ class CustomSubState extends MusicBeatSubstate
         	@:privateAccess parentState.hscriptManager.callAll('onCloseSubState', []);
     }
 
-	override function update(elapsed:Float)
+	override function update(dt:Float)
 	{
-		super.update(elapsed);
+		super.update(dt);
 		if (FlxG.mouse.justMoved && !tweening) FlxTween.cancelTweensOf(mPos);
 
-		hscriptManager.callAll('update', [elapsed]);
+		hscriptManager.callAll('update', [dt]);
 	}
-
+	
 	override function beatHit()
 	{
 		super.beatHit();

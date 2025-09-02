@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menubar styleNames="test" width="100%">
+    <menu text="Test">
+        <menuitem text="First" shortcutText="test" />
+        <menuitem text="Second" />
+        <menuitem text="Third" />
+    </menu>
+
+    <menu text="Second">
+        <menuitem text="" styleNames="hold-a-sub" />
+    </menu>
+
+    <menu text="Third" />
+    <menu text="Fourth">
+        <menuitem text="Open test window" styleNames="open-window" />
+    </menu>
+    <menu text="Hold 'A' to change me!" styleNames="hold-a" />
+</menubar>

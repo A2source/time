@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<box text="Metadata">
+    <hbox>
+        <vbox>
+            <label text="Credits" horizontalAlign="center" />
+            <listview width="225" height="350" styleNames="credits-view">
+                <item-renderer width="100%">
+                    <hbox width="100%">
+                        <label id="name" width="100%" verticalAlign="center" />
+                        <button id="delete" text="x" horizontalAlign="right" style="background-color: red;" />
+                    </hbox>
+                </item-renderer>
+            </listview>
+            <button text="+" horizontalAlign="center" styleNames="credits-add char-button" style="background-color: lime; border-color: black;" />
+        </vbox>
+
+        <vbox>
+            <label text="Roles" horizontalAlign="center" />
+            <listview width="225" height="350" styleNames="roles-view">
+                <item-renderer width="100%">
+                    <hbox width="100%">
+                        <label id="name" width="100%" verticalAlign="center" />
+                        <button id="delete" text="x" horizontalAlign="right" style="background-color: red;" />
+                    </hbox>
+                </item-renderer>
+            </listview>
+            <button text="+" horizontalAlign="center" styleNames="roles-add char-button" style="background-color: lime; border-color: black;" />
+        </vbox>
+    </hbox>
+</box>

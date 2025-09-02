@@ -1,4 +1,4 @@
-static public function getDirectory(path:String):Array<String>
+public static function getDirectory(path:String):Array<String>
 {
     var list:Array<String> = [];
 

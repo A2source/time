@@ -1,0 +1,120 @@
+var barOutline;
+var barBack;
+var bar;
+
+var batchBarOutline;
+var batchBarBack;
+var batchBar;
+
+var text;
+var batchText;
+var jobText;
+
+var screen;
+
+var BAR_WIDTH = 400;
+var BAR_HEIGHT = 25;
+var BAR_COL = 0xFFFFFFFF;
+
+var BATCH_WIDTH = 250;
+var BATCH_HEIGHT = 15;
+var BATCH_COL = 0xFFFF00FF;
+
+var BAR_OFFSET = 50;
+
+function create()
+{
+    DiscordClient.changePresence({state: 'Loading...'});
+    
+    text = new FlxText();
+    batchText = new FlxText();
+    jobText = new FlxText();
+
+    text.setFormat(DEFAULT_FONT, 16, 0xFFFFFFFF, 'center', BORDER_OUTLINE, 0xFF000000);
+    batchText.setFormat(DEFAULT_FONT, 9, 0xFFFFFFFF, 'center', BORDER_OUTLINE, 0xFF000000);
+    jobText.setFormat(DEFAULT_FONT, 16, 0xFFFFFFFF, 'center', BORDER_OUTLINE, 0xFF000000);
+    
+    text.borderSize = 2;
+    batchText.borderSize = 2;
+    jobText.borderSize = 2;
+
+    barBack = new FlxSprite().makeGraphic(BAR_WIDTH, BAR_HEIGHT, 0xFF000000);
+    bar = new FlxSprite().makeGraphic(BAR_WIDTH, BAR_HEIGHT, BAR_COL);
+    bar.scale.x = 0;
+
+    barBack.screenCenter();
+    bar.screenCenter();
+
+    bar.origin.set(-1, 0);
+
+    batchBarBack = new FlxSprite().makeGraphic(BATCH_WIDTH, BATCH_HEIGHT, 0xFF000000);
+    batchBar = new FlxSprite().makeGraphic(BATCH_WIDTH, BATCH_HEIGHT, BATCH_COL);
+    batchBar.scale.x = 0;
+
+    batchBarBack.screenCenter();
+    batchBar.screenCenter();
+
+    batchBar.origin.set(-1, 0);
+    batchBar.y += BAR_HEIGHT + 5;
+    batchBarBack.y = batchBar.y;
+
+    barOutline = new FlxSprite().makeGraphic(BAR_WIDTH + 8, BAR_HEIGHT + 8, 0xFF000000);
+    barOutline.setPosition(bar.x - 4, bar.y - 4);
+
+    batchBarOutline = new FlxSprite().makeGraphic(BATCH_WIDTH + 8, BATCH_HEIGHT + 14, 0xFF000000);
+    batchBarOutline.setPosition(batchBar.x - 4, batchBar.y - 10);
+
+    add(barOutline);
+    add(batchBarOutline);
+    add(barBack);
+    add(batchBarBack);
+    add(bar);
+    add(batchBar);
+
+    add(text);
+    add(jobText);
+    add(batchText);
+
+    FlxG.camera.bgColor = 0xFF333333;
+    screen = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxG.camera.bgColor);
+    screen.alpha = 0;
+    add(screen);
+}
+
+function update(dt)
+{
+    updateBarWidth(dt);
+
+    text.text = currentBatch.name;
+    text.screenCenter();
+    text.y -= 35;
+
+    batchText.text = concat([currentBatchJob, ' / ', currentBatch.jobs.length]);
+    batchText.screenCenter();
+    batchText.y += BAR_HEIGHT + 6;
+    
+    jobText.text = concat([currentJob, ' / ', totalJobs]);
+    jobText.screenCenter();
+    jobText.y += 2;
+}
+
+function updateBarWidth(dt)
+{
+    var lerpVal = 1 - Math.exp(-90 * dt);
+    bar.scale.x = FlxMath.lerp(bar.scale.x, currentJob / totalJobs, lerpVal);
+    batchBar.scale.x = FlxMath.lerp(batchBar.scale.x, currentBatchJob / currentBatch.jobs.length, lerpVal);
+}
+
+function onLoadingComplete(state, dir)
+{
+    currentBatch.name = 'Complete!';
+
+    FlxTimer.wait(1.2, () -> 
+    { 
+        switch(state)
+        {
+            case LOADING_PLAYSTATE: LoadingState.switchState(new PlayState(PlayState.CAMPAIGN_SONG_ORDER, PlayState.LOADED_DIFFICULTY, PlayState.LOADED_MOD_DIRECTORY));
+            default: LoadingState.switchCustomState(state, dir);
+        }
+    });
+}

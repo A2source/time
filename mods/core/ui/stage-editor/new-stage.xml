@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vbox width="200" height="150">
+    <text-field placeholder="Enter name..." styleNames="new-stage" />
+    <rule />
+    <label styleNames="mod-dir" />
+</vbox>

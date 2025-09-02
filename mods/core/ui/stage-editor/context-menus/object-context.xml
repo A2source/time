@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu width="135">
+    <menu-item text="Move Up" icon="haxeui-core/styles/shared/up-arrow-light.png" styleNames="move-up" />
+    <menu-item text="Move Down" icon="haxeui-core/styles/shared/down-arrow-light.png" styleNames="move-down" />
+    <menu-separator />
+    <menu-item text="Move to Layer" icon="haxeui-core/styles/shared/folder-light.png" styleNames="move-to-layer" />
+    <menu-separator />
+    <menu-item text="Delete" icon="haxeui-core/styles/shared/error-small.png" styleNames="delete" />
+</menu>

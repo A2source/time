@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Rendering">
+    <vbox>
+        <sectionheader text="Renderer Data" />
+
+        <label text="Sample Start" />
+        <number-stepper styleNames="sample-start-stepper" min="0" />
+
+        <label text="Sample Cutoff" />
+        <number-stepper styleNames="sample-cutoff-stepper" min="0" />
+
+        <sectionheader text="Flip Direction" />
+        <option-stepper styleNames="tail-flip-stepper">
+            <data>
+                <item text="UP" />
+                <item text="DOWN" />
+            </data>
+        </option-stepper>
+    </vbox>
+</panel>

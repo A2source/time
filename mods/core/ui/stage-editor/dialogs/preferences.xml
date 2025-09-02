@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vbox width="300">
+    <section-header text="On Startup" />
+    <property-grid width="100%">
+        <property label="Object Panel Visible" type="boolean" value="true" styleNames="prefs-panel-object" />
+        <property label="Values Panel Visible" type="boolean" value="true" styleNames="prefs-panel-value" />
+        <property label="Rim Light Panel Visible" type="boolean" value="true" styleNames="prefs-panel-rim" />
+        <property label="Shadow Panel Visible" type="boolean" value="true" styleNames="prefs-panel-shadow" />
+    </property-grid>
+</vbox>

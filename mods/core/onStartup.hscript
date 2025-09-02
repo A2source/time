@@ -4,22 +4,31 @@ function create()
 
     var manager = new HscriptManager(null);
 
-    for (mod in Paths.getModDirectories())
+    for (mod in Paths.directories)
     {
-        if (mod == MOD_NAME)
-            continue;
+        if (mod == MOD_NAME) continue;
 
         trace('-----------------');
         trace('Found mod "' + mod + '"');
 
         var file = 'mods/' + mod + '/onStartup.hscript';
-        if (!FileSystem.exists(file))
-            continue;
+        if (!FileSystem.exists(file)) continue;
 
-        manager.addScript('startup', Paths.mods('', mod), 'onStartup', 'hscript');
+        manager.addScript('startup', Paths.folder('', mod), 'onStartup', 'hscript');
     }
 
     manager.callAll('create', []);
 
-    LoadingState.loadAndSwitchCustomState('IntroState');
+    LoadingState.switchCustomState('IntroState');
+
+    for (file in FileSystem.readDirectory(Paths.folder('ui')))
+    {
+        if (!StringTools.endsWith(file, 'css')) continue;
+
+        var name = file.split('.')[0];
+        Main.parseStyle(Paths.mods.ui.css([name]).path, name + 'Style');
+    }
+
+    // heat
+    FlxG.signals.preStateCreate.add((state) -> { moveFPS(0); });
 }

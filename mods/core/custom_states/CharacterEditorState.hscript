@@ -1,0 +1,1132 @@
+var saveWindowTitle = Lib.application.window.title;
+
+var ribbon = Screen.addComponent(UiS.buildXml(['character-editor', 'ribbon']));
+
+var info = Screen.addComponent(UiS.buildXml(['character-editor', 'character']));
+var i_WorkingPlayer = UiS.get('working-player', info);
+
+var i_FlipX = UiS.get('flipx', info);
+var i_FlipY = UiS.get('flipy', info);
+var i_Antialiasing = UiS.get('antialiasing', info);
+var i_Sheets = UiS.get('sheet-list', info);
+var i_AddSheet = UiS.get('add-sheet', info);
+var i_SingDuration = UiS.get('sing-duration', info);
+var i_Scale = UiS.get('scale', info);
+
+var i_PlayerCameraPositionX = UiS.get('player-x', info);
+var i_PlayerCameraPositionY = UiS.get('player-y', info);
+var i_OpponentCameraPositionX = UiS.get('opp-x', info);
+var i_OpponentCameraPositionY = UiS.get('opp-y', info);
+
+var i_Metadata = UiS.get('metadata', info);
+
+var tools = Screen.addComponent(UiS.buildXml(['character-editor', 'tools']));
+var t_AnimationFrame = UiS.get('anim-frame', tools);
+var t_FrameRange = UiS.get('frame-range', tools);
+var t_SetTrail = UiS.get('set-trail', tools);
+var t_TrailAlpha = UiS.get('trail-alpha', tools);
+
+var picker = Screen.addComponent(UiS.buildXml(['character-editor', 'animation-picker']));
+var a_Filter = UiS.get('animation-filter', picker);
+var a_List = UiS.get('animation-picker', picker);
+var a_Add = UiS.get('add-anim', picker);
+
+var animations = Screen.addComponent(UiS.buildXml(['character-editor', 'animations']));
+
+var a_Tag = UiS.get('anim-tag', animations);
+var a_FPS = UiS.get('anim-fps', animations);
+var a_FlipX = UiS.get('anim-flipx', animations);
+var a_FlipY = UiS.get('anim-flipy', animations);
+var a_Loop = UiS.get('anim-loop', animations);
+var a_LoopPoint = UiS.get('anim-looppoint', animations);
+
+var a_Indices = UiS.get('index-list', animations);
+var a_AddIndex = UiS.get('add-index', animations);
+
+var a_PlayerOffsetX = UiS.get('anim-player-x', animations);
+var a_PlayerOffsetY = UiS.get('anim-player-y', animations);
+var a_OpponentOffsetX = UiS.get('anim-opp-x', animations);
+var a_OpponentOffsetY = UiS.get('anim-opp-y', animations);
+
+var a_AnimationType = UiS.get('anim-type', animations);
+var a_AnimationTypeIndex = UiS.get('anim-type-index', animations);
+
+var camManager;
+var camChar;
+
+var curChar;
+
+var character;
+var lastPlayedAnimation = '';
+var lastPlayedTrail = '';
+
+var cameraPositionSprite;
+
+function load()
+{
+    curChar = ClientPrefs.register('timeCurrentCharacter', 'bf');
+
+    var pngs = [];
+    var foundAtlas = [];
+    var jsons = [];
+    for (file in FileSystem.readDirectory(Paths.mods.character.folder(curChar, WORKING_MOD_DIRECTORY)))
+    {
+        var name = file.split('.')[0];
+
+        if (stringEndsWith(file, PNG_FILE_EXT)) pngs.push(name);
+        else if (stringEndsWith(file, XML_FILE_EXT) && pngs.contains(name)) foundAtlas.push(name);
+        else if (stringEndsWith(file, JSON_FILE_EXT)) jsons.push(name);
+    }
+
+    var batch = {
+        name: concat(['Loading ', '"', curChar, '" Character Assets...']),
+        jobs: [],
+        dir: WORKING_MOD_DIRECTORY
+    }
+
+    for (atlas in foundAtlas) 
+    {
+        batch.jobs.push({
+            method: Paths.mods.character.atlas,
+            keys: [curChar, atlas]
+        });
+    }
+
+    for (png in pngs)
+    {
+        if (foundAtlas.contains(png)) continue;
+
+        batch.jobs.push({
+            method: Paths.mods.character.image,
+            keys: [curChar, png]
+        });
+    }
+
+    for (json in jsons)
+    {
+        batch.jobs.push({
+            method: Paths.mods.character.json,
+            keys: [curChar, json]
+        });
+    }
+
+    editorBatch = {
+        name: 'Loading Editor Assets...',
+        jobs: [
+            {
+                method: Paths.mods.state.atlas,
+                keys: ['chart', 'focus']
+            }
+        ]
+    }
+
+    var xmlPath = 'ui/character-editor';
+    for (file in FileSystem.readDirectory(Paths.folder(xmlPath)))
+    {
+        var name = file.split('.')[0];
+        if (name == 'dialogs')
+        {
+            for (xml in FileSystem.readDirectory(Paths.folder(concat([xmlPath, '/dialogs']))))
+            {
+                var xmlName = xml.split('.')[0];
+                editorBatch.jobs.push({
+                    method: Paths.mods.ui.xml,
+                    keys: ['character-editor/dialogs', xmlName]
+                });
+            }
+        }
+        else
+        {
+            editorBatch.jobs.push({
+                method: Paths.mods.ui.xml,
+                keys: ['character-editor', name]
+            });
+        }
+    }
+
+    LoadingState.initializeLoadingScreen([batch, editorBatch], { state: 'CharacterEditorState' });
+}
+
+function create()
+{
+    DiscordClient.changePresence({state: 'Character Editor'});
+    FlxG.mouse.visible = true;
+
+    curChar = ClientPrefs.register('timeCurrentCharacter', 'bf');
+
+    setupCamera();
+
+    loadCharacter();
+    setupUI();
+
+    setWindowTitle();
+}
+
+function onChangedSaved()
+{
+    setWindowTitle();
+}
+
+function onSave()
+{
+    saveCharacterProxy();
+}
+
+function update(dt)
+{
+    camManager.update(dt);
+    updateControls(dt);
+}
+
+function updateControls(dt)
+{
+    if (this.blockInput) return;
+
+    updateMouse();
+    updateKeyboardControls(dt);
+}
+
+function updateMouse()
+{
+    if (!FlxG.mouse.pressedRight) return;
+
+    var x = Std.int(FlxG.mouse.deltaX / camChar.zoom);
+    var y = Std.int(FlxG.mouse.deltaY / camChar.zoom);
+
+    if (character.player)
+    {
+        a_PlayerOffsetX.value -= x;
+        a_PlayerOffsetY.value -= y;
+    }
+    else
+    {
+        a_OpponentOffsetX.value -= x;
+        a_OpponentOffsetY.value -= y;
+    }
+}
+
+var MOVE_AMT = 250;
+function updateKeyboardControls(dt)
+{
+    var amt = MOVE_AMT;
+    var checkImpulse = FlxG.keys.pressed.CONTROL;
+
+    if (FlxG.keys.pressed.SHIFT) amt *= 5;
+
+    amt *= dt;
+    amt = Std.int(amt);
+
+    var xFocus = character.player ? a_PlayerOffsetX : a_OpponentOffsetX;
+    var yFocus = character.player ? a_PlayerOffsetY : a_OpponentOffsetY;
+
+    if (checkImpulse ? FlxG.keys.justPressed.LEFT : FlxG.keys.pressed.LEFT) xFocus.value += amt;
+    if (checkImpulse ? FlxG.keys.justPressed.DOWN : FlxG.keys.pressed.DOWN) yFocus.value -= amt;
+    if (checkImpulse ? FlxG.keys.justPressed.UP : FlxG.keys.pressed.UP) yFocus.value += amt;
+    if (checkImpulse ? FlxG.keys.justPressed.RIGHT : FlxG.keys.pressed.RIGHT) xFocus.value -= amt;
+}
+
+function onKeyDown(key, modifiers)
+{
+    if (character == null) return;
+    if (this.blockInput) return;
+
+    if (ctrlKeyModifier(modifiers))
+    {
+        onControlShortcut(key);
+        return;
+    }
+
+    switch(key)
+    {
+        case KEY_SPACE: playLastAnimation();
+        case KEY_F3: privateAccess(() -> { trace(character.animation._animations.keys().array); });
+        
+        case KEY_ESCAPE: quitEditor(null);
+    }
+}
+
+function onControlShortcut(key)
+{
+    switch(key)
+    {
+        case KEY_O: openOpenCharacterDialog(null);
+        case KEY_N: openNewCharacterDialog(null);
+    }
+}
+
+function onLeaveState()
+{
+    Lib.application.window.title = saveWindowTitle;
+}
+
+function setWindowTitle()
+{
+    var base = concat([saveWindowTitle, ' Character Editor - ', curChar]);
+    if (UndoManager.unsaved)
+        base += '*';
+
+    Lib.application.window.title = base;
+}
+
+function setupCamera()
+{
+    camManager = new CameraManager([
+        {name: 'char', follow: true, bgColor: 0xFF333333},
+        {name: 'ui', follow: false}
+    ], 1);
+    camManager.defaultZoom = 0.6;
+    camManager.inEditor = true;
+
+    camChar = camManager.cams[0].cam;
+}
+
+function loadCharacter()
+{
+    character = new Character(0, 0, {
+        name: curChar,
+        player: true, 
+        dir: WORKING_MOD_DIRECTORY,
+        debug: true
+    });
+    character.cameras = [camChar];
+    character.trail.cameras = [camChar];
+    add(character.trail);
+    add(character);
+
+    character.animation.onFrameChange.add((name, frame, index) ->
+    {
+        t_AnimationFrame.pos = frame;
+    });
+
+    character.playAnim(character.danceAnimations[0]);
+    lastPlayedAnimation = character.danceAnimations[0];
+
+    camManager.focusOnPoint(character.cameraPosition);
+
+    a_List.dataSource = getDataSource();
+    for (anim in character.animations.keys()) a_List.dataSource.add({name: anim});
+
+    a_List.onChange = changeSelectedAnimation;
+    a_List.onComponentEvent = (e) ->
+    {
+        if (e.source.id != 'delete') return;
+
+        var name = a_List.dataSource.get(e.itemIndex).name;
+
+        a_List.dataSource.removeAt(e.itemIndex);
+        character.animation.remove(name);
+        character.animations.remove(name);
+
+        character.trail.animation.copyFrom(character.animation);
+        character.shadow.animation.copyFrom(character.animation);
+
+        a_List.selectedIndex = 0;
+    }
+
+    a_List.selectedIndex = 0;
+
+    var removedItems = [];
+    a_Filter.onChange = (e) ->
+    {
+        var filter = a_Filter.text;
+
+        a_List.dataSource.filter((i, data) ->
+        {
+            return stringContains(data.name.toLowerCase(), filter);
+        });
+    }
+
+    a_Add.onClick = (e) ->
+    {
+        var content = UiS.buildXml(['character-editor', 'dialogs', 'add-animation']);
+        var a_Name = UiS.get('anim-name', content);
+        var a_NameValidity = UiS.get('anim-name-validity', content);
+        var a_Add = UiS.get('create', content);
+
+        var validateAddButton = () -> 
+        { 
+            a_Add.disabled = true;
+
+            if (a_Name.text == null) return;
+            if (a_Name.text == '') return;
+
+            a_Add.disabled = false;
+        }
+
+        a_Name.onChange = (e) ->
+        {
+            if (a_Name.text == '') 
+                a_NameValidity.text = 'Please enter a name.';
+
+            else if (character.animations.exists(a_Name.text)) 
+                a_NameValidity.text = concat(['Animation "', a_Name.text, '" already exists.']);
+            
+            else 
+                a_NameValidity.text = 'This name is ok.';
+
+            validateAddButton();
+        }
+
+        var animDialog;
+        a_Add.onClick = (e) ->
+        {
+            var name = a_Name.text;
+
+            var animation = {
+                tag: '',
+                name: name,
+
+                fps: 24,
+
+                flipX: false,
+                flipY: false,
+
+                loop: false,
+                loopPoint: 0,
+
+                indices: [],
+
+                playerOffsets: {
+                    x: 0,
+                    y: 0 
+                },
+                opponentOffsets: {
+                    x: 0,
+                    y: 0
+                },
+
+                type: '',
+                typeIndex: 0
+            }
+
+            a_List.dataSource.add({name: name});
+
+            character.animations.set(name, animation);
+            character.trail.animations.set(name, animation);
+            character.shadow.animations.set(name, animation);
+
+            character.animation.addByPrefix(name, '', 24, false);
+            privateAccess(() ->
+            {
+                trace(character.animation._animations.get(name));
+            });
+
+            character.trail.animation.copyFrom(character.animation);
+            character.shadow.animation.copyFrom(character.animation);
+
+			character.shadowOffsets.set(name, {x: 0, y: 0});
+			character.shadowSkews.set(name, {x: 0, y: 0});
+			character.shadowScales.set(name, {x: 0, y: 0});
+
+            animDialog.hide();
+        }
+
+        animDialog = UiS.openDialog({
+            content: content,
+            title: 'Add New Animation'
+        });
+    }
+
+    add(cameraPositionSprite = new FlxSprite().loadAtlas(Paths.mods.state.atlas(['chart', 'focus']).content));
+    cameraPositionSprite.animation.addByPrefix('idle', 'idle', 4, true); 
+    cameraPositionSprite.animation.play('idle');
+    cameraPositionSprite.cameras = [camChar]; 
+    cameraPositionSprite.setGraphicSize(100, 100);
+
+    updateCameraPositionSprite();
+}
+
+function changeSelectedAnimation(e)
+{
+    var animName = a_List.selectedItem.name;
+    lastPlayedAnimation = animName;
+
+    playLastAnimation();
+
+    animations.text = animName;
+
+    privateAccess(() ->
+    {
+        var animation = character.animations.get(animName);
+        var anim = character.animation._animations.get(animName);
+
+        var trailAnimation = character.trail.animations.get(animName);
+        var trailAnim = character.animation._animations.get(animName);
+
+        a_Tag.value = animation.tag;
+        a_FPS.value = animation.fps;
+        a_FlipX.value = animation.flipX;
+        a_FlipY.value = animation.flipY;
+        a_Loop.value = animation.looped;
+        a_LoopPoint.value = animation.loopPoint;
+
+        a_PlayerOffsetX.value = animation.playerOffsets.x;
+        a_PlayerOffsetY.value = animation.playerOffsets.y;
+        a_OpponentOffsetX.value = animation.opponentOffsets.x;
+        a_OpponentOffsetY.value = animation.opponentOffsets.y;
+
+        a_AnimationType.value = animation.type;
+        a_AnimationTypeIndex.value = animation.typeIndex;
+
+        a_Tag.onChange = (e) ->
+        {
+            animation.tag = a_Tag.value;
+            trailAnimation.tag = a_Tag.value;
+
+            updateAnimationIndices();
+        }
+
+        a_FPS.onChange = (e) -> 
+        { 
+            animation.fps = a_FPS.value;
+            trailAnimation.fps = a_FPS.value;
+
+            anim.frameRate = a_FPS.value; 
+            trailAnim.frameRate = a_FPS.value; 
+        }
+        
+        a_FlipX.onChange = (e) -> 
+        { 
+            animation.flipX = a_FlipX.value;
+            trailAnimation.flipX = a_FlipX.value;
+
+            anim.flipX = a_FlipX.value; 
+            trailAnim.flipX = a_FlipX.value; 
+        }
+        
+        a_FlipY.onChange = (e) -> 
+        { 
+            animation.flipY = a_FlipY.value;
+            trailAnimation.flipY = a_FlipY.value;
+            
+            anim.flipY = a_FlipY.value;
+            trailAnim.flipY = a_FlipY.value;
+        }
+        
+        a_Loop.onChange = (e) -> 
+        { 
+            animation.loop = a_Loop.value;
+            trailAnimation.loop = a_Loop.value;
+            
+            anim.looped = a_Loop.value;
+            trailAnim.looped = a_Loop.value;
+        }
+        
+        a_LoopPoint.onChange = (e) -> 
+        {
+            animation.loopPoint = a_LoopPoint.value;
+            trailAnimation.loopPoint = a_LoopPoint.value;
+            
+            anim.loopPoint = a_LoopPoint.value;
+            trailAnim.loopPoint = a_LoopPoint.value;
+        }
+
+        a_Indices.dataSource = getDataSource();
+        for (index in animation.indices) a_Indices.dataSource.add({index: index});
+
+        a_Indices.onComponentEvent = (e)->
+        {
+            if (e.source.id != 'delete') return;
+
+            a_Indices.dataSource.removeAt(e.itemIndex);
+            updateAnimationIndices();
+        }
+
+        a_AddIndex.onClick = (e) -> {
+            var content = UiS.buildXml(['character-editor', 'dialogs', 'add-index']);
+            var index = UiS.get('index', content);
+            var add = UiS.get('add-index', content);
+
+            add.onClick = (e) ->
+            {
+                a_Indices.dataSource.add({index: index.pos});
+                updateAnimationIndices();
+            }
+
+            UiS.openDialog({
+                title: 'Add Index',
+                content: content,
+                modal: false
+            });
+        }
+
+        a_PlayerOffsetX.onChange = (e) -> {
+            animation.playerOffsets.x = a_PlayerOffsetX.value;
+            trailAnimation.playerOffsets.x = a_PlayerOffsetX.value;
+            
+            if (character.player) playLastAnimation();
+        }
+        a_PlayerOffsetY.onChange = (e) -> {
+            animation.playerOffsets.y = a_PlayerOffsetY.value;
+            trailAnimation.playerOffsets.y = a_PlayerOffsetY.value;
+            
+            if (character.player) playLastAnimation();
+        }
+
+        a_OpponentOffsetX.onChange = (e) -> {
+            animation.opponentOffsets.x = a_OpponentOffsetX.value;
+            trailAnimation.opponentOffsets.x = a_OpponentOffsetX.value;
+            
+            if (!character.player) playLastAnimation();
+        }
+        a_OpponentOffsetY.onChange = (e) -> {
+            animation.opponentOffsets.y = a_OpponentOffsetY.value;
+            trailAnimation.opponentOffsets.y = a_OpponentOffsetY.value;
+            
+            if (!character.player) playLastAnimation();
+        }
+
+        a_AnimationType.onChange = (e) -> {
+            animation.type = a_AnimationType.value;
+            trailAnimation.type = a_AnimationType.value;
+        }
+
+        a_AnimationTypeIndex.onChange = (e) -> {
+            animation.typeIndex = a_AnimationTypeIndex.value;
+            trailAnimation.typeIndex = a_AnimationTypeIndex.value;
+        }
+    });
+}
+
+function playLastAnimation()
+{
+    if (lastPlayedAnimation == null || lastPlayedAnimation == '') return;
+
+    character.playAnim(lastPlayedAnimation);
+    // if (lastPlayedTrail == lastPlayedAnimation) character.playTrailAnim(false, lastPlayedAnimation, true);
+
+    t_FrameRange.text = concat(['/ ', character.animation.curAnim.numFrames - 1]);
+}
+
+function updateAnimationIndices()
+{
+    var indices = [];
+    a_Indices.dataSource.filter((i, data) ->
+    {
+        indices.push(concat(['', data.index]));
+        return true;
+    });
+
+    var animation = character.animations.get(lastPlayedAnimation);
+    var prevIndices = animation.indices;
+    animation.indices = getIndices(indices);
+
+    if (indices.length > 0)
+        character.animation.addByIndices(animation.name, animation.tag, getIndices(indices), '', animation.fps, 
+                                            animation.loop, animation.flipX, animation.flipY);
+    else
+        character.animation.addByPrefix(animation.name, animation.tag, animation.fps, animation.loop, animation.flipX, animation.flipY);
+
+    playLastAnimation();
+
+    if (prevIndices != animation.indices) return;
+
+    character.trail.animation.copyFrom(character.animation);
+    character.shadow.animation.copyFrom(character.animation);
+}
+
+function setupUI()
+{
+    UiS.registerDraggable(info);
+    UiS.registerDraggable(tools);
+    UiS.registerDraggable(picker);
+    UiS.registerDraggable(animations);
+
+    UiS.get('ribbon-file-open', ribbon).onClick = openOpenCharacterDialog;
+    UiS.get('ribbon-file-new', ribbon).onClick = openNewCharacterDialog;
+    UiS.get('ribbon-file-undo', ribbon).onClick = UndoManager.performUndo;
+    UiS.get('ribbon-file-redo', ribbon).onClick = UndoManager.performRedo;
+    UiS.get('ribbon-file-save', ribbon).onClick = UndoManager.performSave;
+    UiS.get('ribbon-file-quit', ribbon).onClick = quitEditor;
+
+    moveFPS(ribbon.height);
+    ribbon.onMenuOpened = (e) -> { moveFPS(ribbon.height + e.target.height); }
+    ribbon.onMenuClosed = (e) -> { moveFPS(ribbon.height); }
+
+    i_FlipX.value = character.characterJsonData.flipX;
+    i_FlipX.onChange = (e) -> 
+    {   
+        if (character.player) character.flipX = i_FlipX.value;
+        else character.flipX = !i_FlipX.value;
+
+        character.characterJsonData.flipX = character.flipX;
+    }
+
+    i_FlipY.value = character.characterJsonData.flipY;
+    i_FlipY.onChange = (e) -> 
+    { 
+        character.flipY = i_FlipY.value; 
+        character.characterJsonData.flipY = character.flipY;
+    }
+
+    i_Antialiasing.value = character.characterJsonData.antialiasing;
+    i_Antialiasing.onChange = (e) -> 
+    { 
+        character.antialiasing = i_Antialiasing.value;
+        character.characterJsonData.antialiasing = i_Antialiasing.value;
+    }
+    
+    i_Sheets.dataSource = getDataSource();
+    for (sheet in character.spriteSheets) i_Sheets.dataSource.add({text: sheet});
+
+    i_AddSheet.onClick = (e) ->
+    {
+        UiS.openOpenFileDialog([{label: 'Spritesheet', extension: 'png'}], (button, files) ->
+        {
+            if (button != '{{ok}}') return;
+
+            for (file in files)
+            {
+                var name = file.name.substr(0, file.name.length - 4);
+                
+                if (character.spriteSheets.contains(name)) 
+                {
+                    alert(concat(['Sheet "', name, '" already found, skipping.']), ALERT_TITLE);
+                    continue;
+                }
+
+                character.spriteSheets.push(name);
+                i_Sheets.dataSource.add({text: name});
+            }
+        }, StringTools.replace(Path.join([Paths.mods.character.folder(curChar, WORKING_MOD_DIRECTORY)]), '/', '\\'));
+    }
+
+    i_SingDuration.value = character.singDuration;
+    i_SingDuration.onChange = (e) -> { 
+        character.singDuration = i_SingDuration.value; 
+    }
+
+    i_Scale.onChange = updateCharacterScale;
+    i_Scale.value = character.characterJsonData.scale;
+
+    i_PlayerCameraPositionX.value = character.playerCameraPosition.x;
+    i_PlayerCameraPositionY.value = character.playerCameraPosition.y;
+    i_OpponentCameraPositionX.value = character.opponentCameraPosition.x;
+    i_OpponentCameraPositionY.value = character.opponentCameraPosition.y;
+
+    i_PlayerCameraPositionX.onChange = updatePlayerCameraPosition;
+    i_PlayerCameraPositionY.onChange = updatePlayerCameraPosition;
+
+    i_OpponentCameraPositionX.onChange = updateOpponentCameraPosition;
+    i_OpponentCameraPositionY.onChange = updateOpponentCameraPosition;
+
+    t_AnimationFrame.onChange = (e) ->
+    {
+        if (!character.animation.curAnim.finished) return;
+        character.animation.curAnim.curFrame = t_AnimationFrame.pos;
+    }
+
+    t_SetTrail.onClick = setTrailAnimation;
+    t_TrailAlpha.onChange = (e) -> { character.trail.alpha = t_TrailAlpha.pos; }
+
+    i_WorkingPlayer.selected = character.player;
+    i_WorkingPlayer.onChange = (e) -> 
+    { 
+        if (character.player == i_WorkingPlayer.selected) return;
+        
+        character.player = i_WorkingPlayer.selected;
+        character.trail.player = i_WorkingPlayer.selected;
+
+        character.flipX = !character.flipX;
+
+        playLastAnimation();
+    }
+
+    i_Metadata.onClick = (e) ->
+    {
+        var content = UiS.buildXml(['character-editor', 'dialogs', 'metadata']);
+        var m_Artists = UiS.get('artists-view', content);
+        m_Artists.dataSource = getArtistsDataSource();
+
+        var m_Animators = UiS.get('animators-view', content);
+        m_Animators.dataSource = getAnimatorsDataSource();
+
+        m_Artists.onComponentEvent = (e) ->
+        {
+            if (e.source.id != 'delete') return;
+
+            var name = UiS.get('label', e.target).text;
+            character.metadata.artists.remove(name);
+            m_Artists.dataSource = getArtistsDataSource();
+        }
+
+        m_Animators.onComponentEvent = (e) ->
+        {
+            if (e.source.id != 'delete') return;
+
+            var name = UiS.get('label', e.target).text;
+            character.metadata.animators.remove(name);
+            m_Animators.dataSource = getAnimatorsDataSource();
+        }
+
+        UiS.get('artists-add', content).onClick = (e) ->
+        {
+            validateMetadata();
+
+            var field = new TextField();
+            UiS.openDialog({
+                content: field,
+                title: 'Add Artist',
+                buttons: ['Add', 'Cancel'],
+                callback: (e) -> 
+                {
+                    if (e.button != 'Add') return;
+
+                    var name = field.text;
+                    if (name == null || name == '') return;
+
+                    character.metadata.artists.push(name);
+                    m_Artists.dataSource = getArtistsDataSource();
+                }
+            });
+        }
+
+        UiS.get('animators-add', content).onClick = (e) ->
+        {
+            validateMetadata();
+
+            var field = new TextField();
+            UiS.openDialog({
+                content: field,
+                title: 'Add Animator',
+                buttons: ['Add', 'Cancel'],
+                callback: (e) -> 
+                {
+                    if (e.button != 'Add') return;
+
+                    var name = field.text;
+                    if (name == null || name == '') return;
+
+                    character.metadata.animators.push(name);
+                    m_Animators.dataSource = getAnimatorsDataSource();
+                }
+            });
+        }
+
+        UiS.openDialog({
+            content: content,
+            title: 'Character Metadata'
+        });
+    }
+}
+
+function validateMetadata()
+{
+    if (character.metadata == null) character.metadata = {artists: [], animators: []}
+}
+
+function getArtistsDataSource()
+{
+    var source = getDataSource();
+    if (character.metadata != null) for (cred in character.metadata.artists) source.add({name: cred});
+
+    return source;
+}
+
+function getAnimatorsDataSource()
+{
+    var source = getDataSource();
+    if (character.metadata != null) for (cred in character.metadata.animators) source.add({name: cred});
+
+    return source;
+}
+
+function setTrailAnimation(e)
+{
+    lastPlayedTrail = lastPlayedAnimation;
+    character.playTrailAnim(false, lastPlayedAnimation, true); 
+}
+
+function updateCharacterScale(e)
+{
+    character.characterJsonData.scale = i_Scale.value; 
+    character.setScale(i_Scale.value);
+
+    playLastAnimation();
+    
+    // if (!character.animations.exists(lastPlayedTrail)) return;
+    // character.playTrailAnim(false, lastPlayedTrail, true); 
+}
+
+function updatePlayerCameraPosition(e)
+{
+    character.playerCameraPosition.x = i_PlayerCameraPositionX.value;
+    character.playerCameraPosition.y = i_PlayerCameraPositionY.value;
+
+    if (character.player) updateCameraPositionSprite();
+}
+
+function updateOpponentCameraPosition(e)
+{
+    character.opponentCameraPosition.x = i_OpponentCameraPositionX.value;
+    character.opponentCameraPosition.y = i_OpponentCameraPositionY.value;
+
+    if (!character.player) updateCameraPositionSprite();
+}
+
+function updateCameraPositionSprite()
+{
+    var point = character.cameraPosition;
+
+    var halfWidth = cameraPositionSprite.width / 2;
+    var halfHeight = cameraPositionSprite.height / 2;
+
+    FlxTween.cancelTweensOf(cameraPositionSprite);
+
+    cameraPositionSprite.alpha = 1;
+    FlxTween.tween(cameraPositionSprite, {x: point.x - halfWidth, y: point.y - halfHeight}, 1, {ease: FlxEase.expoOut});
+    FlxTween.tween(cameraPositionSprite, {alpha: 0}, 0.2, {startDelay: 1.5});
+
+    camManager.focusOnPoint(point);
+}
+
+// -- RIBBON FUNCS --
+
+function openOpenCharacterDialog(e)
+{
+    var list = new ListView();
+    list.width = 200;
+    list.dataSource = getDataSource();
+
+    for (char in FileSystem.readDirectory(Paths.folder('characters', WORKING_MOD_DIRECTORY))) 
+        list.dataSource.add({text: char});
+
+    UiS.openDialog({
+        content: list,
+        title: 'Open Character',
+        buttons: ['Open', 'Cancel'],
+        callback: (e) ->
+        {
+            if (e.button != 'Open') return;
+            if (list.selectedItem == null) return;
+
+            ClientPrefs.set('timeCurrentCharacter', list.selectedItem.text);
+            ClientPrefs.save();
+            reset();
+        }
+    });
+}
+
+function openNewCharacterDialog(e)
+{
+    var content = UiS.buildXml(['character-editor', 'dialogs', 'new-character']);
+    var c_Name = UiS.get('char-name', content);
+    var c_NameValidity = UiS.get('char-name-validity', content);
+    var c_Create = UiS.get('create', content);
+
+    var validateCreateButton = () -> 
+    { 
+        c_Create.disabled = true;
+
+        if (c_Name.text == null) return;
+        if (c_Name.text == '') return;
+
+        c_Create.disabled = false;
+    }
+
+    UiS.get('mod-directory', content).text = concat(['\nWorking mod directory "', WORKING_MOD_DIRECTORY, '"']);
+
+    c_Name.onChange = (e) ->
+    {
+        Paths.VERBOSE = false;
+
+        var path = Paths.mods.character.folder(c_Name.text, WORKING_MOD_DIRECTORY);
+
+        if (c_Name.text == '') c_NameValidity.text = 'Please enter a name.';
+        else if (path != null) c_NameValidity.text = concat(['Character named "', c_Name.text, '" already exists.']);
+        else c_NameValidity.text = 'This name is ok.';
+
+        validateCreateButton();
+
+        Paths.VERBOSE = true;
+    }
+
+    var createCharDialog;
+    c_Create.onClick = (e) ->
+    {
+        var name = c_Name.text;
+
+        FileSystem.createDirectory(concat(['mods/', WORKING_MOD_DIRECTORY, '/characters/', name]));
+        var path = Paths.mods.character.folder(name, WORKING_MOD_DIRECTORY);
+
+        var characterFile = {
+            name: name,
+            sheets: [name],
+
+            scale: 1,
+            singDuration: 4,
+
+            flipX: false,
+            flipY: false,
+
+            antialiasing: true,
+
+            playerCameraPosition: {
+                x: 0,
+                y: 0
+            },
+            opponentCameraPosition: {
+                x: 0,
+                y: 0
+            },
+
+            metadata: {
+                artists: [],
+                animators: []
+            }
+        }
+
+        var content = stringifyJson(characterFile, '\t');
+        File.saveContent(concat([path, '/character.json']), content);
+
+        var animationFile = {
+            animations: [
+                {
+                    tag: '',
+                    name: 'idle',
+
+                    fps: 24,
+
+                    flipX: false,
+                    flipY: false,
+
+                    loop: false,
+                    loopPoint: 0,
+
+                    indices: [],
+
+                    playerOffsets: {
+                        x: 0,
+                        y: 0
+                    },
+                    opponentOffsets: {
+                        x: 0,
+                        y: 0
+                    },
+
+                    type: ANIMATION_DANCE,
+                    typeIndex: 0
+                }
+            ]
+        }
+
+        var content = stringifyJson(animationFile, '\t');
+        File.saveContent(concat([path, '/animations.json']), content);
+
+        UiS.addNotification({
+            title: 'Character Created!',
+            body: concat(['Character named "', name, '" has been created in "', path, '"!']),
+            actions: [{
+                text: 'Ok'
+            }, {
+                text: 'Take me there!',
+                callback: (e) -> { Paths.openInFileExplorer(path); }
+            }],
+            type: NOTIFICATION_SUCCESS,
+            expiryMs: 2750
+        });
+
+        createCharDialog.hide();
+    }
+
+    createCharDialog = UiS.openDialog({
+        content: content,
+        title: 'Create New Character'
+    });
+}
+
+function saveCharacterProxy() { saveCharacter(null); }
+function saveCharacter(e)
+{
+    var characterFile = {
+        name: character.name,
+        sheets: character.spriteSheets,
+
+        scale: i_Scale.value,
+        singDuration: i_SingDuration.value,
+
+        flipX: i_FlipX.value,
+        flipY: i_FlipY.value,
+
+        antialiasing: i_Antialiasing.value,
+
+        playerCameraPosition: {
+            x: i_PlayerCameraPositionX.value,
+            y: i_PlayerCameraPositionY.value
+        },
+        opponentCameraPosition: {
+            x: i_OpponentCameraPositionX.value,
+            y: i_OpponentCameraPositionY.value
+        },
+
+        metadata: character.metadata
+    }
+
+    var animationsFile = {
+        animations: []
+    }
+
+    for (key in character.animations.keys())
+    {
+        var anim = character.animations.get(key);
+
+        animationsFile.animations.push({
+            tag: anim.tag,
+            name: anim.name,
+            
+            fps: anim.fps,
+
+            flipX: anim.flipX,
+            flipY: anim.flipY,
+
+            loop: anim.loop,
+            loopPoint: anim.loopPoint,
+
+            indices: anim.indices,
+
+            playerOffsets: anim.playerOffsets,
+            opponentOffsets: anim.opponentOffsets,
+
+            type: anim.type,
+            typeIndex: anim.typeIndex
+        });
+    }
+
+    var characterContent = stringifyJson(characterFile, "\t");
+    var animationContent = stringifyJson(animationsFile, "\t");
+
+    var path = Paths.mods.character.folder(curChar, WORKING_MOD_DIRECTORY);
+
+    charPath = concat([path, '/character.json']);
+    File.saveContent(charPath, characterContent);
+
+    animPath = concat([path, '/animations.json']);
+    File.saveContent(animPath, animationContent);
+
+    UiS.addNotification({
+        title: 'Character Saved!',
+        body: concat(['Character "', curChar, '" has been saved to "', path, '"!']),
+        actions: [{
+            text: 'Ok'
+        }, {
+            text: 'Take me there!',
+            callback: (e) -> { Paths.openInFileExplorer(path); }
+        }],
+        type: NOTIFICATION_SUCCESS,
+        expiryMs: 2750
+    });
+}
+
+function quitEditor(e) 
+{
+    UiS.openQuitDialog({
+        callback: (e) ->
+        {
+            if (!UiS.QUIT_DIALOG_BUTTONS.contains(e.button)) return;
+            if (e.button == UiS.QUIT_DIALOG_BUTTONS[2]) return;
+
+            if (e.button == UiS.QUIT_DIALOG_BUTTONS[0]) saveCharacterProxy();
+            LoadingState.switchCustomState('MasterEditorMenu');
+        }
+    });
+}

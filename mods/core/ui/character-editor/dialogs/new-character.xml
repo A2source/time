@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vbox width="300">
+    <text-field placeholder="Enter character name..." styleNames="char-name" restrictChars="a-zA-Z0-9_ " />
+    <label text="Plase enter a name." styleNames="char-name-validity" />
+
+    <label text="mod directory" styleNames="mod-directory" style="padding-top: 5px; padding-bottom: 5px;" />
+    
+    <rule />
+
+    <button text="Create" horizontalAlign="center" disabled="true" styleNames="create" style="font-size: 12px;" />
+</vbox>

@@ -1,124 +1,255 @@
 {
-	"anims": {
-		"r": {
-			"p": "right press",
-			"h": "right confirm",
-			"i": "arrowRIGHT"
-		},
-		"d": {
-			"p": "down press",
-			"h": "down confirm",
-			"i": "arrowDOWN"
-		},
-		"l": {
-			"p": "left press",
-			"h": "left confirm",
-			"i": "arrowLEFT"
-		},
-		"u": {
-			"p": "up press",
-			"h": "up confirm",
-			"i": "arrowUP"
-		}
-	},
 	"offsets": {
-		"r": {
-			"h": {
-				"x": 0,
-				"y": 0
-			},
-			"p": {
-				"x": 0,
-				"y": 0
-			},
-			"i": {
-				"x": 0,
-				"y": 0
-			},
-			"g": {
-				"x": 0,
-				"y": 0
-			}
-		},
-		"d": {
-			"h": {
-				"x": 1,
-				"y": 0
-			},
-			"p": {
-				"x": 0,
-				"y": 0
-			},
-			"i": {
-				"x": 0,
-				"y": 0
-			},
-			"g": {
-				"x": 0,
-				"y": 0
-			}
-		},
-		"l": {
-			"h": {
-				"x": -1,
-				"y": -3
-			},
-			"p": {
-				"x": 0,
-				"y": 0
-			},
-			"i": {
-				"x": 0,
-				"y": 0
-			},
-			"g": {
-				"x": 0,
-				"y": 0
-			}
-		},
-		"u": {
-			"h": {
-				"x": 0,
-				"y": 0
-			},
-			"p": {
-				"x": 0,
-				"y": 0
-			},
-			"i": {
-				"x": 0,
-				"y": 0
-			},
-			"g": {
-				"x": 0,
-				"y": 0
-			}
-		}
-	},
-	"notes": {
-		"sus": {
-			"r": {
-				"p": "red hold piece",
-				"e": "red hold end"
+		"strums": {
+			"l": {
+				"p": {
+					"x": -3,
+					"y": -2
+				},
+				"i": {
+					"x": 0,
+					"y": 0
+				},
+				"c": {
+					"x": 22,
+					"y": 22
+				},
+				"g": {
+					"x": 3,
+					"y": -1
+				}
 			},
 			"d": {
-				"p": "blue hold piece",
-				"e": "blue hold end"
-			},
-			"l": {
-				"p": "purple hold piece",
-				"e": "pruple end hold"
+				"p": {
+					"x": -2,
+					"y": -2
+				},
+				"i": {
+					"x": 0,
+					"y": 0
+				},
+				"c": {
+					"x": 27,
+					"y": 27
+				},
+				"g": {
+					"x": 0,
+					"y": 0
+				}
 			},
 			"u": {
-				"p": "green hold piece",
-				"e": "green hold end"
+				"p": {
+					"x": -4,
+					"y": 0
+				},
+				"i": {
+					"x": -3,
+					"y": 0
+				},
+				"c": {
+					"x": 22,
+					"y": 25
+				},
+				"g": {
+					"x": 0,
+					"y": 0
+				}
+			},
+			"r": {
+				"p": {
+					"x": -11,
+					"y": -2
+				},
+				"i": {
+					"x": -8,
+					"y": 0
+				},
+				"c": {
+					"x": 15,
+					"y": 24
+				},
+				"g": {
+					"x": 0,
+					"y": 0
+				}
+			},
+			"g": {
+				"x": 0,
+				"y": 0
 			}
 		},
-		"solid": {
-			"r": "red0",
-			"d": "blue0",
-			"l": "purple0",
-			"u": "green0"
+		"tails": {
+			"l": {
+				"x": 0,
+				"y": 0
+			},
+			"d": {
+				"x": 0,
+				"y": 0
+			},
+			"u": {
+				"x": 0,
+				"y": 0
+			},
+			"r": {
+				"x": 0,
+				"y": 0
+			},
+			"g": {
+				"x": 10,
+				"y": 30
+			}
+		},
+		"notes": {
+			"l": {
+				"x": 0,
+				"y": 0
+			},
+			"d": {
+				"x": 0,
+				"y": 0
+			},
+			"u": {
+				"x": 0,
+				"y": 0
+			},
+			"r": {
+				"x": 0,
+				"y": 0
+			},
+			"g": {
+				"x": 0,
+				"y": 0
+			}
 		}
+	},
+	"strumGap": 0,
+	"flipTail": 1,
+	"anims": {
+		"strums": {
+			"l": {
+				"p": {
+					"tag": "left press instance",
+					"fps": 24
+				},
+				"i": {
+					"tag": "arrow static instance 1",
+					"fps": 24
+				},
+				"c": {
+					"tag": "left confirm instance",
+					"fps": 24
+				}
+			},
+			"d": {
+				"p": {
+					"tag": "down press instance",
+					"fps": 24
+				},
+				"i": {
+					"tag": "arrow static instance 2",
+					"fps": 24
+				},
+				"c": {
+					"tag": "down confirm instance",
+					"fps": 24
+				}
+			},
+			"r": {
+				"p": {
+					"tag": "right press instance",
+					"fps": 24
+				},
+				"i": {
+					"tag": "arrow static instance 3",
+					"fps": 24
+				},
+				"c": {
+					"tag": "right confirm instance",
+					"fps": 24
+				}
+			},
+			"u": {
+				"p": {
+					"tag": "up press instance",
+					"fps": 24
+				},
+				"i": {
+					"tag": "arrow static instance 4",
+					"fps": 24
+				},
+				"c": {
+					"tag": "up confirm instance",
+					"fps": 24
+				}
+			}
+		},
+		"notes": {
+			"tail": {
+				"l": {
+					"b": {
+						"tag": "purple hold piece instance",
+						"fps": 24
+					},
+					"c": {
+						"tag": "pruple end hold instance",
+						"fps": 24
+					}
+				},
+				"d": {
+					"b": {
+						"tag": "blue hold piece instance",
+						"fps": 24
+					},
+					"c": {
+						"tag": "blue hold end instance",
+						"fps": 24
+					}
+				},
+				"r": {
+					"b": {
+						"tag": "red hold piece instance",
+						"fps": 24
+					},
+					"c": {
+						"tag": "red hold end instance",
+						"fps": 24
+					}
+				},
+				"u": {
+					"b": {
+						"tag": "green hold piece instance",
+						"fps": 24
+					},
+					"c": {
+						"tag": "green hold end instance",
+						"fps": 24
+					}
+				}
+			},
+			"solid": {
+				"l": {
+					"tag": "purple instance",
+					"fps": 24
+				},
+				"d": {
+					"tag": "blue instance",
+					"fps": 24
+				},
+				"r": {
+					"tag": "red instance",
+					"fps": 24
+				},
+				"u": {
+					"tag": "green instance",
+					"fps": 24
+				}
+			}
+		}
+	},
+	"scale": 0.65,
+	"tailRenderer": {
+		"start": 9,
+		"cutoff": 16
 	}
 }

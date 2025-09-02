@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Animations">
+    <vbox>
+        <listview styleNames="anim-view" width="100" />
+
+        <label text="FPS" />
+        <number-stepper styleNames="fps-stepper" min="1" />
+
+        <textfield styleNames="xml-tag" placeholder="Input XML Tag..." />
+    </vbox>
+</panel>

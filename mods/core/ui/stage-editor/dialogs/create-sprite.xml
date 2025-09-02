@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vbox width="350" >
+    <property-grid width="100%">
+       <hbox width="100%" padding="5px 0px">
+            <label text="File Source" width="100%" verticalAlign="center" />
+            <rule direction="vertical" horizontalAlign="center" />
+            <hbox width="100%"> 
+                <button styleNames="file-source" icon="haxeui-core/styles/shared/search.png" /> 
+                <label styleNames="file-name" text="No file loaded." verticalAlign="center" />
+            </hbox>
+        </hbox>
+
+        <property label="Animated" type="boolean" value="false" styleNames="is-animated" />
+    </property-grid>
+
+    <spacer height="10" />
+
+    <checkbox text="Backdrop" styleNames="backdrop-check" />
+    <property-grid width="100%" styleNames="backdrop-properties" >
+        <property label="Tile X" type="boolean" value="false" styleNames="backdrop-tilex" />
+        <property label="Tile Y" type="boolean" value="false" styleNames="backdrop-tiley" />
+    </property-grid>
+</vbox>

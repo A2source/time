@@ -1,0 +1,164 @@
+var opened = false;
+
+var debugWindow = UiS.buildXml(['debug-window']);
+var d_OpenChart = UiS.get('open-chart', debugWindow);
+var d_OpenStage = UiS.get('open-stage', debugWindow);
+var d_OpenChar = UiS.get('open-char', debugWindow);
+var d_CharStepper = UiS.get('char-stepper', debugWindow);
+var d_TimescaleSlider = UiS.get('timescale-slider', debugWindow);
+var d_ResetTimescale = UiS.get('reset-timescale', debugWindow);
+var d_PauseTimescale = UiS.get('pause-timescale', debugWindow);
+var d_Botplay = UiS.get('botplay', debugWindow);
+
+var holdTimers = [];
+
+function start(song)
+{
+    debugWindow.cameras = [cams.top];
+    debugWindow.fadeOut();
+    UiS.registerDraggable(debugWindow);
+
+    Screen.addComponent(debugWindow);
+
+    d_OpenChart.onClick = (e) ->
+    {
+        ClientPrefs.set('timeCurrentChart', song);
+        ClientPrefs.save();
+
+        LoadingState.switchCustomState('ChartEditorState');
+    }
+
+    d_OpenStage.onClick = (e) ->
+    {
+        ClientPrefs.set('timeCurrentStage', game.chart.stage);
+        ClientPrefs.save();
+        
+        LoadingState.switchCustomState('StageEditorState');
+    }
+
+    d_OpenChar.onClick = (e) ->
+    {
+        ClientPrefs.set('timeCurrentCharacter', d_CharStepper.selectedItem.text);
+        ClientPrefs.save();
+        
+        LoadingState.switchCustomState('CharacterEditorState');
+    }
+
+    d_CharStepper.dataSource = getDataSource();
+    for (player in game.chart.players) d_CharStepper.dataSource.add({text: player});
+    for (opp in game.chart.opponents) d_CharStepper.dataSource.add({text: opp});
+
+    d_TimescaleSlider.onChange = (e) -> 
+    {
+        Conductor.timescale = d_TimescaleSlider.pos;
+    }
+    d_ResetTimescale.onClick = (e) -> 
+    {
+        d_TimescaleSlider.pos = 1;
+    }
+    d_PauseTimescale.onClick = (e) -> 
+    {
+        d_TimescaleSlider.pos = 0;
+    }
+
+    d_Botplay.selected = true;
+    d_Botplay.onChange = (e) ->
+    {
+        game.botplay = d_Botplay.selected;
+    }
+}
+
+function startPostAll(song)
+{
+    game.forEachCharacter((c) ->
+    {
+        var text = new FlxText();
+        text.setFormat(DEFAULT_FONT, 16, 0xFFFFFFFF, 'left', BORDER_OUTLINE, 0xFF000000);
+        text.borderSize = 2;
+        add(text);
+        text.visible = false;
+
+        text.cameras = [cams.game];
+
+        holdTimers.push({
+            name: c.name,
+            text: text
+        });
+    });
+}
+
+function update(dt)
+{
+    if (!opened) return;
+
+    for (text in holdTimers)
+    {
+        if (text.text.x == null) continue;
+
+        var c = game.characters.get(text.name);
+        if (c.x == null) continue;
+
+        text.text.applyMarkup(
+            concat([
+                '<g>', c.name, '<g>', ' (<v>', c.x, '<v>, <v>', c.y, '<v>)',
+                c.player ? '\nPlayer' : '\nOpponent',
+                '\n<r>Hold Timer<r>: ', c.holdTimer, 
+                '\n<b>Animation<b>: ', c.curAnimName
+            ]), 
+            [
+                new FlxTextFormatMarkerPair(new FlxTextFormat(0xFFFF0000), '<r>'),
+                new FlxTextFormatMarkerPair(new FlxTextFormat(0xFF00FF00), '<g>'),
+                new FlxTextFormatMarkerPair(new FlxTextFormat(0xFF00FFFF), '<b>'),
+                new FlxTextFormatMarkerPair(new FlxTextFormat(0xFFFFFF00), '<y>'),
+                new FlxTextFormatMarkerPair(new FlxTextFormat(0xFFAAAAAA), '<v>')
+            ]
+        );
+
+        text.text.x = c.x;
+        text.text.y = c.y;
+    }
+}
+
+function onKeyPress(e)
+{
+    switch(e.keyCode)
+    {
+        // F4
+        case 115:
+            FlxG.mouse.visible = true;
+            opened = !opened;
+
+            for (text in holdTimers)
+                text.text.visible = opened;
+
+            game.camManager.inEditor = opened;
+        
+            if (opened) 
+            {
+                debugWindow.fadeIn();
+                d_Botplay.selected = true;
+                game.botplay = true;
+
+                d_CharStepper.selectedIndex = 0;
+                
+                game.camManager.lock();
+            }
+            else 
+            {
+                debugWindow.fadeOut();
+                game.camManager.unlock();
+            }
+    }
+}
+
+function formatString(values, newLine)
+{
+    var string = newLine ? '\n' : '';
+
+    for (i in 0...values.length - 1)
+        string +=  values[i] + ' - ';
+
+    string += values[values.length - 1];
+
+    return string;
+}

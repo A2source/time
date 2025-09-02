@@ -1,0 +1,49 @@
+{
+	"version": "Created with TIME Chart Editor v2.0.0",
+	"events": {},
+	"notes": {
+		"easy": {
+			"bf": [],
+			"dad": [],
+			"gf": []
+		},
+		"normal": {
+			"bf": [],
+			"dad": [],
+			"gf": []
+		},
+		"hard": {
+			"bf": [],
+			"dad": [],
+			"gf": []
+		}
+	},
+	"players": [
+		"bf",
+		"gf"
+	],
+	"song": "Dad Battle",
+	"opponents": [
+		"dad"
+	],
+	"needsVoices": true,
+	"stage": "stage",
+	"metadata": [
+		{
+			"roles": [
+				"Charter",
+				"Programmer"
+			],
+			"name": "[A2]"
+		},
+		{
+			"roles": [
+				"Voice Actor",
+				"Musician"
+			],
+			"name": "KawaiiSprite"
+		}
+	],
+	"bpm": 180,
+	"speed": 2.5
+}

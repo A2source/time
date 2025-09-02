@@ -1,341 +1,251 @@
 package a2.time.states;
 
-import a2.time.objects.song.StageData;
-import a2.time.util.ClientPrefs;
-import a2.time.Paths;
+import a2.time.backend.Assets;
+import a2.time.backend.Paths;
+import a2.time.backend.Paths.PathMethod;
+import a2.time.backend.managers.HscriptManager;
+import a2.time.backend.managers.LoadingScreenManager;
+import a2.time.backend.managers.StateTransitionManager;
 
-import lime.app.Promise;
-import lime.app.Future;
 import flixel.FlxG;
 import flixel.FlxState;
-import flixel.FlxSprite;
-import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.util.FlxTimer;
-import flixel.math.FlxMath;
 
-import openfl.utils.Assets;
-import lime.utils.Assets as LimeAssets;
-import lime.utils.AssetLibrary;
-import lime.utils.AssetManifest;
+import haxe.MainLoop;
+import haxe.ui.containers.windows.WindowManager;
 
-import haxe.io.Path;
+import hscript.InterpEx;
+
+import sys.thread.Thread;
+
+typedef LoadingBatch = 
+{
+	@:optional var name:String;
+	@:optional var dir:String;
+
+	var jobs:Array<LoadingJob>;
+}
+
+typedef LoadingJob =
+{
+	var method:PathMethod;
+	var keys:Array<String>;
+}
+
+typedef StateOptions =
+{
+	var state:String;
+	@:optional var dir:String;
+}
+
+typedef LoadingThreadMessage =
+{
+	var job:LoadingJob;
+	var batchDirectory:String;
+}
 
 class LoadingState extends MusicBeatState
 {
-	inline static var MIN_TIME = 1.0;
+	/**
+	  * LOADING SCREEN
+	**/
 
-	// Browsers will load create(), you can make your song load a custom directory there
-	// If you're compiling to desktop (or something that doesn't use NO_PRELOAD_ALL), search for getNextState instead
-	// I'd recommend doing it on both actually lol
-	
-	// TO DO: Make this easier
-	
-	var target:FlxState;
-	var stopMusic = false;
-	var directory:String;
-	var callbacks:MultiCallback;
-	var targetShit:Float = 0;
+	private static var targetStateOptions:StateOptions;
+	public static var leavingLoadingScreen:Bool = false;
 
-	function new(target:FlxState, stopMusic:Bool, directory:String)
+	public static function initializeLoadingScreen(batches:Array<LoadingBatch>, _targetStateOptions:StateOptions):Void
 	{
-		super();
-		this.target = target;
-		this.stopMusic = stopMusic;
-		this.directory = directory;
+		allBatches = batches;
+		targetStateOptions = _targetStateOptions;
+
+		switchState(new LoadingState());
 	}
 
-	var funkay:FlxSprite;
-	var loadBar:FlxSprite;
-	override function create()
+	private function injectInterp(interp:InterpEx)
 	{
-		var bg:FlxSprite = new FlxSprite(0, 0).makeGraphic(FlxG.width, FlxG.height, 0xffcaff4d);
-		add(bg);
-		funkay = new FlxSprite(0, 0).loadGraphic(Paths.getPath('images/funkay.png', IMAGE));
-		funkay.setGraphicSize(0, FlxG.height);
-		funkay.updateHitbox();
-		funkay.antialiasing = ClientPrefs.data.antialiasing;
-		add(funkay);
-		funkay.scrollFactor.set();
-		funkay.screenCenter();
+		interp.variables.set('add', instance.add);
+		interp.variables.set('remove', instance.remove);
+		interp.variables.set('insert', instance.insert);
+        interp.variables.set('replace', instance.replace);
 
-		loadBar = new FlxSprite(0, FlxG.height - 20).makeGraphic(FlxG.width, 10, 0xffff16d2);
-		loadBar.screenCenter(X);
-		loadBar.antialiasing = ClientPrefs.data.antialiasing;
-		add(loadBar);
-		
-		initSongsManifest().onComplete
-		(
-			function (lib)
+        interp.variables.set('controls', instance.controls);
+	}
+
+	private var loadingScreen:HscriptManager;
+
+	private static var allBatches:Array<LoadingBatch> = [];
+	private var batchesToLoad:Array<LoadingBatch> = [];
+
+	private var totalJobs:Int = 0;
+
+	private var currentJobOnThread:Int = -1;
+	private var currentJob:Int = 0;
+
+	private var currentBatch:LoadingBatch;
+	private var currentBatchJob:Int = 0;
+
+	private var loadingThread:Thread;
+	private var killThread:Bool = false;
+
+	private var currentBatchDirectory:String = Main.MOD_NAME;
+
+	public static var instance:LoadingState;
+
+	override public function create():Void
+	{
+		super.create();
+		instance = this;
+
+		Assets.clearKeys();
+
+		for (batch in allBatches)
+		{
+			batchesToLoad.push(batch);
+			for (job in batch.jobs) totalJobs++;
+		}
+		currentBatch = batchesToLoad[0];
+
+		trace('Batches to load: ${batchesToLoad.length}');
+		trace('Total Jobs: $totalJobs');
+
+		loadingScreen = new HscriptManager(injectInterp);
+		loadingScreen.addScriptFromPath(LoadingScreenManager.loadingScreenPath);
+
+		updateInterp();
+		loadingScreen.callAll('create', []);
+
+		loadingThread = Thread.create(() -> 
+		{
+			while (true)
 			{
-				callbacks = new MultiCallback(onLoad);
-				var introComplete = callbacks.add("introComplete");
-				/*if (PlayState.SONG != null) {
-					checkLoadSong(getSongPath());
-					if (PlayState.SONG.needsVoices)
-						checkLoadSong(getVocalPath());
-				}*/
-				checkLibrary("shared");
-				if(directory != null && directory.length > 0 && directory != 'shared') {
-					checkLibrary(directory);
-				}
+				if (killThread) return;
 
-				var fadeTime = 0.5;
-				FlxG.camera.fade(FlxG.camera.bgColor, fadeTime, true);
-				new FlxTimer().start(fadeTime + MIN_TIME, function(_) introComplete());
+				var message:LoadingThreadMessage = Thread.readMessage(false);
+				if (message == null) continue;
+				if (currentJob == currentJobOnThread) continue;
+
+				message.job.method(message.job.keys, message.batchDirectory, false);
+				currentJobOnThread = currentJob;
 			}
-		);
+		});
 	}
-	
-	function checkLoadSong(path:String)
-	{
-		if (!Assets.cache.hasSound(path))
-		{
-			var library = Assets.getLibrary("songs");
-			final symbolPath = path.split(":").pop();
-			// @:privateAccess
-			// library.types.set(symbolPath, SOUND);
-			// @:privateAccess
-			// library.pathGroups.set(symbolPath, [library.__cacheBreak(symbolPath)]);
-			var callback = callbacks.add("song:" + path);
-			Assets.loadSound(path).onComplete(function (_) { callback(); });
-		}
-	}
-	
-	function checkLibrary(library:String) {
-		trace(Assets.hasLibrary(library));
-		if (Assets.getLibrary(library) == null)
-		{
-			@:privateAccess
-			if (!LimeAssets.libraryPaths.exists(library))
-				throw "Missing library: " + library;
 
-			var callback = callbacks.add("library:" + library);
-			Assets.loadLibrary(library).onComplete(function (_) { callback(); });
-		}
-	}
-	
-	override function update(elapsed:Float)
+	public override function update(dt:Float):Void 
 	{
-		super.update(elapsed);
-		funkay.setGraphicSize(Std.int(0.88 * FlxG.width + 0.9 * (funkay.width - 0.88 * FlxG.width)));
-		funkay.updateHitbox();
-		if(controls.ACCEPT)
-		{
-			funkay.setGraphicSize(Std.int(funkay.width + 60));
-			funkay.updateHitbox();
-		}
+		super.update(dt);
+		loadingScreen.callAll('update', [dt]);
 
-		if(callbacks != null) {
-			targetShit = FlxMath.remapToRange(callbacks.numRemaining / callbacks.length, 1, 0, 0, 1);
-			loadBar.scale.x += 0.5 * (targetShit - loadBar.scale.x);
-		}
+		updateInterp();
+		updateJobs();
 	}
-	
-	function onLoad()
+
+	private function updateJobs():Void
 	{
-		if (stopMusic && FlxG.sound.music != null)
-			FlxG.sound.music.stop();
+		if (currentJob > totalJobs) return;
+
+		if (currentJob != currentJobOnThread)
+		{
+			loadingThread.sendMessage({
+				job: currentBatch.jobs[currentBatchJob],
+				batchDirectory: currentBatchDirectory
+			});
+		}
+		else checkBatchAndStartNewJob();
+	}
+
+	private function updateInterp():Void
+	{
+		loadingScreen.setAll('currentBatch', currentBatch);
+		loadingScreen.setAll('allBatches', allBatches);
 		
-		MusicBeatState.switchState(target);
+		loadingScreen.setAll('currentBatchJob', killThread ? currentBatch.jobs.length : currentBatchJob);
+		loadingScreen.setAll('currentJob', killThread ? totalJobs : currentJob);
+		loadingScreen.setAll('totalJobs', totalJobs);
 	}
+	
+	private function checkBatchAndStartNewJob():Void
+	{
+		currentBatchDirectory = Main.MOD_NAME;
+		if (Reflect.hasField(currentBatch, 'dir')) currentBatchDirectory = currentBatch.dir;
 
-    public static function loadAndSwitchCustomState(name:String, modDirectory:String = Main.MOD_NAME)
-    {
-        if (Paths.customState(name, modDirectory) != null)
-        {
-			CustomState.stateName = name;
-			CustomState.modDirectory = modDirectory;
-
-            MusicBeatState.switchState(getNextState(new CustomState()));
-        }
-		else
+		currentBatchJob++;
+		if (currentBatchJob == currentBatch.jobs.length)
 		{
-			openfl.Lib.application.window.alert('Couldn\'t find custom state named "$name" in mod directory "$modDirectory"', Main.ALERT_TITLE);
-
-			CustomState.stateName = 'IntroState';
-			CustomState.modDirectory = Main.MOD_NAME;
-
-            MusicBeatState.switchState(getNextState(new CustomState()));
-		}
-    }
-	
-	static function getSongPath()
-	{
-		return Paths.inst(PlayState.SONG.song);
-	}
-	
-	static function getVocalPath()
-	{
-		return Paths.voices(PlayState.SONG.song);
-	}
-	
-	inline static public function loadAndSwitchState(target:FlxState, stopMusic = false)
-	{
-		MusicBeatState.transitioning = true;
-		MusicBeatState.switchState(getNextState(target, stopMusic));
-	}
-	
-	static function getNextState(target:FlxState, stopMusic = false):FlxState
-	{
-		var directory:String = 'shared';
-
-		Paths.setCurrentLevel(directory);
-		trace('Setting asset folder to ' + directory);
-
-		#if NO_PRELOAD_ALL
-		var loaded:Bool = false;
-		if (PlayState.SONG != null) {
-			loaded = isSoundLoaded(getSongPath()) && (!PlayState.SONG.needsVoices || isSoundLoaded(getVocalPath())) && isLibraryLoaded("shared") && isLibraryLoaded(directory);
-		}
-		
-		if (!loaded)
-			return new LoadingState(target, stopMusic, directory);
-		#end
-		if (stopMusic && FlxG.sound.music != null)
-			FlxG.sound.music.stop();
-		
-		return target;
-	}
-	
-	#if NO_PRELOAD_ALL
-	static function isSoundLoaded(path:String):Bool
-	{
-		return Assets.cache.hasSound(path);
-	}
-	
-	static function isLibraryLoaded(library:String):Bool
-	{
-		return Assets.getLibrary(library) != null;
-	}
-	#end
-	
-	override function destroy()
-	{
-		super.destroy();
-		
-		callbacks = null;
-	}
-	
-	static function initSongsManifest()
-	{
-		var id = "songs";
-		var promise = new Promise<AssetLibrary>();
-
-		var library = LimeAssets.getLibrary(id);
-
-		if (library != null)
-		{
-			return Future.withValue(library);
-		}
-
-		var path = id;
-		var rootPath = null;
-
-		@:privateAccess
-		var libraryPaths = LimeAssets.libraryPaths;
-		if (libraryPaths.exists(id))
-		{
-			path = libraryPaths[id];
-			rootPath = Path.directory(path);
-		}
-		else
-		{
-			if (StringTools.endsWith(path, ".bundle"))
+			batchesToLoad.remove(currentBatch);
+			if (batchesToLoad.length == 0)
 			{
-				rootPath = path;
-				path += "/library.json";
-			}
-			else
-			{
-				rootPath = Path.directory(path);
-			}
-			@:privateAccess
-			path = LimeAssets.__cacheBreak(path);
-		}
-
-		AssetManifest.loadFromFile(path, rootPath).onComplete(function(manifest)
-		{
-			if (manifest == null)
-			{
-				promise.error("Cannot parse asset manifest for library \"" + id + "\"");
+				completeLoading();
 				return;
 			}
+			
+			currentBatch = batchesToLoad[0];
+			
+			currentBatchJob = -1;
+			checkBatchAndStartNewJob();
 
-			var library = AssetLibrary.fromManifest(manifest);
-
-			if (library == null)
-			{
-				promise.error("Cannot open library \"" + id + "\"");
-			}
-			else
-			{
-				@:privateAccess
-				LimeAssets.libraries.set(id, library);
-				library.onChange.add(LimeAssets.onChange.dispatch);
-				promise.completeWith(Future.withValue(library));
-			}
-		}).onError(function(_)
-		{
-			promise.error("There is no asset library with an ID of \"" + id + "\"");
-		});
-
-		return promise.future;
-	}
-}
-
-class MultiCallback
-{
-	public var callback:Void->Void;
-	public var logId:String = null;
-	public var length(default, null) = 0;
-	public var numRemaining(default, null) = 0;
-	
-	var unfired = new Map<String, Void->Void>();
-	var fired = new Array<String>();
-	
-	public function new (callback:Void->Void, logId:String = null)
-	{
-		this.callback = callback;
-		this.logId = logId;
-	}
-	
-	public function add(id = "untitled")
-	{
-		id = '$length:$id';
-		length++;
-		numRemaining++;
-		var func:Void->Void = null;
-		func = function ()
-		{
-			if (unfired.exists(id))
-			{
-				unfired.remove(id);
-				fired.push(id);
-				numRemaining--;
-				
-				if (logId != null)
-					log('fired $id, $numRemaining remaining');
-				
-				if (numRemaining == 0)
-				{
-					if (logId != null)
-						log('all callbacks fired');
-					callback();
-				}
-			}
-			else
-				log('already fired $id');
+			return;
 		}
-		unfired[id] = func;
-		return func;
+
+		loadingScreen.callAll('onStartJob', [currentBatch.jobs[currentBatchJob], currentBatch]);
+		currentJob++;
 	}
-	
-	inline function log(msg):Void
+
+	private function completeLoading()
 	{
-		if (logId != null)
-			trace('$logId: $msg');
+		trace('Loading complete!');
+
+		killThread = true;
+
+		var dir:String = Main.MOD_NAME;
+		if (Reflect.hasField(targetStateOptions, 'dir')) dir = targetStateOptions.dir;
+
+		updateInterp();
+
+		leavingLoadingScreen = true;
+		loadingScreen.callAll('onLoadingComplete', [targetStateOptions.state, dir]);
 	}
-	
-	public function getFired() return fired.copy();
-	public function getUnfired() return [for (id in unfired.keys()) id];
+
+	/**
+	  * STATE SWITCHING
+	**/
+
+    public static function switchCustomState(name:String, dir:String = Main.MOD_NAME):Void
+    {
+        if (Paths.mods.state.script([name], dir).content != null)
+        {
+			CustomState.name = name;
+			CustomState.dir = dir;
+
+			if (BaseState.currentState is CustomState)
+				@:privateAccess CustomState.instance.hscriptManager.callAll('onLeaveState', []);
+
+            switchState(new CustomState());	
+		}
+		else
+		{
+			openfl.Lib.application.window.alert('Couldn\'t find custom state named "$name" in mod directory "$dir"', Main.ALERT_TITLE);
+
+			CustomState.name = 'IntroState';
+			CustomState.dir = Main.MOD_NAME;
+
+            switchState(new CustomState());
+		}
+    }
+
+	public static function resetHaxeUI()
+	{
+		WindowManager.instance.reset();
+		WindowManager.instance.container = new haxe.ui.core.Component();
+	}
+
+	inline public static function switchState(target:FlxState):Void
+	{
+		StateTransitionManager.startTransition(() ->
+		{
+			resetHaxeUI();
+			BaseState.currentState = target;
+
+			FlxG.switchState(target);
+		});
+	}
 }

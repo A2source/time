@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Values" width="250" height="400" top="315" left="210">
+    <hbox width="100%" height="100%">
+        <property-grid width="100%" height="100%">
+            <property label="Z-Index" type="number" min="0" styleNames="values-zindex" />
+
+            <property label="Antialiasing" type="boolean" value="true" styleNames="values-anti" />
+            <property label="Visible" type="boolean" value="true" styleNames="values-visible" />
+
+            <property label="Blend Mode" type="list" styleNames="values-blend">
+                <data>
+                    <item text="Add" />
+                    <item text="Alpha" />
+                    <!-- darkened -->
+                    <item text="Darken" />
+                    <item text="Difference" />
+                    <item text="Erase" />
+                    <item text="Hardlight" />
+                    <item text="Invert" />
+                    <item text="Layer" />
+                    <item text="Lighten" />
+                    <item text="Multiply" />
+                    <item text="Normal" />
+                    <item text="Overlay" />
+                    <item text="Screen" />
+                    <item text="Shader" />
+                    <item text="Subtract" />
+                </data>
+            </property>
+
+            <property-group text="Position">
+                <property label="X" type="number" value="0" step="1" styleNames="values-x" />
+                <property label="Y" type="number" value="0" step="1" styleNames="values-y" />
+            </property-group>
+
+            <property-group text="Scroll Factor">
+                <property label="X" type="number" value="1" step="0.01" precision="2" styleNames="values-scrollx" />
+                <property label="Y" type="number" value="1" step="0.01" precision="2" styleNames="values-scrolly" />
+            </property-group>
+
+            <property-group text="Skew">
+                <property label="X" type="number" value="0" step="1" styleNames="values-skewx" />
+                <property label="Y" type="number" value="0" step="1" styleNames="values-skewy" />
+            </property-group>
+
+            <property-group text="Scale">
+                <property label="X" type="number" value="1" step="0.001" precision="3" styleNames="values-scalex" />
+                <property label="Y" type="number" value="1" step="0.001" precision="3" styleNames="values-scaley" />
+            </property-group>
+
+            <hbox width="100%" padding="5px 0px">
+                <label text="Alpha" width="100%" verticalAlign="center" />
+                <rule direction="vertical" horizontalAlign="center" />
+                <slider width="100%" horizontalAlign="right" styleNames="values-alpha" min="0" max="1" />
+            </hbox>
+
+            <hbox width="100%" padding="5px 0px">
+                <label text="Angle" width="100%" verticalAlign="center" />
+                <rule direction="vertical" horizontalAlign="center" />
+                <slider width="100%" horizontalAlign="right" styleNames="values-angle" min="0" max="360" />
+            </hbox>
+
+            <property-group text="Flip">
+                <property label="X" type="boolean" value="false" styleNames="values-flipx" />
+                <property label="Y" type="boolean" value="false" styleNames="values-flipy" />
+            </property-group>
+
+            <property label="Colour" type="color" value="#ffffff" styleNames="values-col" />
+        </property-grid>
+    </hbox>
+</panel>

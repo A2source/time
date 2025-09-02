@@ -91,9 +91,9 @@ enum abstract FlxTweenType(Int) from Int to Int
  *     tween = FlxTween.tween(sprite, { x:600, y:800 }, 2);
  * }
  * 
- * override public function update(elapsed:Float)
+ * override public function update(dt:Float)
  * {
- *     super.update(elapsed);
+ *     super.update(dt);
  *     
  *     if (FlxG.keys.justPressed.SPACE)
  *         tween.cancel();
@@ -651,13 +651,13 @@ class FlxTween implements IFlxDestroyable
 
     private var nameInPlayState:String = '';
 
-	function update(elapsed:Float):Void
+	function update(dt:Float):Void
 	{
         // KILLING MYSELF
-        if (PlayState.instance != null && PlayState.instance.paused && nameInPlayState != '')
+        if (nameInPlayState != '' && PlayState.gameInstance != null && PlayState.gameInstance.paused)
             return;
 
-		_secondsSinceStart += elapsed;
+		_secondsSinceStart += dt;
 		var delay:Float = (executions > 0) ? loopDelay : startDelay;
 		if (_secondsSinceStart < delay)
 		{
@@ -1022,7 +1022,13 @@ class FlxTweenManager extends FlxBasic
 		var tween = new VarTween(Options, this);
 	    tween.tween(Object, Values, Duration);  
 
-		return add(tween, false, Name);
+		if (Name != '')
+        {
+            PlayState.setScriptTween(Name, tween);
+            @:privateAccess tween.nameInPlayState = Name;
+        }
+
+		return add(tween, false);
 	}
 
 	/**
@@ -1337,7 +1343,7 @@ class FlxTweenManager extends FlxBasic
 		FlxG.signals.preStateSwitch.remove(clear);
 	}
 
-	override public function update(elapsed:Float):Void
+	override public function update(dt:Float):Void
 	{
 		// process finished tweens after iterating through main list, since finish() can manipulate FlxTween.list
 		var finishedTweens:Array<FlxTween> = null;
@@ -1347,7 +1353,7 @@ class FlxTweenManager extends FlxBasic
 			if (!tween.active)
 				continue;
 
-			tween.update(elapsed);
+			tween.update(dt);
 			if (tween.finished)
 			{
 				if (finishedTweens == null)
@@ -1374,7 +1380,7 @@ class FlxTweenManager extends FlxBasic
 	 */
 	@:generic
 	@:allow(flixel.tweens.FlxTween)
-	function add<T:FlxTween>(Tween:T, Start:Bool = false, ?Name:String = ''):T
+	function add<T:FlxTween>(Tween:T, Start:Bool = false):T
 	{
 		// Don't add a null object
 		if (Tween == null)
@@ -1382,14 +1388,9 @@ class FlxTweenManager extends FlxBasic
 
 		_tweens.push(Tween);
 
-        if (Name != '' && PlayState.instance != null)
-        {
-            PlayState.instance.modchartTweens.set(Name, Tween);
-            @:privateAccess Tween.nameInPlayState = Name;
-        }
-
 		if (Start)
 			Tween.start();
+
 		return Tween;
 	}
 

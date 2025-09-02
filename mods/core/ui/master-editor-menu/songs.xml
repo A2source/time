@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Quick Song Select" width="200" height="570">
+        <listview styleNames="songs" width="100%" height="100%" />
+</panel>

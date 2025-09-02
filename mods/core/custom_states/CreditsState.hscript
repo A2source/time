@@ -1,0 +1,274 @@
+var peeps = [
+    'triki',
+    'cooey',
+    'awaken',
+    'alyssa',
+    'june'
+];
+
+var formattedNames = [
+    'alyssa' => '[A2]',
+    'cooey' => 'Cooey',
+    'triki' => 'Triki Troy',
+    'awaken' => 'Awaken',
+    'june' => 'Junebug',
+    'evil' => 'Evil BF',
+    'joe' => 'JoeDoughBoi',
+    'honkish' => 'H0nkish'
+];
+
+var positions = [
+    'alyssa' => [125, 250],
+    'cooey' => [275, 190],
+    'triki' => [425, 180],
+    'awaken' => [685, 180],
+    'june' => [800, 240],
+];
+
+var boxDimensions = [
+    'alyssa' => [200, 400],
+    'cooey' => [100, 400],
+    'triki' => [225, 175],
+    'awaken' => [100, 400],
+    'june' => [200, 400],
+];
+
+var boxOffsets = [
+    'alyssa' => [30, 30],
+    'cooey' => [100, 30],
+    'triki' => [55, 0],
+    'awaken' => [30, 30],
+    'june' => [30, 30]
+];
+
+var credits = [
+    'alyssa' => 'Programmer\nMusician',
+    'cooey' => 'Artist\nAnimator',
+    'triki' => 'Artist\nAnimator',
+    'awaken' => 'Animator',
+    'june' => 'Charter',
+    'evil' => 'Get well\nsoon!',
+    'joe' => 'Lord X\nCreator',
+    'honkish' => 'Musician'
+];
+
+var people = [];
+var boxes = [];
+
+var evilBF;
+
+var joe;
+var honkish;
+
+var links = [
+    'Evil BF' => 'https://raw.githubusercontent.com/A2source/A2archive/main/safe.png',
+    'JoeDoughBoi' => 'https://twitter.com/losermakesgames',
+    'H0nkish' => 'https://twitter.com/H0nkish',
+    '[A2]' => 'https://a2source.github.io',
+    'Cooey' => 'https://twitter.com/cooey05',
+    'Triki Troy' => 'https://twitter.com/Triki_Tr0y',
+    'Awaken' => 'https://twitter.com/BakingMeshes',
+    'Junebug' => 'https://twitter.com/junebug_7801'
+];
+
+var creditImage;
+var linkHitbox;
+
+var creditMonitor;
+
+var creditTitleText;
+var creditText;
+
+var curState = 'CLOSED';
+
+var creditsTextPoint = {x: 823, y: 485};
+
+function create()
+{
+    DiscordClient.changePresence({state: 'Credits'});
+
+    FlxG.sound.playMusic(Paths.returnModsSound('music', 'credits'), 0.8);
+
+    FlxG.mouse.visible = true;
+    FlxG.mouse.useSystemCursor = true;
+
+    FlxG.worldBounds.set();
+
+    var circle = new FlxSprite(500, 400).load(Paths.modsImage('credits/circle'));
+    circle.screenCenter();
+    circle.x -= 50;
+    circle.y += 300;
+    add(circle);
+
+    evilBF = new InteractiveSprite(50, 50).load(Paths.modsImage('credits/evil bf'));
+    evilBF.onHover = ()-> { evilBF.color = 0xFFFF0000; }
+    evilBF.onExit = ()-> { evilBF.color = 0xFFFFFFFF; }
+    evilBF.onClick = ()-> { clickCheck('evil'); }
+    add(evilBF);
+
+    joe = new InteractiveSprite(50 + evilBF.width, 50).load(Paths.modsImage('credits/joe'));
+    joe.onHover = ()-> { joe.color = 0xFFFF0000; }
+    joe.onExit = ()-> { joe.color = 0xFFFFFFFF; }
+    joe.onClick = ()-> { clickCheck('joe'); }
+    add(joe);
+
+    var runningSonicGif = new FlxSprite(895, 205).loadSparrow('images/credits', 'sonic');
+    runningSonicGif.animation.addByPrefix('idle', 'sonic', 24, true);
+    runningSonicGif.animation.play('idle');
+    runningSonicGif.scale.set(0.35, 0.4);
+    runningSonicGif.alpha = 0.4;
+    add(runningSonicGif);
+
+    var tv = new FlxSprite(1050, 200).load(Paths.modsImage('credits/i fucking love tvs'));
+    add(tv);
+
+    for (name in peeps)
+    {
+        var sprite = new FlxSprite(positions[name][0], positions[name][1]).loadSparrow('images/credits', name);
+        sprite.animation.addByPrefix('idle', name + ' idle');
+        sprite.animation.addByPrefix('reveal', name + ' revealed');
+        sprite.updateHitbox();
+        people.push(sprite);
+        add(sprite);
+
+        var hitbox = new InteractiveSprite(sprite.x, sprite.y);
+        hitbox.makeGraphic(boxDimensions[name][0], boxDimensions[name][1], 0xFFFF0000);
+        hitbox.x += boxOffsets[name][0];
+        hitbox.y += boxOffsets[name][1];
+        hitbox.alpha = 0;
+        boxes.push(hitbox);
+
+        hitbox.onClick = ()-> { clickCheck(name); }
+        hitbox.onHover = ()-> { sprite.animation.play('reveal'); }
+        hitbox.onExit = ()-> { sprite.animation.play('idle'); }
+
+        add(hitbox);
+    }
+
+    honkish = new InteractiveSprite(520, 360).load(Paths.modsImage('credits/honkish'));
+    honkish.onHover = ()-> { honkish.color = 0xFFFF0000; }
+    honkish.onExit = ()-> { honkish.color = 0xFFFFFFFF; }
+    honkish.onClick = ()-> { clickCheck('honkish'); }
+    add(honkish);
+
+    creditImage = new FlxSprite();
+    add(creditImage);
+
+    creditMonitor = new FlxSprite().load(Paths.modsImage('credits/monitor'));
+    creditMonitor.y += creditMonitor.height;
+    creditImage.y += creditMonitor.height;
+    add(creditMonitor);
+
+    linkHitbox = new InteractiveSprite();
+    linkHitbox.makeGraphic(367, 274, 0xFFFF0000);
+    linkHitbox.screenCenter();
+    linkHitbox.y -= 65;
+    linkHitbox.alpha = 0;
+
+    linkHitbox.onClick = () ->
+    {
+        if (blockInput)
+            return;
+
+        CoolUtil.browserLoad(links[creditTitleText.text]);
+    }
+
+    add(linkHitbox);
+
+    creditTitleText = new FlxText(0, 30, 0, '');
+    creditTitleText.setFormat(Paths.modsFont('blood'), 64, 0xFFFF0000, 'center');
+    creditTitleText.alignment = 'center';
+    creditTitleText.y += creditMonitor.height;
+    add(creditTitleText);
+
+    creditText = new FlxText(0, 0, 0, '');
+    creditText.setFormat(Paths.modsFont('blood'), 18, 0xFFFF0000, 'center', FlxTextBorderStyle.SHADOW, 0xFF000000);
+    creditText.alignment = 'center';
+    creditText.angle = -4;
+    creditText.y += creditMonitor.height;
+    add(creditText);
+}
+
+function update(dt)
+{
+    if (controls.BACK && !blockInput) 
+    {
+        switch(curState)
+        {
+            case 'CLOSED':
+                FlxG.mouse.visible = false;
+                LoadingState.switchCustomState('MasterEditorMenu');
+
+            case 'OPENED':
+                closeCredit();
+        }
+    }
+
+    updateCredit();
+}
+
+function clickCheck(name)
+{
+    if (curState == 'OPENED' || blockInput)
+		return;
+
+    var format = formattedNames[name];
+
+    creditTitleText.text = format;
+    creditText.text = credits[name];
+
+    blockInput = true;
+
+    creditTitleText.x = FlxG.width / 2 - creditTitleText.width / 2;
+
+    creditText.x = creditsTextPoint.x - creditText.width / 2;
+
+    creditText.y = creditsTextPoint.y - creditText.height / 2;
+    creditText.y += creditMonitor.height;
+
+    FlxTween.tween(creditTitleText, {y: creditTitleText.y - creditMonitor.height}, 1, {ease: FlxEase.expoOut});
+    FlxTween.tween(creditText, {y: creditText.y - creditMonitor.height}, 1, {ease: FlxEase.expoOut});
+
+    creditImage.load(Paths.modsImage('credits/popup/' + name));
+    FlxTween.tween(creditImage, {y: creditImage.y - creditMonitor.height}, 1, {ease: FlxEase.expoOut});
+
+    if (format == 'JoeDoughBoi')
+        CoolUtil.steamMessage(add);
+
+    FlxTween.tween(creditMonitor, {y: 0}, 1, {ease: FlxEase.expoOut, onComplete: (twn) ->
+    {
+        blockInput = false;
+        curState = 'OPENED';
+    }});
+}
+
+function updateCredit()
+{
+    if (curState == 'CLOSED' || blockInput)
+        return;
+
+    if (controls.ACCEPT)
+        CoolUtil.browserLoad(links[creditTitleText.text]);
+
+    if (!FlxG.mouse.justPressed)
+        return;
+
+    if (!FlxG.mouse.overlaps(linkHitbox))
+        closeCredit();
+}
+
+function closeCredit()
+{
+    blockInput = true;
+
+    FlxTween.tween(creditTitleText, {y: creditTitleText.y + creditMonitor.height}, 1, {ease: FlxEase.expoOut});
+    FlxTween.tween(creditText, {y: creditText.y + creditMonitor.height}, 1, {ease: FlxEase.expoOut});
+
+    FlxTween.tween(creditImage, {y: creditImage.y + creditMonitor.height}, 1, {ease: FlxEase.expoOut});
+
+    FlxTween.tween(creditMonitor, {y: creditMonitor.height}, 1, {ease: FlxEase.expoOut, onComplete: (twn:FlxTween) ->
+    {
+        blockInput = false;
+        curState = 'CLOSED';
+    }});
+}

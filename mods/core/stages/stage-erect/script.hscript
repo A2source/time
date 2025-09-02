@@ -1,0 +1,31 @@
+function startPostAll(song)
+{
+    getObjectByName('crowd').object.animation.play('idle');
+    game.camManager.defaultZoom = 0.6;
+
+    game.camManager.snapToPoint(char('gf').cameraPosition);
+    game.camManager.resume();
+
+    game.camManager.lockToPoint(char('gf').cameraPosition);
+}
+
+function onCountdownTick(num)
+{
+    game.forEachCharacter((c) -> {c.dance();});
+}
+
+function postCountdown()
+{
+    game.camManager.unlock();
+}
+
+function onUpdateFocus(focus)
+{
+    if (game.camManager.inEditor) return;
+    
+    switch(focus)
+    {
+        case 'dad': game.camManager.defaultZoom = 0.7;
+        case 'bf': game.camManager.defaultZoom = 0.85;
+    }
+}

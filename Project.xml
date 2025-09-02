@@ -2,7 +2,7 @@
 <project>
 	<!-- _________________________ Application Settings _________________________ -->
 
-	<app title="FNF: TIME" file="TIME" packageName="com.fnf.time" package="com.fnf.time" main="Main" version="2.0.0" company="[A2]" /> 
+	<app title="Friday Night Funkin' - TIME" file="TIME" packageName="com.fnf.time" package="com.fnf.time" main="Main" version="2.0.0" company="[A2]" /> 
 
 	<!--The flixel preloader is not accurate in Chrome. You can use it regularly if you embed the swf into a html file
 		or you can set the actual size of your file manually at "FlxPreloaderBase-onUpdate-bytesTotal"-->
@@ -47,6 +47,7 @@
 	<define name="NO_PRELOAD_ALL" unless="PRELOAD_ALL"/>
 	
 	<library name="videos"        preload="true" />
+
 	<section if="PRELOAD_ALL">
 		<library name="songs"         preload="true" />
 		<library name="shared"        preload="true" />
@@ -59,23 +60,13 @@
 	<assets path="assets/shared"        library="shared"        exclude="*.ogg" if="web"/>
 	<assets path="assets/shared"        library="shared"        exclude="*.mp3" unless="web"/>
 
-	<assets path='vlc/libvlc.dll' rename='libvlc.dll' embed='false'/>
-	<assets path='vlc/libvlccore.dll' rename='libvlccore.dll' embed='false'/>
-
-	<!-- un-comment this to include mod template in compilation -->
-	<!-- <define name="INCLUDE_MOD_TEMPLATE"/> -->
-
 	<assets path='mods' embed='false'/>
-	<assets path='mods/mod_template.zip' if="INCLUDE_MOD_TEMPLATE"/>
+	<assets path="assets/icons" embed='false'/>
 	
-	<!-- assets path="CHANGELOG.md" rename='changelog.txt' -->
-
-	<!-- NOTE FOR FUTURE SELF SINCE FONTS ARE ALWAYS FUCKY 
-		TO FIX ONE OF THEM, I CONVERTED IT TO OTF. DUNNO IF YOU NEED TO
-		THEN UHHH I USED THE NAME OF THE FONT WITH SETFORMAT() ON THE TEXT!!!
-		NOT USING A DIRECT THING TO THE ASSET!!!
-	-->
 	<assets path="assets/fonts" embed='true'/>
+	
+	<library path="manifest" embed="true"/>
+	
 	<!-- _______________________________ Libraries ______________________________ -->
 
 	<haxelib name="flixel" />
@@ -91,6 +82,13 @@
 	<!-- Clicking outside a dialog should deselect the current focused component. -->
 	<haxedef name="haxeui_focus_out_on_click"/>
 
+	<section if="cpp">
+		<haxelib name="hxvlc" if="desktop || mobile" />
+		
+		<!-- https://github.com/FunkinCrew/hxdiscord_rpc -->
+		<haxelib name="hxdiscord_rpc" if="desktop" />
+	</section>
+
 	<!-- Ensure all UI components are available at runtime. -->
 	<haxeflag name="--macro" value="include('haxe.ui.backend.flixel.components')" />
 	<haxeflag name="--macro" value="include('haxe.ui.containers.dialogs')" />
@@ -100,26 +98,21 @@
 	<haxeflag name="--macro" value="include('haxe.ui.components')" />
 	<haxeflag name="--macro" value="include('haxe.ui.containers')" />
 
-	<!--In case you want to use the addons package-->
 	<haxelib name="flixel-addons" />
 	<haxelib name="actuate" />
 	<haxelib name="hscript" />
 	<define name="hscriptPos" />
-	<haxelib name="extension-webm" />
 
-	<!--In case you want to use the ui package-->
-	<haxelib name="flixel-ui" />
+	<!-- In case you want to use the ui package -->
 	<haxelib name="faxe" if='switch'/>
-	<!--<haxelib name="polymod"/> -->
+	<!-- <haxelib name="polymod"/> -->
 	<haxelib name="hscript"/>
-	<!-- git https://github.com/ianharrigan/hscript-ex-->
+	<!-- git https://github.com/ianharrigan/hscript-ex -->
 	<haxelib name="hscript-ex"/>
-	<!--haxelib git discord_rpc https://github.com/Aidan63/linc_discord-rpc -->
-	<haxelib name="discord_rpc" if="desktop"/>
-	<!--haxelib name="actuate" -->
-	<!--haxelib git extension-webm https://github.com/GrowtopiaFli/extension-webm-->
-	<!--haxelib name="extension-webm" if="desktop" -->
-	<!-- <haxelib name="hxcpp-debug-server" if="desktop"/> -->
+
+	<haxelib name="hxcpp-debug-server" if="desktop"/>
+
+	<haxelib name="flixel-waveform" />
 
 	<!-- <haxelib name="markdown" /> -->
 	<!-- <haxelib name="HtmlParser" /> -->

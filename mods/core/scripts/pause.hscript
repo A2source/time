@@ -1,8 +1,14 @@
-function onPause(bf)
+function onPause()
 {
+    // don't pause when dead or song is beginning
+    if (Conductor.songPosition < 0 || health <= 0) return;
+
     trace('game paused at ' + Conductor.songPosition);
 
     var pause = new CustomSubState('PauseSubState', null);
+
     pause.hscriptManager.setAll('game', game);
+    pause.hscriptManager.setAll('cams', cams);
+    
 	game.openSubState(pause);
 }

@@ -1,0 +1,2835 @@
+var saveWindowTitle = Lib.application.window.title;
+
+var GRID_SIZE = 55; 
+var HALF_GRID_SIZE = GRID_SIZE / 2; 
+var DOUBLE_GRID_SIZE = GRID_SIZE * 2;
+
+var SUS_WIDTH = 8; 
+var HALF_SUS_WIDTH = SUS_WIDTH / 2;
+
+var NUM_KEYS = 4;
+var BAR_HEIGHT = 2;
+
+var HALF_WIDTH = FlxG.width / 2; 
+var HALF_HEIGHT = FlxG.height / 2;
+
+var JUMP_TO_STEP = 'Step';
+var JUMP_TO_BEAT = 'Beat';
+var JUMP_TO_SECT = 'Section';
+
+var ribbon = Screen.addComponent(UiS.buildXml(['chart-editor/ribbon']));
+
+var camManager;
+var camChart;
+var camSelec;
+var camTop;
+
+var edit = Screen.addComponent(UiS.buildXml(['chart-editor/edit']));
+var e_Character = UiS.get('info-hovered-character', edit);
+var e_NoteData = UiS.get('info-hovered-notedata', edit);
+var e_Step = UiS.get('info-hovered-step', edit);
+var e_ZoomLevel = UiS.get('info-zoom', edit);
+var e_SnapLevel = UiS.get('info-snap', edit);
+var e_TimeScale = UiS.get('info-playback', edit);
+
+var info = Screen.addComponent(UiS.buildXml(['chart-editor/info']));
+var i_SongPosition = UiS.get('info-song-position', info);
+var i_Time = UiS.get('info-song-timestamp', info);
+var i_Step = UiS.get('info-chart-step', info);
+var i_Beat = UiS.get('info-chart-beat', info);
+var i_BPM = UiS.get('info-dynamic-bpm', info);
+var i_Focus = UiS.get('info-dynamic-focus', info);
+
+var TEMPLATE_STRING = 'TEMPLATE_DONT_USE';
+
+var gridSprite;
+var midSprite;
+var endSprite;
+var focusSprite;
+
+var lanes = [TEMPLATE_STRING => new ChartLane('', -1)];
+var eventLane;
+
+var gridGap = 15;
+
+var metronome = false;
+var beatSound; 
+var secSound;
+
+var MINIMAP_HEIGHT = FlxG.height;
+var MINIMAP_WIDTH = FlxG.width * 0.1;
+var MINIMAP_COL = 0xFF262626;
+
+var minimap; 
+var usingMap = false;
+
+var minimapTime; 
+var minimapHandle;
+
+var MAX_CAM_ZOOM = 1.25; 
+var MIN_CAM_ZOOM = 0.65;
+
+var curZoom = 1;
+var zooms = [
+    {string: '1/2x', value: 0.5},
+    {string: '1x', value: 1},
+    {string: '2x', value: 2},
+    {string: '4x', value: 4},
+    {string: '8x', value: 8},
+    {string: '16x', value: 16}
+];
+
+var curSnap = 0;
+var snaps = [
+    {string: 'Step', value: 1},
+    {string: 'Triplet', value: 0.8},
+    {string: 'Double Step', value: 0.5},
+    {string: 'Quintuplet', value: 0.4},
+    {string: 'Quadruple Step', value: 0.2},
+    {string: 'Quintuple Step', value: 0.1}
+];
+
+var curHovered = {
+    c: '',
+    d: 0,
+    step: 0
+}
+var prevHovered = curHovered;
+
+var curChart;
+
+var events = [];
+var curDif = 'normal';
+var parsedChart;
+
+var instSong;
+
+var vocxSong;
+var vocxError = false;
+
+var curBPM = 0;
+var curFocus = ''; 
+var playing = false;
+
+var maxTimeString;
+
+var animPrefs = {
+    grid: false,
+    add: false,
+    remove: false,
+    focus: false,
+    waveform: false
+}
+
+function load()
+{
+    curChart = ClientPrefs.register('timeCurrentChart', 'test');
+    parsedChart = Conductor.loadSong(curChart);
+
+    var songBatch = {
+        name: concat(['Loading "', curChart, '" Song Data...']),
+        jobs: [
+            {
+                method: Paths.mods.song.inst,
+                keys: [curChart]
+            }
+        ],
+        dir: WORKING_MOD_DIRECTORY
+    }
+
+    if (parsedChart.needsVoices) songBatch.jobs.push({
+        method: Paths.mods.song.voices,
+        keys: [curChart]
+    });
+
+
+    var iconsBatch = {
+        name: 'Loading Character Assets...',
+        jobs: [],
+        dir: WORKING_MOD_DIRECTORY
+    }
+
+    for (player in parsedChart.players) iconsBatch.jobs.push({
+        method: Paths.mods.character.image,
+        keys: [player, 'icons']
+    });
+
+    for (opp in parsedChart.opponents) iconsBatch.jobs.push({
+        method: Paths.mods.character.image,
+        keys: [opp, 'icons']
+    });
+
+    var editorBatch = {
+        name: 'Loading Editor Assets...',
+        jobs: [
+            {
+                method: Paths.mods.state.atlas,
+                keys: ['chart', 'focus']
+            },
+            {
+                method: Paths.mods.sound,
+                keys: ['B']
+            },
+            {
+                method: Paths.mods.sound,
+                keys: ['MM']
+            },
+            {
+                method: Paths.mods.strumskin.atlas,
+                keys: ['note_ASSETS']
+            },
+            {
+                method: Paths.mods.ui.xml,
+                keys: ['chart-editor', 'dialogs', 'tabs', 'details-tab']
+            },
+            {
+                method: Paths.mods.ui.xml,
+                keys: ['chart-editor', 'dialogs', 'tabs', 'metadata-tab']
+            }
+        ]
+    }
+
+    var xmlPath = 'ui/chart-editor';
+    for (file in FileSystem.readDirectory(Paths.folder(xmlPath)))
+    {
+        var name = file.split('.')[0];
+        if (!stringEndsWith(file, XML_FILE_EXT))
+        {
+            for (xml in FileSystem.readDirectory(Paths.folder(concat([xmlPath, '/', file]))))
+            {
+                if (!stringEndsWith(xml, XML_FILE_EXT)) continue;
+
+                var xmlName = xml.split('.')[0];
+                editorBatch.jobs.push({
+                    method: Paths.mods.ui.xml,
+                    keys: ['chart-editor', file, xmlName]
+                });
+            }
+        }
+        else
+        {
+            editorBatch.jobs.push({
+                method: Paths.mods.ui.xml,
+                keys: ['chart-editor', name]
+            });
+        }
+    }
+
+    LoadingState.initializeLoadingScreen([songBatch, iconsBatch, editorBatch], { state: 'ChartEditorState' });
+}
+
+function create()
+{
+    DiscordClient.changePresence({state: 'Chart Editor'});
+    FlxG.mouse.visible = true;
+
+    curChart = ClientPrefs.register('timeCurrentChart', 'test');
+
+    beatSound = Paths.mods.sound(['B']).content; 
+    secSound = Paths.mods.sound(['MM']).content;
+
+    registerPreferences();
+
+    setupCamera();
+
+    loadChart();
+    setupUI();
+
+    createEditorSprites();
+    createMinimap();
+
+    registerEventStructures();
+
+    camManager.desiredPos.x = getGridWidths() / 2; 
+    FlxG.worldBounds.set();
+
+    Conductor.onBPMRemap.push(updateTimeSensitivePositions);
+
+    setWindowTitle();
+}
+
+function onChangedSaved()
+{
+    setWindowTitle();
+}
+
+function onSave()
+{
+    saveChart(null);
+}
+
+function onLeaveState()
+{
+    Lib.application.window.title = saveWindowTitle;
+}
+
+function setWindowTitle()
+{
+    var base = concat([saveWindowTitle, ' Chart Editor - ', curChart]);
+    if (UndoManager.unsaved)
+        base += '*';
+
+    Lib.application.window.title = base;
+}
+
+var songPosY = 0;
+var preview = 0;
+var thisDT = 0;
+
+var mps = {x: 0, y: 0}
+var hoveredAnyLane = false;
+
+var TEXT_OFFSET = 35; 
+var ICON_OFFSET = 10;
+function update(dt)
+{
+    thisDT = dt;
+
+    preview = calculateCameraPreview();
+    songPosY = getNoteY(Conductor.songPosition);
+
+    updateMinimap();
+
+    updateControls(dt);
+    updateSongValues();
+
+    updatePanelTexts();
+
+    focusSprite.y = songPosY - focusSprite.height - TEXT_OFFSET;
+
+    var calcYPos = songPosY + preview;
+    if (playing) camManager.currentPos.y = calcYPos;
+    camManager.desiredPos.y = calcYPos;
+
+    // updateWaveform();
+
+    camManager.update(dt);
+
+    midSprite.y = songPosY + HALF_GRID_SIZE - midSprite.height / 2;
+
+    updateBPM(dt); 
+    updateFocus(dt);
+
+    mps = {
+        x: camChart.scroll.x + HALF_WIDTH + (FlxG.mouse.viewX - HALF_WIDTH) / camChart.zoom, 
+        y: camChart.scroll.y + HALF_HEIGHT + (FlxG.mouse.viewY - HALF_HEIGHT) / camChart.zoom
+    }
+
+    hoveredAnyLane = false;
+    
+    updateEventLane(); 
+    updateEvents(dt); 
+    
+    forEachLane(updateLane);
+    if (!hoveredAnyLane) outBoundsHover();
+
+    updateGridSprite();
+}
+
+var wasHover = false; 
+var prevPlaying = false;
+function updateMinimap()
+{
+    minimapTime.y = minimap.y + getMinimapY(Conductor.songPosition);
+    minimapHandle.y = minimapTime.y - minimapHandle.height / 2;
+
+    if (!FlxG.mouse.overlaps(minimap) && !usingMap)
+    {
+        if (wasHover)
+        {
+            FlxTween.cancelTweensOf(minimapHandle);
+            FlxTween.tween(minimapHandle, {alpha: 0.15}, 0.5, {ease: FlxEase.expoOut});
+
+            usingMap = false;
+        }
+
+        wasHover = false;
+        return;
+    }
+
+    if (!wasHover)
+    {
+        FlxTween.cancelTweensOf(minimapHandle);
+        FlxTween.tween(minimapHandle, {alpha: 1}, 0.5, {ease: FlxEase.expoOut});
+    }
+
+    wasHover = true;
+
+    if (FlxG.mouse.justPressed && !this.blockInput) 
+    {
+        usingMap = true;
+        prevPlaying = playing;
+        toggleSong(false);
+    }
+    if (FlxG.mouse.justReleased && usingMap)
+    {
+        usingMap = false;
+        toggleSong(prevPlaying);
+    }
+
+    if (usingMap && FlxG.mouse.pressed) 
+    {
+        var songTime = FlxG.sound.music.length * (FlxG.mouse.viewY / MINIMAP_HEIGHT);
+
+        FlxG.sound.music.time = songTime;
+        camManager.currentPos.y = getNoteY(songTime);
+    }
+}
+
+var SCROLL_AMT = 10000 * 1.5;
+function updateControls(dt)
+{
+    if (this.blockInput || usingMap) return;
+
+    if (gridSprite != null) gridSprite.color = FlxG.keys.pressed.ALT ? 0xFFFF4444 : 0xFFFFFFFF;
+
+    var sAmt = SCROLL_AMT;
+    var yAmt = FlxG.mouse.deltaY * 1.5;
+
+    if (FlxG.keys.pressed.SHIFT) 
+    {
+        sAmt *= 2;
+        yAmt *= 2;
+    }
+    else if (FlxG.keys.pressed.ALT) 
+    {
+        sAmt /= 2;
+        yAmt /= 2;
+    }
+
+    sAmt *= dt; 
+    sAmt /= camManager.defaultZoom;
+
+    updateMouse(yAmt); 
+    updateMouseRight();
+
+    if (playing) return;
+
+    if (!FlxG.keys.pressed.CONTROL && FlxG.mouse.wheel != 0) FlxG.sound.music.time += sAmt * -FlxG.mouse.wheel;
+
+    if (FlxG.sound.music.time <= 0)
+    {
+        FlxG.sound.music.time = 0;
+        camManager.desiredPos.y = getNoteY(0);
+    } 
+
+    if (FlxG.sound.music.time >= FlxG.sound.music.length - 1) 
+    {
+        FlxG.sound.music.time = FlxG.sound.music.length - 1;
+        camManager.desiredPos.y = getNoteY(FlxG.sound.music.time);
+    }
+}
+
+function updateMouse(amt)
+{
+    if (!FlxG.mouse.pressed) return;
+    if (!FlxG.mouse.justMoved) return;
+    if (FlxG.mouse.gameX < 0 || FlxG.mouse.gameX > FlxG.width || FlxG.mouse.gameY < 0 || FlxG.mouse.gameY > FlxG.height) return;
+
+    var MIN_X = eventLane.grid.x - GRID_SIZE;
+    var MAX_X = getGridWidths() + GRID_SIZE;
+    if (camManager.desiredPos.x < MIN_X) camManager.desiredPos.x = MIN_X;
+    if (camManager.desiredPos.x > MAX_X) camManager.desiredPos.x = MAX_X;
+
+    if (playing) return;
+    FlxG.sound.music.time -= amt;
+}
+
+var susStuff = {
+    setting: false,
+    start: 0,
+    end: 0,
+    amt: 0,
+    c: '',
+    lane: null,
+    note: {sprite: null, sus: null, note: {d: 0, ms: 0, l: 0}}
+}
+function updateMouseRight() 
+{
+    if (!FlxG.mouse.pressedRight) 
+    {
+        if (susStuff.setting) completeSus();
+        return;
+    }
+
+    if (susStuff.setting) 
+    {
+        updateSus();
+        return;
+    }
+
+    if (curHovered == null) return;
+    if (curHovered.c == '' && curHovered.i == -2) return;
+
+    attemptPlaceSelectOrRemoveNote();
+}
+
+function onKeyDown(key, modifiers)
+{
+    if (this.blockInput) return;
+
+    if (ctrlKeyModifier(modifiers))
+    {
+        onControlShortcut(key);
+        return;
+    }
+
+    switch(key)
+    {
+        case KEY_ESCAPE: quitEditor(null);
+        case KEY_SPACE: toggleSong();
+
+        case KEY_Z: changeZoom(-1);
+        case KEY_X: changeZoom(1);
+
+        case KEY_LEFT: changeSnap(-1);
+        case KEY_RIGHT: changeSnap(1);
+    }
+}
+
+function onControlShortcut(key)
+{
+    switch(key)
+    {
+        case KEY_O: openOpenChartDialog(null);
+        case KEY_N: openNewChartDialog(null);
+        case KEY_P: openAnimPreferencesDialog(null);
+
+        case KEY_E: openMetadataDialog(null);
+
+        case KEY_D: openJumpStepDialog(null);
+        case KEY_F: openJumpBeatDialog(null);
+        case KEY_G: openJumpSectDialog(null);
+    }
+}
+
+function updateSus()
+{
+    susStuff.end = mps.y;
+
+    susStuff.amt = susStuff.end - susStuff.start;
+    if (susStuff.amt < 0) susStuff.amt = 0;
+
+    susStuff.note.sus.scale.y = susStuff.amt;
+    susStuff.note.note.l = (susStuff.amt * Conductor.stepCrochet) / getWorkingGridSize();
+}
+
+function completeSus()
+{
+    susStuff.note.sus.makeGraphic(SUS_WIDTH, susStuff.note.sus.scale.y);
+    susStuff.note.sus.scale.y = 1;
+
+    if (susStuff.amt < GRID_SIZE)
+    {
+        susStuff.note.sus.destroy();
+        susStuff.note.note.l = 0;
+    }
+
+    var arr = susStuff.lane.laneNotes[susStuff.note.note.d];
+    arr.push(susStuff.note);
+    sortNoteArrayByMS(arr);
+
+    drawMinimapNote(susStuff.lane.i, susStuff.note.note);
+
+    susStuff.setting = false;
+    susStuff.start = 0;
+    susStuff.end = 0;
+    susStuff.amt = 0;
+    susStuff.c = '';
+    susStuff.lane = null;
+    susStuff.note = {sprite: null, sus: null, note: {d: 0, ms: 0, l: 0}}
+}
+
+function attemptPlaceSelectOrRemoveNote() 
+{
+    if (curHovered.d < -1) return;
+    if (curHovered.c == '') 
+    {
+        if (curHovered.d == -2) return;
+        if (curHovered.d == -1) attemptPlaceSelectOrRemoveEvent();
+
+        return;
+    }
+
+    var shift = FlxG.keys.pressed.SHIFT;
+    var alt = FlxG.keys.pressed.ALT;
+
+    var any = alt ? true : false;
+    var destroyed = false;
+
+    var lane = lanes[curHovered.c];
+    var curMS = Conductor.getMS(curHovered.step);
+    for (note in lane.getAllNotes())
+    {
+        if (note.note.ms > curMS + 0.00001 || note.note.ms < curMS - 0.00001) continue;
+        if (note.note.d != curHovered.d) continue;
+
+        if (note.sprite == null) continue;
+        if (!FlxG.mouse.overlaps(note.sprite, camChart)) continue;
+ 
+        if (alt) 
+        { 
+            if (shift) { if (!destroyed) removeNote(curHovered.c, note.note); }
+            else { if (FlxG.mouse.justPressedRight) removeNote(curHovered.c, note.note); }
+        }
+        else selectNote(curHovered.c, note.note);
+
+        any = true;
+        if (alt) destroyed = true;
+    }
+
+    if (!any) placeNote(curHovered.c, {ms: Conductor.getMS(curHovered.step), d: curHovered.d, l: shift ? 0 : -1});
+}
+
+function attemptPlaceSelectOrRemoveEvent()
+{
+    var shift = FlxG.keys.pressed.SHIFT;
+    var alt = FlxG.keys.pressed.ALT;
+
+    var any = alt ? true : false;
+    var destroyed = false;
+
+    var curMS = Conductor.getMS(curHovered.step);
+    for (event in eventLane.getAllNotes())
+    {
+        if (event.ms > curMS + 0.00001 || event.ms < curMS - 0.00001) continue;
+        if (!FlxG.mouse.overlaps(event.sprite, camChart)) continue;
+
+        if (alt) 
+        { 
+            if (shift) { if (!destroyed) removeEvent(event.ms); }
+            else { if (FlxG.mouse.justPressedRight) removeEvent(event.ms); }
+        }
+        else selectEvent(event.ms);
+
+        any = true;
+        if (alt) destroyed = true;
+
+        break;
+    }
+
+    if (!any && FlxG.mouse.justPressedRight) placeEvent(curMS);
+}
+
+function placeNote(c, data)
+{
+    for (note in lanes[c].laneNotes[data.d]) if (note.note.ms == data.ms && note.note.d == data.d) return;
+
+    var sprite = getNoteSprite(c, data);
+    sprite.updateHitbox();
+    bumpSprite(sprite);
+
+    var doSus = data.l == -1;
+
+    var lane = lanes[c];
+    if (!doSus) 
+    {
+        var sus;
+        if (data.l > 0) sus = getSusSprite(c, data);
+
+        lane.laneNotes[data.d].push({
+            sprite: sprite,
+            sus: sus,
+            note: data
+        });
+        sortNoteArrayByMS(lane.laneNotes[data.d]);
+
+        if (sus != null) add(sus);
+        add(sprite);
+
+        drawMinimapNote(lane.i, data);
+
+        return;
+    }
+
+    var sus = getSusSprite(c, data);
+    sus.makeGraphic(SUS_WIDTH, 1, 0xFFFF0000);
+    sus.origin.set(0, 0);
+
+    susStuff.setting = true;
+    susStuff.start = Conductor.getStep(data.ms) * getWorkingGridSize();
+    susStuff.end = susStuff.start;
+    susStuff.amt = 0;
+    susStuff.c = c;
+    susStuff.lane = lane;
+    susStuff.note = {sprite: sprite, sus: sus, note: data}
+
+    add(susStuff.note.sus); 
+    add(susStuff.note.sprite);
+}
+
+function selectNote(note) {}
+function removeNote(c, data) 
+{
+    var lane = lanes[c];
+
+    var arr = lane.laneNotes[data.d];
+
+    lane.removeNoteWithData(data);
+    sortNoteArrayByMS(arr);
+
+    drawMinimapNote(lane.i, data, true);
+}
+
+var previousEvent = {t: 'None', e: [{n: '', v: null, t: 'NONE'}]}
+function placeEvent(ms)
+{
+    for (note in eventLane.laneNotes[0]) if (note.ms == ms) return;
+
+    var eventCopy = {t: previousEvent.t, e: []}
+    for (entry in previousEvent.e)
+    {
+        var newEntry = {
+            n: entry.n,
+            v: entry.v,
+            t: entry.t
+        }
+        eventCopy.e.push(newEntry);
+    }
+
+    var event = getEventSprites(ms, ['']);
+    var structure = {
+        sprite: event[0],
+        text: event[1],
+        ms: ms,
+        scales: [{x: event[0].scale.x, y: event[0].scale.y}, {x: event[1].scale.x, y: event[1].scale.y}],
+        events: [eventCopy]
+    }
+    
+    eventLane.laneNotes[0].push(structure);
+    parsedChart.events.set(concat([ms]), structure.events);
+
+    for (sprite in event) 
+    { 
+        sprite.updateHitbox();
+        bumpSprite(sprite);
+        add(sprite); 
+    }
+}
+
+function selectEvent(ms)
+{
+    if (!FlxG.mouse.justPressedRight) return;
+    openEventWindow(eventLane.getGroupingFromMS(ms));
+}
+
+function removeEvent(ms) 
+{
+    var grouping = eventLane.getGroupingFromMS(ms);
+
+    FlxTween.cancelTweensOf(grouping.sprite);
+    FlxTween.cancelTweensOf(grouping.text);
+
+    grouping.sprite.destroy();
+    grouping.text.destroy();
+
+    eventLane.laneNotes[0].remove(grouping);
+    parsedChart.events.remove(concat([ms]));
+
+    for (event in grouping.events)
+    {
+        switch(event.t)
+        {
+            case BPM_CHANGE_EVENT_NAME: Conductor.mapBPMChanges();
+            case CHAR_FOCUS_EVENT_NAME: Conductor.mapCharFocus();
+        }
+    }
+}
+
+function updateSongValues()
+{
+    FlxG.sound.music.pitch = Conductor.timescale;
+    if (parsedChart.needsVoices) vocxSong.pitch = Conductor.timescale;
+
+    Conductor.songPosition = FlxG.sound.music.time;
+    if (!playing && parsedChart.needsVoices) vocxSong.time = Conductor.songPosition;
+
+    if (parsedChart.needsVoices) vocxSong.volume = FlxG.sound.volume + 1;
+}
+
+function toggleSong(?force)
+{
+    var val = force != null ? force : null;
+
+    playing = !playing;
+
+    if (val != null) playing = val;
+    
+    switch(playing)
+    {
+        case true:
+            FlxG.sound.music.resume();
+            if (needsVoices()) vocxSong.resume();
+
+        case false:
+            FlxG.sound.music.pause();
+            Conductor.songPosition = FlxG.sound.music.time;
+
+            if (needsVoices())
+            {
+                vocxSong.pause();
+                vocxSong.time = Conductor.songPosition;
+            }
+    }
+}
+
+function updatePanelTexts()
+{
+    e_Character.value = curHovered.c;
+    e_NoteData.value = curHovered.d;
+    e_Step.value = curHovered.step;
+
+    e_ZoomLevel.value = zooms[curZoom].string;
+    e_SnapLevel.value = snaps[curSnap].string;
+    e_TimeScale.value = Conductor.timescale;
+
+    i_SongPosition.value = concat([Math.floor(Conductor.songPosition), 'ms']);
+    i_Time.value = concat([FlxStringUtil.formatTime(Math.floor(Conductor.songPosition / 1000), false), ' / ', maxTimeString]);
+
+    var step = Conductor.step;
+    i_Step.value = step;
+    i_Beat.value = Math.floor(step / 4);
+
+    i_BPM.value = Conductor.bpm;
+    i_Focus.value = Conductor.focus;
+}
+
+function updateBPM(dt)
+{
+    var prevBPM = curBPM;
+    curBPM = Conductor.bpm;
+
+    if (prevBPM != Conductor.bpm) updateBPMDependent(curBPM);
+}
+
+function updateBPMDependent(bpm)
+{
+    var pos = getNoteY(Conductor.lastChange.ms + 0.1); // I want to make sure we're in the change
+
+    forEachLane((lane) -> 
+    { 
+        lane.beats.y = pos; 
+        lane.sections.y = pos; 
+    });
+
+    // updateWaveformDuration(bpm);
+    
+    eventLane.beats.y = pos; 
+    eventLane.sections.y = pos;
+}
+
+function beatHit(beat) 
+{
+    playMetronome(beat);
+
+    forEachLane((lane) ->
+    {
+        if (lane.c == curFocus) return;
+        lane.icon.scale.x = 0.85;
+    });
+}
+
+function playMetronome(beat)
+{
+    if (!metronome) return;
+    FlxG.sound.play(beatSound, 1.5);
+}
+
+var prevPlayingFocus = false;
+function onFocusLost()
+{
+    prevPlayingFocus = vocxSong.playing;
+    vocxSong.pause();
+}
+
+function onFocus()
+{
+    if (prevPlayingFocus) vocxSong.play();
+    prevPlayingFocus = false;
+}
+
+function updateFocus(dt)
+{
+    var prevFocus = curFocus; curFocus = Conductor.focus;
+    if (prevFocus == curFocus) return;
+    
+    tweenFocusSprite(Conductor.focus);
+}
+
+function tweenFocusSprite(c)
+{
+    var lane = lanes[c]; 
+    forEachLane((l) -> { l.text.color = l.c == c ? 0xFF00FF00 : 0xFFFFFFFF; });
+
+    if (c != curFocus) return;
+    
+    centerOnGrid(c, focusSprite); 
+    var anim = animPrefs.focus;
+
+    focusSprite.alpha = anim ? 0 : 1;
+    focusSprite.angle = anim ? -150 : 0;
+    focusSprite.offset.set(!anim ? -GRID_SIZE : -DOUBLE_GRID_SIZE, !anim ? -HALF_GRID_SIZE : -GRID_SIZE);
+
+    if (!anim) return;
+
+    FlxTween.cancelTweensOf(focusSprite);
+    FlxTween.tween(focusSprite.offset, {x: -GRID_SIZE, y: -HALF_GRID_SIZE}, 0.5, {ease: FlxEase.elasticOut});
+    FlxTween.tween(focusSprite, {alpha: 1}, 0.5, {ease: FlxEase.expoOut});
+    FlxTween.tween(focusSprite, {angle: 0}, 0.5, {ease: FlxEase.elasticOut});
+}
+
+function updateLane(lane)
+{
+    var i = 0;
+    for (strum in lane.strums) 
+    {
+        strum.y = midSprite.y - strum.height / 2;
+        updateNotes(i, lane);
+
+        i++;
+    }
+
+    lane.text.y = midSprite.y - TEXT_OFFSET - lane.text.height;
+    lane.icon.y = lane.text.y - ICON_OFFSET - lane.icon.height;
+
+    var lerp = FlxMath.lerp(0.75, lane.icon.scale.x, 1 - Math.exp(thisDT * -100));
+    lane.icon.scale.set(lerp, lerp);
+
+    if (!mouseInBounds(lane.grid) || this.blockInput) return;
+
+    hoveredAnyLane = true;
+
+    var offs = calculateGridOffset(lane.i);
+
+    var rounded = {
+        x: snapToGrid(mps.x - offs, true),
+        y: snapToGrid(mps.y)
+    }
+
+    updateSelecPos(rounded.x + offs, rounded.y);
+
+    prevHovered = curHovered;
+    setCurHovered(lane.c, (rounded.x / GRID_SIZE) % 4, rounded.y / getWorkingGridSize());
+
+    if (prevHovered.c == lane.c) return;
+    
+    // if (animPrefs.waveform)
+    // {
+    //     FlxTween.cancelTweensOf(waveform);
+    //     FlxTween.tween(waveform, {x: lane.grid.x}, 0.5, {ease: FlxEase.elasticOut});
+    // }
+    // else waveform.x = lane.grid.x;
+}
+
+var HIT_NOTE_ALPHA = 0.25;
+var NOTE_ALPHA = 1;
+function updateNotes(i, lane)
+{
+    var notes = lane.laneNotes[i];
+    if (lane.currentFocus[i] == null) lane.currentFocus[i] = 0;
+
+    if (usingMap) return;
+
+    var nextNote = notes[lane.currentFocus[i]];
+
+    var previousNote;
+    if (lane.currentFocus[i] - 1 >= 0) previousNote = notes[lane.currentFocus[i] - 1];
+
+    if (nextNote == null && lane.currentFocus[i] == 0) return;
+
+    if (previousNote != null && previousNote.note.ms >= Conductor.songPosition)
+    {
+        if (previousNote.sprite.alpha == HIT_NOTE_ALPHA)
+        {
+            previousNote.sprite.alpha = NOTE_ALPHA;
+            if (previousNote.note.l > 0) previousNote.sus.alpha = NOTE_ALPHA;
+
+            playStrumAnimation(lane, previousNote.note.d);
+
+            lane.currentFocus[i] = notes.indexOf(previousNote);
+        }
+    }
+
+    if (nextNote == null) return;
+    if (Conductor.songPosition < nextNote.note.ms) return;
+
+    nextNote.sprite.alpha = HIT_NOTE_ALPHA;
+    if (nextNote.note.l > 0) nextNote.sus.alpha = HIT_NOTE_ALPHA;
+
+    playStrumAnimation(lane, nextNote.note.d);
+
+    var _i = lane.currentFocus[i];
+    lane.currentFocus[i] = _i + 1;
+}
+
+function playStrumAnimation(lane, d)
+{
+    if (lane.c == curFocus) lane.icon.scale.x = 1;
+
+    var strum = lane.strums[d];
+    strum.animation.play('confirm', true);
+
+    var offset = getStrumOffset(d); 
+    strum.offset.set(offset.x, offset.y);
+}
+
+function getNoteAlpha(ms)
+{
+    return Conductor.songPosition >= ms ? HIT_NOTE_ALPHA : NOTE_ALPHA;
+}
+
+function updateEventLane()
+{
+    if (!mouseInBounds(eventLane.grid) || this.blockInput) return;
+
+    hoveredAnyLane = true;
+
+    var rounded = {
+        x: eventLane.grid.x,
+        y: snapToGrid(mps.y)
+    }
+
+    updateSelecPos(rounded.x, rounded.y);
+
+    prevHovered = curHovered;
+    setCurHovered('', -1, rounded.y / getWorkingGridSize());
+}
+
+function updateEvents(dt)
+{
+    for (event in eventLane.laneNotes[0])
+    {
+        var data = event.event; 
+        var ms = event.ms;
+
+        var dAlpha = getNoteAlpha(ms); 
+        var prevAlpha = event.sprite.alpha;
+
+        if (dAlpha != prevAlpha)
+        {
+            var sprite = event.sprite;
+            var text = event.text;
+
+            for (i in 0...2)
+            {
+                var thing = [sprite, text][i];
+                FlxTween.cancelTweensOf(thing);
+                FlxTween.cancelTweensOf(thing.scale);
+
+                FlxTween.tween(thing, {angle: dAlpha == 1 ? 0 : 360}, 0.5, {ease: FlxEase.expoOut});
+                FlxTween.tween(thing.scale, {
+                    x: dAlpha == 1 ? event.scales[i].x : event.scales[i].x * 0.75, 
+                    y: dAlpha == 1 ? event.scales[i].y : event.scales[i].y * 0.75, 
+                }, 0.5, {ease: FlxEase.expoOut});
+            
+                thing.alpha = dAlpha;
+            }
+        }
+    }
+}
+
+var gridTween = {
+    alpha: 1,
+    pos: {x: 0, y: 0},
+    angle: {v: 0}
+}
+
+var prevPos = {x: 0, y: 0}
+function updateSelecPos(x, y)
+{
+    if (x == prevPos.x && y == prevPos.y) return;
+
+    if (!animPrefs.grid)
+    {
+        gridTween.pos = {x: x, y: y} gridTween.angle.v = 0;
+        // evilRed.setPosition(x, y); prevPos.x = x; prevPos.y = y;
+
+        return;
+    }
+
+    FlxTween.cancelTweensOf(gridTween.pos); FlxTween.cancelTweensOf(gridTween.angle);
+    FlxTween.tween(gridTween.pos, {x: x, y: y}, 0.25, {ease: FlxEase.elasticOut});
+
+    gridTween.angle.v = (1.5 * (FlxG.mouse.deltaX - FlxG.mouse.deltaY)) % 360;
+    FlxTween.tween(gridTween.angle, {v: 0}, 0.5, {ease: FlxEase.elasticOut});
+
+    // evilRed.setPosition(x, y);
+
+    prevPos.x = x; 
+    prevPos.y = y;
+}
+
+function updateGridSprite()
+{
+    gridSprite.angle = gridTween.angle.v;
+    gridSprite.setPosition(gridTween.pos.x, gridTween.pos.y);
+    gridSprite.alpha = gridTween.alpha;
+}
+
+function setupCamera()
+{
+    camManager = new CameraManager([
+        {name: 'chart', follow: true},
+        {name: 'selec', follow: true},
+        {name: 'top', follow: true}
+        {name: 'ui', follow: false}
+    ], 3);
+    camManager.inEditor = true;
+    camManager.minZoom = MIN_CAM_ZOOM;
+    camManager.maxZoom = MAX_CAM_ZOOM;
+    camManager.disableYControl = true;
+
+    camChart = camManager.cams[0].cam;
+    camSelec = camManager.cams[1].cam;
+    camTop = camManager.cams[2].cam;
+}
+
+var init = {
+    timescale: false,
+    gap: false
+}
+function setupUI()
+{
+    UiS.registerDraggable(edit);
+    UiS.registerDraggable(info);
+
+    UiS.get('ribbon-file-open', ribbon).onClick = openOpenChartDialog;
+    UiS.get('ribbon-file-new', ribbon).onClick = openNewChartDialog;
+    UiS.get('ribbon-file-undo', ribbon).onClick = UndoManager.performUndo;
+    UiS.get('ribbon-file-redo', ribbon).onClick = UndoManager.performRedo;
+    UiS.get('ribbon-file-save', ribbon).onClick = UndoManager.performSave;
+    UiS.get('ribbon-file-prefs', ribbon).onClick = openAnimPreferencesDialog;
+    UiS.get('ribbon-file-quit', ribbon).onClick = quitEditor;
+
+    moveFPS(ribbon.height);
+    ribbon.onMenuOpened = (e) -> { moveFPS(ribbon.height + e.target.height); }
+    ribbon.onMenuClosed = (e) -> { moveFPS(ribbon.height); }
+
+    UiS.get('ribbon-chart-metadata', ribbon).onClick = openMetadataDialog;
+
+    UiS.get('ribbon-chart-jump-step', ribbon).onClick = openJumpStepDialog;
+    UiS.get('ribbon-chart-jump-beat', ribbon).onClick = openJumpBeatDialog;
+    UiS.get('ribbon-chart-jump-section', ribbon).onClick = openJumpSectDialog;
+
+    var metronomeCheck = UiS.get('ribbon-chart-metronome', ribbon);
+    metronomeCheck.onClick = (e) -> { metronome = metronomeCheck.selected; }
+
+    var timescaleSlider = UiS.get('ribbon-chart-playback', ribbon);
+    timescaleSlider.onChange = (e) ->
+    {
+        if (!init.timescale)
+        {
+            timescaleSlider.pos = 1;
+            init.timescale = true;
+            return;
+        }
+
+        Conductor.timescale = timescaleSlider.pos;
+    }
+    UiS.get('ribbon-chart-playback-reset', ribbon).onClick = (e) ->
+    {
+        timescaleSlider.pos = 1;
+    }
+
+    UiS.get('ribbon-chart-zoomin', ribbon).onClick = zoomInProxy;
+    UiS.get('ribbon-chart-zoomout', ribbon).onClick = zoomOutProxy;
+
+    UiS.get('ribbon-chart-tighten', ribbon).onClick = loosenSnapProxy;
+    UiS.get('ribbon-chart-loosen', ribbon).onClick = tightenSnapProxy;
+
+    UiS.get('ribbon-chart-edit-panel', ribbon).onClick = (e) ->
+    {
+        if (e.target.selected) edit.show();
+        else edit.hide();
+    }
+    UiS.get('ribbon-chart-info-panel', ribbon).onClick = (e) ->
+    {
+        if (e.target.selected) info.show();
+        else info.hide();
+    }
+
+    var gapSlider = UiS.get('ribbon-chart-gridgap', ribbon);
+    gapSlider.onChange = (e) ->
+    {
+        if (!init.gap)
+        {
+            gapSlider.pos = ClientPrefs.get('timeCEGridGap');
+            init.gap = true;
+            return;
+        }
+
+        gridGap = e.target.pos;
+        repositionLanes();
+    }
+
+    UiS.get('ribbon-chart-new-event', ribbon).onClick = openCreateEventDialog;
+}
+
+function loadChart()
+{
+    var path = Paths.mods.song.chart([curChart], WORKING_MOD_DIRECTORY).path;
+    parsedChart = Conductor.loadSong(curChart);
+
+    // Sys.println('\n------ GATHERED CHART DATA ------');
+    // Sys.println(concat(['Version: ', parsedChart.version]));
+    // Sys.println(concat(['Song: ', parsedChart.song]));
+    // Sys.println(concat(['Stage: ', parsedChart.stage]));
+    // Sys.println(concat(['Metadata: ', parsedChart.metadata]));
+    // Sys.println(concat(['BPM: ', parsedChart.bpm]));
+    // Sys.println(concat(['Speed: ', parsedChart.speed]));
+    // Sys.println(concat(['Needs Voices: ', parsedChart.needsVoices]));
+    // Sys.println(concat(['Players: ', parsedChart.players]));
+    // Sys.println(concat(['Opponents: ', parsedChart.opponents]));
+
+    instSong = Paths.mods.song.inst([curChart], WORKING_MOD_DIRECTORY).content;
+
+    var voices = Paths.mods.song.voices([curChart], WORKING_MOD_DIRECTORY).content;
+    if (voices == null)
+    {
+        FlxTimer.wait(1, () ->
+        {
+            UiS.addNotification({
+                title: 'Voices Not Found',
+                body: 'Despite "Needs Voices" being true, "voices.ogg" is not found.',
+                type: NOTIFICATION_ERROR,
+                expiryMs: -1
+            });
+        });
+
+        vocxSong = new FlxSound();
+        vocxError = true;
+    }
+    else vocxSong = new FlxSound().loadEmbedded(voices);
+
+    FlxG.sound.playMusic(instSong, 1); FlxG.sound.music.pause();
+    FlxG.sound.music.onComplete = () ->
+    {
+        FlxG.sound.music.time = FlxG.sound.music.length - 1;
+    }
+    if (parsedChart.needsVoices)
+    { 
+        vocxSong.play(true);
+        vocxSong.pause();
+    }
+
+    maxTimeString = FlxStringUtil.formatTime(Math.floor(FlxG.sound.music.length / 1000), false);
+
+    // Sys.println(concat(['\n', 'Steps: ', getSongLengthInSteps()]));
+    // Sys.println(concat(['Beats: ', getSongLengthInBeats()]));
+    // Sys.println(concat(['Sections: ', getSongLengthInSections(), '\n']));
+
+    var thisDif = parsedChart.notes[curDif];
+
+    var tempNotes = [TEMPLATE_STRING => []];
+    for (c in parsedChart.players)
+    {
+        var theseNotes = thisDif[c]; 
+        tempNotes[c] = thisDif[c];
+
+        // Sys.println(concat(['--- Player: ', c]));
+        // Sys.println(concat(['Notes: ', theseNotes.length]));
+    }
+
+    for (c in parsedChart.opponents)
+    {
+        var theseNotes = thisDif[c]; 
+        tempNotes[c] = thisDif[c];
+
+        // Sys.println(concat(['--- Opponent: ', c]));
+        // Sys.println(concat(['Notes: ', theseNotes.length]));
+    }
+
+    var chars = getCharArray();
+    for (i in 0...chars.length) createNewLane(chars[i], i, tempNotes);
+    forEachLane(addLaneElements);
+
+    registerEventEntryBehaviours();
+    createEventLane();
+    ChartEventManager.forEachEventGrouping(parsedChart, (ms, events) ->
+    {
+        var sprites = getEventSprites(ms, events);
+        for (sprite in sprites) add(sprite);
+
+        eventLane.laneNotes[0].push({sprite: sprites[0], text: sprites[1], events: events, ms: ms,
+                                    scales: [
+                                    {x: sprites[0].scale.x, y: sprites[0].scale.y},
+                                    {x: sprites[1].scale.x, y: sprites[1].scale.y}
+        ]});
+    });
+
+    ClientPrefs.set('timeCELoadBackup', false); 
+    ClientPrefs.save();
+}
+
+function createNewLane(c, i, notes)
+{
+    var cur = new ChartLane(c, i);
+
+    var grid = new FlxBackdrop(FlxGraphic.fromBitmapData(FlxGridOverlay.create(GRID_SIZE, GRID_SIZE, GRID_SIZE * NUM_KEYS, 64 * GRID_SIZE, true, 0xFF262626, 0xFF3D3D3D).pixels), AXES_Y);
+    grid.cameras = [camChart]; 
+    grid.x = (grid.width * i) + calculateGridOffset(i);
+
+    var beats = new FlxBackdrop(FlxGraphic.fromBitmapData(new FlxSprite().makeGraphic(grid.width, BAR_HEIGHT, 0xFFFF00FF).pixels), AXES_Y, 0, GRID_SIZE * 4 - BAR_HEIGHT);
+    beats.cameras = [camChart]; 
+    beats.x = grid.x;
+    
+    var sections = new FlxBackdrop(FlxGraphic.fromBitmapData(new FlxSprite().makeGraphic(grid.width, BAR_HEIGHT, 0xFFFFFF00).pixels), AXES_Y, 0, GRID_SIZE * 16 - BAR_HEIGHT);
+    sections.cameras = [camChart]; 
+    sections.x = grid.x;
+
+    cur.grid = grid;
+    cur.beats = beats;
+    cur.sections = sections;
+
+    add(grid); 
+    add(beats);
+    add(sections);
+
+    lanes.set(c, cur);
+
+    for (note in notes[c])
+    {
+        var sprite = getNoteSprite(c, note);
+
+        var sus = null;
+        if (note.l > 0) sus = getSusSprite(c, note);
+
+        cur.laneNotes[note.d].push({sprite: sprite, sus: sus, note: note});
+    }
+
+    for (x in 0...NUM_KEYS) cur.strums.push(getStrumSprite(c, x));
+
+    var icon = new HealthIcon(c);
+    icon.setGraphicSize(DOUBLE_GRID_SIZE, DOUBLE_GRID_SIZE); 
+    icon.scrollFactor.set(1, 1); 
+    icon.updateHitbox();
+    icon.cameras = [camTop];
+    centerOnGrid(c, icon); 
+    
+    icon.x -= 10;
+
+    var text = new FlxText(0, 0, -1, c).setFormat(DEFAULT_FONT, 18, 0xFFFFFFFF, 'center', BORDER_OUTLINE, 0xFF000000);
+    text.borderSize = 1.8; 
+    text.cameras = [camTop];
+
+    centerOnGrid(c, text); 
+    fitToWidth(text, grid.width);
+
+    cur.icon = icon; 
+    cur.text = text;
+
+    return cur;
+}
+
+function addLaneElements(lane)
+{
+    for (note in lane.getAllNotes())
+    {
+        if (note.sus != null) add(note.sus);
+        add(note.sprite);
+    }
+
+    for (strum in lane.strums) add(strum);
+
+    add(lane.text); 
+    add(lane.icon);
+}
+
+function createEventLane()
+{
+    eventLane = new ChartLane('', -1);
+    eventLane.grid = new FlxBackdrop(FlxGraphic.fromBitmapData(FlxGridOverlay.create(GRID_SIZE, GRID_SIZE, GRID_SIZE, 64 * GRID_SIZE, true, 0xFF3D3D3D, 0xFF262626).pixels), AXES_Y);
+    eventLane.grid.cameras = [camChart];
+    eventLane.grid.x = -GRID_SIZE - gridGap;
+
+    eventLane.beats = new FlxBackdrop(FlxGraphic.fromBitmapData(new FlxSprite().makeGraphic(eventLane.grid.width, BAR_HEIGHT, 0xFFFF00FF).pixels), AXES_Y, 0, GRID_SIZE * 4 - BAR_HEIGHT);
+    eventLane.beats.cameras = [camChart];
+    eventLane.beats.x = eventLane.grid.x;
+    
+    eventLane.sections = new FlxBackdrop(FlxGraphic.fromBitmapData(new FlxSprite().makeGraphic(eventLane.grid.width, BAR_HEIGHT, 0xFFFFFF00).pixels), AXES_Y, 0, GRID_SIZE * 16 - BAR_HEIGHT);
+    eventLane.sections.cameras = [camChart];
+    eventLane.sections.x = eventLane.grid.x;
+
+    add(eventLane.grid); 
+    add(eventLane.beats); 
+    add(eventLane.sections);
+}
+
+function createEditorSprites()
+{
+    midSprite = new FlxBackdrop(FlxGraphic.fromBitmapData(new FlxSprite().makeGraphic(4500, BAR_HEIGHT).pixels), AXES_X);
+    midSprite.cameras = [camTop];
+
+    endSprite = new FlxBackdrop(FlxGraphic.fromBitmapData(new FlxSprite().makeGraphic(4500, BAR_HEIGHT, 0xFFFF0000).pixels), AXES_X);
+    endSprite.y = getNoteY(FlxG.sound.music.length); 
+    endSprite.cameras = [camTop];
+
+    add(midSprite); 
+    add(endSprite);
+
+    add(gridSprite = new FlxSprite().makeGraphic(GRID_SIZE, GRID_SIZE)); 
+    gridSprite.cameras = [camChart];
+
+    add(focusSprite = new FlxSprite().loadAtlas(Paths.mods.state.atlas(['chart', 'focus']).content));
+    focusSprite.animation.addByPrefix('idle', 'idle', 4, true); 
+    focusSprite.animation.play('idle');
+    focusSprite.cameras = [camTop]; 
+    focusSprite.setGraphicSize(GRID_SIZE, GRID_SIZE);
+}
+
+function createMinimap()
+{
+    var sideGrad = new FlxSprite().load(Paths.mods.state.image(['beauty', 'ribbon-gradient']));
+    sideGrad.angle = 90; sideGrad.setPosition(FlxG.height - 565, 0); 
+    // add(sideGrad);
+
+    add(minimap = new FlxSprite().makeGraphic(MINIMAP_WIDTH, MINIMAP_HEIGHT, MINIMAP_COL));
+    minimap.x = FlxG.width - MINIMAP_WIDTH;
+
+    add(minimapHandle = new FlxSprite().makeGraphic(MINIMAP_WIDTH, 8, 0x00000000));
+    FlxSpriteUtil.drawRect(minimapHandle, 0, 0, minimapHandle.width, minimapHandle.height, 0x88FFFF00, {thickness: 2, color: 0xFFFFFF00});
+    minimapHandle.x = minimap.x; minimapHandle.alpha = 0.15;
+
+    add(minimapTime = new FlxSprite().makeGraphic(MINIMAP_WIDTH, 2));
+    minimapTime.x = minimap.x;
+
+    var dividingLine = new FlxSprite().makeGraphic(2, FlxG.height, 0xFF000000);
+    dividingLine.x = minimap.x - 1; 
+    add(dividingLine);
+
+    drawMinimapNotes();
+}
+
+var cols = [0xFFFF00FF, 0xFF00FFFF, 0xFF00FF00, 0xFFFF0000];
+var NOTE_HEIGHT = 1;
+function drawMinimapNotes()
+{
+    minimap.makeGraphic(0, 0, MINIMAP_COL);
+    minimap.makeGraphic(MINIMAP_WIDTH, MINIMAP_HEIGHT, MINIMAP_COL);
+    forEachLane((lane) -> { for (note in lane.getAllNotes()) drawMinimapNote(lane.i, note.note); });
+}
+
+function drawMinimapNote(i, note, ?remove)
+{
+    var noteWidth = MINIMAP_WIDTH / getCharArray().length / NUM_KEYS;
+
+    var x = (noteWidth  * NUM_KEYS * i) + (noteWidth * note.d);
+    var y = getMinimapY(note.ms);
+
+    FlxSpriteUtil.drawRect(minimap, x, y, noteWidth, 2, cols[note.d], remove != null ? {thickness: 2, color: MINIMAP_COL} : null);
+}
+
+function registerEventEntryBehaviours()
+{
+    ChartEventManager.registerEntryBehaviour('STRING', (song, grouping, event, entry) ->
+    {
+        switch(event.t)
+        {
+            case CHAR_FOCUS_EVENT_NAME:
+                var content = UiS.buildXml(['chart-editor', 'events', 'set-focus']);
+                var list = UiS.get('focus-list', content);
+                
+                var arr = getCharArray();
+                var source = getDataSource(); for (char in arr) source.add({text: char, icon: lanes[char].icon.frame});
+                list.dataSource = source; 
+
+                list.selectedIndex = arr.indexOf(Conductor.getLastFocus(grouping.ms).c);
+                list.onChange = (e) ->
+                {
+                    entry.v = list.selectedItem.text;
+
+                    for (y in 0...Conductor.charFocusMap.length)
+                    {
+                        var focus = Conductor.charFocusMap[y];
+                        if (focus.ms == grouping.ms) Conductor.charFocusMap[y].c = list.selectedItem.text;
+                    }
+                    
+                    Conductor.mapCharFocus();
+                }
+
+                list.selectedItem = {text: Conductor.getLastFocus(grouping.ms).c} 
+                return content;
+
+            default:
+                var property = new Property();
+                property.label = entry.n;
+                property.value = entry.v;
+                property.onChange = (e) -> { entry.v = property.value; }
+
+                return property;
+        }
+    });
+
+    ChartEventManager.registerEntryBehaviour('FLOAT', (song, grouping, event, entry) ->
+    {
+        var step = new Property();
+        step.label = entry.n;
+        step.type = 'number';
+        step.precision = 3;
+        step.step = 0.001;
+
+        step.onChange = (e) -> 
+        { 
+            entry.v = step.value;
+
+            if (event.t != BPM_CHANGE_EVENT_NAME) return;
+
+            for (y in 0...Conductor.bpmChangeMap.length)
+            {
+                var change = Conductor.bpmChangeMap[y];
+                if (change.ms == grouping.ms) 
+                {
+                    Conductor.bpmChangeMap[y].bpm = step.value;
+                    Conductor.bpmChangeMap[y].stepCrochet = Conductor.calculateStepCrochet(step.value);
+                }
+            }
+
+            // VERY IMPORTANT!
+            Conductor.mapBPMChanges();
+        }
+
+        step.value = entry.v;
+        return step;
+    });
+
+    ChartEventManager.registerEntryBehaviour('INT', (song, grouping, event, entry) ->
+    {
+        var step = new Property();
+        step.label = entry.n;
+        step.type = 'number';
+        step.onChange = (e) ->  { entry.v = step.value; }
+        step.value = entry.v;
+
+        return step;
+    });
+
+    ChartEventManager.registerEntryBehaviour('UNSIGNED_INT', (song, grouping, event, entry) ->
+    {
+        var step = new Property();
+        step.label = concat([entry.n, ' (>= 0)']);
+        step.type = 'number';
+        step.min = 0;
+        step.onChange = (e) ->  { entry.v = step.value; }
+        step.value = entry.v;
+
+        return step;
+    });
+
+    ChartEventManager.registerEntryBehaviour('BOOL', (song, grouping, event, entry) ->
+    {
+        var box = new Property();
+        box.type = 'boolean';
+        box.onChange = (e) ->  { entry.v = box.value; } 
+        box.label = entry.n;
+        box.value = entry.v;
+        return box;
+    });
+
+    ChartEventManager.registerEntryBehaviour('NONE', (song, grouping, event, entry) ->
+    {
+        return UiS.buildXml(['chart-editor', 'events', 'no-event']);
+    });
+}
+
+function registerEventStructures()
+{
+    ChartEventManager.registerEventStructure({t: BPM_CHANGE_EVENT_NAME, e: [{n: 'BPM', t: 'FLOAT', d: 150}]});
+    ChartEventManager.registerEventStructure({t: CHAR_FOCUS_EVENT_NAME, e: [{n: 'Focus', t: 'STRING', d: parsedChart.players[0]}]});
+    ChartEventManager.registerEventStructure({t: 'None', e: [{n: '', t: 'NONE', d: null}]});
+
+    var path = Paths.folder('custom_events', WORKING_MOD_DIRECTORY);
+    if (path == null) FileSystem.createDirectory(concat(['mods/', WORKING_MOD_DIRECTORY, '/custom_events']));
+    for (event in FileSystem.readDirectory(path)) 
+    {
+        var thisStructure = parseJson(Paths.mods.event.json([event], WORKING_MOD_DIRECTORY).content);
+        if (thisStructure == null)
+        {
+            alert(concat(['Structure for event type "', event, '" not found.']), ALERT_TITLE);
+            continue;
+        }
+
+        ChartEventManager.registerEventStructure(thisStructure);
+    }
+}
+
+function registerPreferences()
+{
+    gridGap = ClientPrefs.register('timeCEGridGap', 15);
+
+    animPrefs.grid = ClientPrefs.register('timeCEGridAnim', true);
+    animPrefs.add = ClientPrefs.register('timeCEAddAnim', true);
+    animPrefs.remove = ClientPrefs.register('timeCERemoveAnim', true);
+    animPrefs.focus = ClientPrefs.register('timeCEFocusAnim', true);
+    animPrefs.waveform = ClientPrefs.register('timeCEWaveformAnim', true);
+
+    ClientPrefs.register('timeCEBackup', [TEMPLATE_STRING => '']);
+    ClientPrefs.register('timeCELoadBackup', false);
+    if (getChartBackup() == null) ClientPrefs.get('timeCEBackup').set(getChartBackupName(), '');
+    ClientPrefs.register('timeCEJustCrashed', false);
+    ClientPrefs.register('timeCESaveBackup', true);
+}
+
+function getChartBackupName() { return concat([curChart, '-', WORKING_MOD_DIRECTORY]); }
+function getChartBackup() { return ClientPrefs.get('timeCEBackup').get(getChartBackupName()); }
+
+function onHandleCrash(msg)
+{
+    ClientPrefs.set('timeCEJustCrashed', true);
+
+    if (parsedChart == null) return;
+    ClientPrefs.get('timeCEBackup').set(getChartBackupName(), getChartString());
+    ClientPrefs.save();
+
+    trace(concat(['Saved backup for "', curChart, '"']));
+}
+
+// -- UTIL FUNCS --
+
+function getNoteX(c, d) { return lanes[c].grid.x + (GRID_SIZE * d); }
+function getNoteY(ms, ?print) { return Conductor.getStep(ms, print != null) * GRID_SIZE * zooms[curZoom].value; }
+
+function getMinimapY(ms) { return ms / FlxG.sound.music.length * MINIMAP_HEIGHT; }
+
+function getSongLengthInBeats() { return Math.floor(Conductor.getStep(FlxG.sound.music.length)); }; 
+function getSongLengthInSections() { return Math.floor(getSongLengthInBeats() / 4); }; 
+function getSongLengthInSteps() { return Math.floor(getSongLengthInBeats() * 4); }; 
+
+function getNoteSprite(c, data)
+{
+    var sprite = new FlxSprite(getNoteX(c, data.d), getNoteY(data.ms)).loadAtlas(Paths.mods.strumskin.atlas(['note_ASSETS']).content);
+    sprite.animation.addByPrefix('idle', ['purple', 'blue', 'green', 'red'][data.d] + ' instance', 1, false);
+    sprite.animation.play('idle');
+    sprite.cameras = [camChart];
+
+    sprite.setGraphicSize(GRID_SIZE, GRID_SIZE);
+    sprite.updateHitbox();
+
+    return sprite;
+}
+
+function getSusSprite(c, data)
+{
+    var sprite = new FlxSprite(getNoteX(c, data.d) + HALF_GRID_SIZE - HALF_SUS_WIDTH, getNoteY(data.ms) + 4);
+    sprite.makeGraphic(SUS_WIDTH, getSusLength(data));
+    sprite.cameras = [camChart];
+
+    return sprite;
+}
+function getSusLength(data) { return getNoteY(data.ms + data.l) - getNoteY(data.ms); }
+
+var DEFAULT_STRUM_OFFSETS = [TEMPLATE_STRING => {x: 0, y: 0}];
+var STATIC_TAGS = ['arrow static instance 1', 'arrow static instance 2', 'arrow static instance 4', 'arrow static instance 3'];
+
+function getStrumSprite(c, d)
+{
+    var sprite = new FlxSprite(getNoteX(c, d), 0).loadAtlas(Paths.mods.strumskin.atlas(['note_ASSETS']).content);
+    sprite.animation.addByPrefix('idle', STATIC_TAGS[d], 24, false);
+    sprite.animation.addByPrefix('confirm', ['left confirm instance 1', 'down confirm instance 1', 'up confirm instance 1', 'right confirm instance 1'][d], 24, false); 
+    sprite.animation.play('idle');
+
+    sprite.setGraphicSize(GRID_SIZE, GRID_SIZE);
+    sprite.updateHitbox();
+
+    sprite.cameras = [camTop];
+
+    DEFAULT_STRUM_OFFSETS[d] = {x: sprite.offset.x, y: sprite.offset.y}
+    sprite.animation.onFinish.add((name) ->
+    {
+        if (name != 'confirm') return;
+        sprite.animation.play('idle');
+        sprite.offset.set(DEFAULT_STRUM_OFFSETS[d].x, DEFAULT_STRUM_OFFSETS[d].y);
+    });
+
+    return sprite;
+}
+
+var offsets = [
+    {x: 63, y: 63},
+    {x: 66, y: 65},
+    {x: 64, y: 63},
+    {x: 63, y: 63}
+];
+function getStrumOffset(d) return { offsets[d]; }
+
+function getEventSprites(ms, events)
+{
+    var sprite = new FlxSprite(eventLane.grid.x, getNoteY(ms)).load(Paths.mods.state.image(['chart', 'event']).content);
+    sprite.setGraphicSize(GRID_SIZE, GRID_SIZE);
+    sprite.updateHitbox();
+    sprite.cameras = [camTop];
+
+    var text = new FlxText(0, 0, -1, concat([events.length]));
+    text.setFormat(DEFAULT_FONT, 18, 0xFFFFFFFF, 'center', BORDER_OUTLINE, 0xFF000000);
+    text.borderSize = 1.8;
+    text.cameras = [camTop];
+    fitToWidth(text, GRID_SIZE);
+
+    text.setPosition(sprite.x + text.width / 2, sprite.y + text.height / 2);
+
+    return [sprite, text];
+}
+
+var precalc = {i: 0, v: 0}
+function calculateGridOffset(i) { return i * gridGap; }
+function getGridWidths()
+{
+    var calc = parsedChart.players.length + parsedChart.opponents.length;
+    if (precalc.i == calc) return precalc.v;
+
+    var sum = 0; 
+    forEachLane((lane) -> { sum += lane.grid.width + gridGap; });
+
+    precalc.i = calc; 
+    precalc.v = sum;
+
+    return sum;
+}
+
+function getWorkingGridSize() { return GRID_SIZE * zooms[curZoom].value; }
+
+function centerOnGrid(c, obj, ?tween)
+{
+    if (lanes[c] == null) return;
+    var grid = lanes[c].grid;
+
+    var x = grid.x + grid.width / 2 - obj.width / 2;
+
+    if (tween != null)
+    {
+        FlxTween.cancelTweensOf(obj);
+        FlxTween.tween(obj, {x: x}, 0.5, {ease: FlxEase.expoOut});
+    }
+    else obj.x = x;
+}
+
+function fitToWidth(obj, width)
+{
+    if (obj.width > width) obj.setGraphicSize(width, obj.height);
+    obj.updateHitbox();
+}
+
+function forEachLane(callback)
+{
+    if (callback == null) return;
+    for (c in lanes.keys()) if (c != TEMPLATE_STRING) callback(lanes[c]);
+}
+
+function repositionLanes()
+{
+    tweenFocusSprite(Conductor.focus);
+
+    forEachLane(updateLanePositions);
+    updateLanePositions(eventLane);
+}
+
+function updateLanePositions(lane)
+{
+    var old = lane.grid.x;
+    lane.grid.x = lane.grid.width * lane.i + calculateGridOffset(lane.i);
+    
+    var diff = old - lane.grid.x;
+
+    for (strum in lane.strums) strum.x -= diff;
+    for (note in lane.getAllNotes())
+    {
+        note.sprite.x -= diff;
+        if (note.sus != null) note.sus.x -= diff;
+        if (note.text != null) note.text.x -= diff;
+    }
+
+    lane.sections.x = lane.grid.x;
+    lane.beats.x = lane.grid.x;
+
+    if (lane.icon != null)lane.icon.x -= diff;
+    if (lane.text != null) lane.text.x -= diff;
+}
+
+function forEachEvent(callback)
+{
+    if (callback == null) return;
+    for (event in parsedChart.events) callback(event.t, event.ms, event.e);
+}
+
+function getCharArray()
+{
+    if (parsedChart == null) return [];
+    
+    var chars = [];
+    for (char in parsedChart.opponents) chars.push(char);
+    for (char in parsedChart.players) chars.push(char);
+
+    return chars;
+}
+
+function getDiffArray() 
+{ 
+    var diffs = [];
+
+    for (key in Reflect.getProperty(parsedChart, 'notes').keys()) diffs.push(key);
+    return diffs;
+}
+
+function needsVoices()
+{
+    if (vocxError) return false;
+    return parsedChart.needsVoices;
+}
+
+function bumpSprite(sprite, ?v)
+{
+    if (!animPrefs.add) return;
+
+    FlxTween.cancelTweensOf(sprite.scale);
+
+    var amt = v != null ? v : 0.15;
+
+    var prev = {x: sprite.scale.x, y: sprite.scale.y}
+    sprite.scale.set(prev.x + amt, prev.y + amt);
+
+    FlxTween.tween(sprite.scale, prev, 0.5, {ease: FlxEase.expoOut});
+}
+
+function zoomInProxy(e) { changeZoom(1); }
+function zoomOutProxy(e) { changeZoom(-1); }
+function changeZoom(amt)
+{
+    if (curZoom + amt < 0) return;
+    if (curZoom + amt > zooms.length - 1) return;
+
+    curZoom += amt;
+    updateTimeSensitivePositions();
+}
+
+function tightenSnapProxy(e) { changeSnap(1); }
+function loosenSnapProxy(e) { changeSnap(-1); }
+function changeSnap(amt)
+{
+    curSnap += amt;
+
+    if (curSnap < 0) curSnap = snaps.length - 1;
+    else if (curSnap > snaps.length - 1) curSnap = 0;
+}
+
+function snapToGrid(v, ?bypass)
+{
+    var snapTo = GRID_SIZE * snaps[curSnap].value;
+    if (bypass != null) snapTo = GRID_SIZE;
+
+    return Math.floor(v / snapTo) * snapTo;
+}
+
+function mouseInBounds(obj)
+{
+    if (mps.x <= obj.x || mps.x >= obj.x + obj.width) return false;
+    if (mps.y <= 0 || mps.y >= endSprite.y) return false;
+
+    return true;
+}
+
+function setCurHovered(c, d, step)
+{
+    curHovered = {
+        c: c,
+        d: d, 
+        step: step
+    }
+}
+function outBoundsHover() { setCurHovered('', -2, 0); }
+
+var PREVIEW_AMT = 112.5;
+function calculateCameraPreview() { return PREVIEW_AMT / camChart.zoom; }
+
+function updateTimeSensitivePositions()
+{
+    forEachLane((lane) ->
+    {
+        for (note in lane.getAllNotes())
+        {
+            var y = getNoteY(note.note.ms);
+            note.sprite.y = y;
+            if (note.sus != null) 
+            {
+                note.sus.y = y + 4;
+                note.sus.makeGraphic(SUS_WIDTH, getSusLength(note.note) * zooms[curZoom].value);
+            }
+        }
+    });
+
+    for (note in eventLane.getAllNotes())
+    {
+        var y = getNoteY(note.ms);
+        note.sprite.y = y;
+        note.text.setPosition(note.sprite.x + note.text.width / 2, note.sprite.y + note.text.height / 2);
+    }
+
+    endSprite.y = getNoteY(FlxG.sound.music.length);
+
+    // updateWaveformDuration(Conductor.bpm);
+
+    var pos = getNoteY(Conductor.songPosition);
+    camManager.desiredPos.y = pos; 
+    camManager.currentPos.y = pos;
+}
+
+function sortNoteArrayByMS(arr)
+{
+    return sortArray(arr, (a, b) -> { return a.note.ms < b.note.ms ? -1 : a.note.ms == b.note.ms ? 0 : 1; });
+}
+
+// -- ribbon funcs --
+
+function openOpenChartDialog(e) 
+{
+    var list = new ListView();
+    list.width = 200;
+    list.height = 300;
+    list.dataSource = getDataSource();
+
+    for (song in FileSystem.readDirectory(Paths.folder('songs', WORKING_MOD_DIRECTORY)))
+        list.dataSource.add({text: song});
+
+    UiS.openDialog({
+        content: list, 
+        title: 'Select Chart',
+        buttons: ['Open', 'Cancel'],
+        callback: (e) ->
+        {
+            switch(e.button)
+            {
+                case 'Cancel': return;
+                case 'Open':
+                    if (list.selectedItem == null) return;
+                    ClientPrefs.set('timeCurrentChart', list.selectedItem.text);
+                    
+                    privateAccess(() ->
+                    {
+                        // clear song jsons from cache to properly reload active changes
+                        for (key in Assets.generalCache.keys())
+                        {
+                            if (!stringContains(key, '/songs')) continue;
+                            if (!stringEndsWith(key, '.json')) continue;
+
+                            Assets.generalCache.remove(key);
+                        }
+                    });
+                    reset();
+            }
+        }
+    });
+}
+
+function openNewChartDialog(e) {}
+
+function openAnimPreferencesDialog(e) 
+{ 
+    var prefs = UiS.buildXml(['chart-editor', 'dialogs', 'preferences']);
+    var p_Grid = UiS.get('prefs-anim-grid', prefs);
+    var p_Add = UiS.get('prefs-anim-note-add', prefs);
+    var p_Remove = UiS.get('prefs-anim-note-remove', prefs);
+    var p_Focus = UiS.get('prefs-anim-focus', prefs);
+    var p_Waveform = UiS.get('prefs-anim-waveform', prefs);
+
+    p_Grid.value = animPrefs.grid;
+    p_Add.value = animPrefs.add;
+    p_Remove.value = animPrefs.remove;
+    p_Focus.value = animPrefs.focus;
+    p_Waveform.value = animPrefs.waveform;
+
+    UiS.get('prefs-save-backup', prefs).onClick = (e) -> 
+    { 
+        ClientPrefs.set('timeCESaveBackup', e.target.selected);
+        ClientPrefs.save();
+    }
+    UiS.get('prefs-load-backup', prefs).onClick = (e) -> 
+    {
+        ClientPrefs.set('timeCELoadBackup', true); 
+        ClientPrefs.save(); 
+
+        reset();
+    }
+
+    p_Grid.onChange = (e) -> 
+    { 
+        animPrefs.grid = p_Grid.value; 
+        ClientPrefs.set('timeCEGridAnim', p_Grid.value); 
+        ClientPrefs.save(); 
+    }
+
+    p_Add.onChange = (e) -> 
+    { 
+        animPrefs.add = p_Add.value; 
+        ClientPrefs.set('timeCEAddAnim', p_Add.value); 
+        ClientPrefs.save(); 
+    }
+
+    p_Remove.onChange = (e) -> 
+    { 
+        animPrefs.remove = p_Remove.value; 
+        ClientPrefs.set('timeCERemoveAnim', p_Remove.value); 
+        ClientPrefs.save(); 
+    }
+
+    p_Focus.onChange = (e) -> 
+    { 
+        animPrefs.focus = p_Focus.value; 
+        ClientPrefs.set('timeCEFocusAnim', p_Focus.value); 
+        ClientPrefs.save(); 
+    }
+
+    p_Waveform.onChange = (e) -> 
+    { 
+        animPrefs.waveform = p_Waveform.value; 
+        ClientPrefs.set('timeCEWaveformAnim', p_Waveform.value); 
+        ClientPrefs.save(); 
+    }
+
+    UiS.openDialog({
+        content: prefs,
+        title: 'Preferences'
+    }); 
+}
+
+function saveChart(e) 
+{
+    var songPath = getChartPath();
+    File.saveContent(songPath, getChartString());
+
+    UiS.addNotification({
+        title: 'Chart Saved!',
+        body: concat(['Chart "', curChart, '" has been saved to "', songPath, '"!']),
+        actions: [{
+            text: 'Ok'
+        }, {
+            text: 'Take me there!',
+            callback: (e) -> 
+            {
+                var fullPath = StringTools.replace(Path.join([Sys.getCwd(), songPath]), '/', '\\');
+			    Sys.command('explorer "' + fullPath + '"');
+            }
+        }],
+        type: NOTIFICATION_SUCCESS,
+        expiryMs: 2750
+    });
+}
+
+function getChartPath()
+{
+    var songPath = Paths.mods.song.folder(curChart, WORKING_MOD_DIRECTORY);
+    return concat([songPath, '/', curChart, '.json']);
+}
+
+function getChartString()
+{
+    var unsortedLanes = [];
+    for (c in getCharArray()) unsortedLanes.push(lanes[c]);
+
+    var sortedLanes = sortArray(unsortedLanes, (a, b) -> { return a.i < b.i ? -1 : a.i == b.i ? 0 : 1; });
+
+    var notesToSave = getMap2();
+
+    var playersToSave = [];
+    var opponentsToSave = [];
+
+    var diffs = getDiffArray();
+    for (diff in diffs) 
+    {
+        if (diff == curDif) notesToSave.set(diff, getMap());
+        else notesToSave.set(diff, parsedChart.notes.get(diff));
+    }
+
+    for (lane in sortedLanes)
+    {
+        var theseNotes = [];
+        for (note in lane.getAllNotes()) theseNotes.push(note.note);
+
+        sortArray(theseNotes, (a, b) -> { return a.ms < b.ms ? -1 : a.ms == b.ms ? 0 : 1; });
+    
+        notesToSave[curDif][lane.c] = theseNotes;
+
+        if (parsedChart.players.contains(lane.c)) playersToSave.push(lane.c);
+        if (parsedChart.opponents.contains(lane.c)) opponentsToSave.push(lane.c);
+    }
+
+    var chart = 
+    {
+        version: parsedChart.version,
+
+        song: parsedChart.song,
+        stage: parsedChart.stage,
+
+        metadata: parsedChart.metadata,
+
+        notes: notesToSave,
+        events: parsedChart.events,
+
+        bpm: parsedChart.bpm,
+        speed: parsedChart.speed,
+
+        needsVoices: parsedChart.needsVoices,
+
+        players: playersToSave,
+        opponents: opponentsToSave
+    }
+
+    return stringifyJson(chart, "\t");
+}
+
+function quitEditor(e) 
+{
+    UiS.openQuitDialog({
+        callback: (e) ->
+        {
+            if (!UiS.QUIT_DIALOG_BUTTONS.contains(e.button)) return;
+            if (e.button == UiS.QUIT_DIALOG_BUTTONS[2]) return;
+
+            if (e.button == UiS.QUIT_DIALOG_BUTTONS[0]) saveChart(null);
+            LoadingState.switchCustomState('MasterEditorMenu');
+        }
+    });
+}
+
+var CHARACTER_ICON_SIZE = 50;
+function openMetadataDialog(e)
+{
+    var meta = UiS.buildXml(['chart-editor', 'dialogs', 'metadata']);
+
+    var detailsTab = UiS.buildXml(['chart-editor', 'dialogs', 'tabs', 'details-tab']);
+    var m_Voices = UiS.get('metadata-needs-voices', detailsTab);
+    var m_BPM = UiS.get('metadata-bpm', detailsTab);
+    var m_Speed = UiS.get('metadata-speed', detailsTab);
+    var m_SetStage = UiS.get('stage-source', detailsTab);
+    var m_Stage = UiS.get('stage-name', detailsTab);
+    var m_PlayersView = UiS.get('players-view', detailsTab);
+    var m_PlayersRemove = UiS.get('players-remove', detailsTab);
+    var m_PlayersAdd = UiS.get('players-add', detailsTab);
+    var m_OpponentsView = UiS.get('opps-view', detailsTab);
+    var m_OpponentsRemove = UiS.get('opps-remove', detailsTab);
+    var m_OpponentsAdd = UiS.get('opps-add', detailsTab);
+
+    var metaTab = UiS.buildXml(['chart-editor', 'dialogs', 'tabs', 'metadata-tab']);
+    var m_CreditsView = UiS.get('credits-view', metaTab);
+    var m_CreditsAdd = UiS.get('credits-add', metaTab);
+    var m_RolesView = UiS.get('roles-view', metaTab);
+    var m_RolesAdd = UiS.get('roles-add', metaTab);
+
+    meta.addComponent(detailsTab);
+    meta.addComponent(metaTab);
+
+    detailsTab.text = concat(['"', curChart, '" Details']);
+
+    m_Voices.value = parsedChart.needsVoices;
+    m_Voices.onChange = (e) -> { parsedChart.needsVoices = m_Voices.value; }
+
+    m_BPM.value = parsedChart.bpm;
+    m_BPM.onChange = (e) ->
+    {
+        parsedChart.bpm = m_BPM.value; 
+        Conductor.mapBPMChanges();
+        updateBPMDependent(m_BPM.value);
+    }
+
+    m_Speed.value = parsedChart.speed;
+    m_Speed.onChange = (e) -> { parsedChart.speed = m_Speed.value; }
+
+    m_Stage.text = parsedChart.stage;
+    m_SetStage.onClick = (e) ->
+    {
+        var list = new ListView();
+        list.width = 200;
+        list.height = 300;
+        list.dataSource = getDataSource();
+
+        for (stage in FileSystem.readDirectory(Paths.folder('stages', WORKING_MOD_DIRECTORY)))
+            list.dataSource.add({text: stage});
+
+        UiS.openDialog({
+            title: 'Select Stage',
+            content: list,
+            buttons: ['Select', 'Cancel'],
+            callback: (e) ->
+            {
+                if (e.button != 'Select') return;
+
+                if (list.selectedItem == null) return;
+                var stageName = list.selectedItem.text;
+
+                parsedChart.stage = stageName;
+                m_Stage.text = stageName;
+            }
+        });
+    }
+
+    var images = [];
+    for (player in parsedChart.players) m_PlayersView.addComponent(getCharacterBox(player, images));
+    for (opp in parsedChart.opponents) m_OpponentsView.addComponent(getCharacterBox(opp, images));
+
+    var addCharacter = (e) ->
+    {
+        var isPlayer = stringContains(e.target.styleNames, 'player');
+        var currentCharacters = getCharArray();
+
+        var source = getDataSource();
+        for (folder in FileSystem.readDirectory(Paths.folder('characters', WORKING_MOD_DIRECTORY)))
+            if (!currentCharacters.contains(folder)) source.add({text: folder});
+
+        var selec = new ListView();
+        selec.dataSource = source; 
+        selec.width = 200; 
+        selec.height = 480;
+
+        UiS.openDialog({
+            content: selec,
+            title: 'Add Character', 
+            buttons: ['Add', 'Cancel'], 
+            callback: (e) ->
+            {
+                if (e.button != 'Add') return;
+                if (selec.selectedItem == null) return;
+
+                remove(gridSprite); 
+                remove(focusSprite);
+                
+                var c = selec.selectedItem.text;
+                var lane = createNewLane(c, getCharArray().length, [c => []]);
+
+                for (diff in getDiffArray()) parsedChart.notes[diff][c] = [];
+                addLaneElements(lane);
+
+                var box = getCharacterBox(c, []);
+                if (isPlayer) 
+                {
+                    parsedChart.players.push(c);
+                    m_PlayersView.addComponent(box);
+                }
+                else
+                {
+                    parsedChart.opponents.push(c);
+                    m_OpponentsView.addComponent(box);
+                }
+
+                add(gridSprite); 
+                add(focusSprite);
+
+                drawMinimapNotes();
+            }
+        });
+    }
+
+    var removeCharacter = (e) ->
+    {
+        var isPlayer = stringContains(e.target.styleNames, 'player');
+        var currentCharacters = getCharArray();
+
+        var charsToDelete = [];
+        var view = isPlayer ? m_PlayersView : m_OpponentsView;
+
+        var removingAny = false;
+        for (box in UiS.gets('char-box', view))
+        {
+            var c = UiS.get('char-name', box).text;
+            var delete = UiS.get('char-select', box).selected;
+
+            if (!delete) continue;
+
+            removingAny = true;
+
+            var lane = lanes[c];
+
+            lane.grid.destroy(); 
+            lane.beats.destroy();
+            lane.sections.destroy(); 
+            lane.icon.destroy(); 
+            lane.text.destroy();
+            for (note in lane.getAllNotes())
+            {
+                note.sprite.destroy();
+                if (note.sus != null) note.sus.destroy();
+            }
+            for (strum in lane.strums) strum.destroy();
+
+            lanes.remove(c);
+
+            i = 0;
+            forEachLane((lane) -> 
+            { 
+                lane.i = i;
+                i++;
+            });
+
+            if (isPlayer) parsedChart.players.remove(c);
+            else parsedChart.opponents.remove(c);
+
+            view.removeComponent(box);
+
+            charsToDelete.push(c);
+        }
+
+        if (!removingAny) return;
+
+        repositionLanes();
+        drawMinimapNotes();
+
+        trace(concat(['Deleted chars ', charsToDelete]));
+    }
+
+    m_PlayersAdd.onClick = addCharacter;
+    m_OpponentsAdd.onClick = addCharacter;
+
+    m_PlayersRemove.onClick = removeCharacter;
+    m_OpponentsRemove.onClick = removeCharacter;
+
+    m_CreditsView.dataSource = getCredSource();
+    m_CreditsView.onChange = (e) ->
+    {
+        m_RolesView.dataSource = getRoleSource(m_CreditsView.selectedIndex);
+    }
+    m_CreditsView.selectedIndex = 0;
+
+    m_CreditsView.onComponentEvent = (e)->
+    {
+        if (e.source.id != 'delete') return;
+        
+        var name = UiS.get('label', e.target).text;
+        
+        for (i in 0...parsedChart.metadata.length)
+        {
+            var cred = parsedChart.metadata[i];
+            if (cred.name != name) continue;
+            
+            if (m_CreditsView.selectedIndex == parsedChart.metadata.length - 1) 
+                if (m_CreditsView.selectedIndex != 0) m_CreditsView.selectedIndex--;
+
+            parsedChart.metadata.remove(cred);
+
+            break;
+        }
+
+        m_CreditsView.dataSource = getCredSource();
+        if (parsedChart.metadata.length == 0) m_RolesView.dataSource = getDataSource();
+    }
+
+    m_RolesView.onComponentEvent = (e)->
+    {
+        if (e.source.id != 'delete') return;
+        
+        var role = UiS.get('label', e.target).text;
+        parsedChart.metadata[m_CreditsView.selectedIndex].roles.remove(role);
+
+        m_RolesView.dataSource = getRoleSource(m_CreditsView.selectedIndex);
+    }
+
+    m_CreditsAdd.onClick = (e) ->
+    {
+        var nameInput = new haxe.ui.components.TextField(); 
+        nameInput.placeholder = 'Enter Credit name...';
+        
+        UiS.openDialog({
+            content: nameInput, 
+            title: 'Add New Credit', 
+            buttons: ['Add', 'Cancel'], 
+            callback: (e) ->
+            {
+                if (e.button != 'Add') return;
+                if (nameInput.text == '' || nameInput.text == null) return;  
+
+                if (parsedChart.metadata == null) parsedChart.metadata = [];
+                parsedChart.metadata.push({name: nameInput.text, roles: []});
+                m_CreditsView.dataSource = getCredSource();
+            }
+        });
+    }
+
+    m_RolesAdd.onClick = (e) ->
+    {
+        var nameInput = new haxe.ui.components.TextField(); 
+        nameInput.placeholder = 'Enter role...';
+        
+        UiS.openDialog({
+            content: nameInput, 
+            title: 'Add Role to Credit', 
+            buttons: ['Add', '{{cancel}}'],
+            callback: (e) ->
+            {
+                if (e.button != 'Add') return;
+                if (nameInput.text == '' || nameInput.text == null) return;
+                
+                for (cred in parsedChart.metadata) 
+                    if (cred.name == m_CreditsView.selectedItem.name) 
+                        cred.roles.push(nameInput.text);
+
+                m_RolesView.dataSource = getRoleSource(m_CreditsView.selectedIndex);
+            }
+        });
+    }
+
+    UiS.openDialog({
+        content: meta,
+        title: 'Chart Metadata',
+        callback: (e) ->
+        {
+            for (image in images) image.destroy();
+        }
+    });
+}
+
+function getCharacterBox(name, images)
+{
+    var box = new VBox();
+    box.styleNames = 'char-box';
+
+    var icon = new haxe.ui.components.Image(); 
+    icon.width = CHARACTER_ICON_SIZE; 
+    icon.height = CHARACTER_ICON_SIZE;
+
+    icon.horizontalAlign = 'center'; 
+    icon.imageVerticalAlign = 'center'; 
+    icon.imageHorizontalAlign = 'center'; 
+    icon.scaleMode = 'fitinside'; 
+
+    icon.value = variantFromFrame(lanes[name].icon.frame);
+    images.push(icon);
+
+    var label = new Label();
+    label.horizontalAlign = 'center';
+    label.text = name;
+    label.styleNames = 'char-name';
+
+    var select = new CheckBox();
+    select.text = '';
+    select.horizontalAlign = 'center';
+    select.styleNames = 'char-select';
+
+    UiS.addSpacer(0, 4, box);
+    box.addComponent(icon);
+    box.addComponent(label);
+    box.addComponent(select);
+    UiS.addSpacer(0, 4, box);
+
+    return box;
+}
+
+function openEventWindow(grouping)
+{
+    var editEvent = UiS.buildXml(['chart-editor', 'dialogs', 'edit-event']);
+    var tabs = UiS.get('tabs', editEvent);
+    var addButton = UiS.get('add-event', editEvent);
+    var removeButton = UiS.get('remove-event', editEvent);
+
+    var eventsInGrouping = [];
+
+    var i = 0;
+    for (event in grouping.events)
+    {
+        buildEventTab(grouping, event, tabs); 
+        eventsInGrouping.push(event.t);
+        i++;
+    }
+
+    addButton.onClick = (e) ->
+    {
+        var types = ChartEventManager.getRegisteredStructures(); 
+
+        var source = getDataSource();
+        for (t in types) if (!eventsInGrouping.contains(t)) source.add({text: t, icon: getEventIcon(t)});
+
+        var list = new ListView();
+        list.dataSource = source;
+        list.height = 500; 
+        list.width = 200;
+
+        UiS.openDialog({
+            content: list,
+            title: 'Add Event To Grouping', 
+            buttons: ['Add', 'Cancel'], 
+            callback: (e) ->
+            {
+                if (e.button != 'Add') return;
+                if (list.selectedItem == null) return;
+
+                var thisGrouping = ChartEventManager.getGroupingFromMS(parsedChart, grouping.ms);
+                i = thisGrouping.length;
+
+                var t = list.selectedItem.text; eventsInGrouping.push(t);
+
+                var thisEvent = {t: t, e: []}
+                for (entry in ChartEventManager.getEventStructure(t).e)
+                {
+                    thisEvent.e.push({
+                        n: entry.n,
+                        t: entry.t,
+                        v: entry.d
+                    });
+                }
+                thisGrouping.push(thisEvent);
+
+                previousEvent = thisEvent;
+
+                grouping.text.text = concat([i + 1]);
+                fitToWidth(grouping.text, GRID_SIZE);
+
+                buildEventTab({ms: grouping.ms, events: thisGrouping}, thisEvent, tabs); 
+                tabs.pageIndex = i;
+                
+                switch(t)
+                {
+                    case BPM_CHANGE_EVENT_NAME: Conductor.mapBPMChanges();
+                    case CHAR_FOCUS_EVENT_NAME: Conductor.mapCharFocus();
+                }
+            }
+        });
+    }
+
+    removeButton.onClick = (e) ->
+    {
+        var thisGrouping = ChartEventManager.getGroupingFromMS(parsedChart, grouping.ms);
+        if (thisGrouping.length == 1) return;
+
+        var name = thisGrouping[tabs.pageIndex].t;
+
+        var full = new VBox(); 
+        UiS.addLabel(concat(['Are you sure you want to remove event "', name, '" from grouping?']), full);
+        UiS.openDialog({
+            content: full, 
+            title: 'Remove Event From Grouping',
+            buttons: ['Remove', 'Cancel'],
+            callback: (e) ->
+            {
+                if (e.button != 'Remove') return;
+
+                eventsInGrouping.remove(name);
+
+                var eventToRemove = thisGrouping[tabs.pageIndex];
+
+                thisGrouping.remove(eventToRemove); 
+                grouping.events.remove(eventToRemove);
+                eventLane.getGroupingFromMS(grouping.ms).events.remove(eventToRemove);
+                
+                i = thisGrouping.length - 1;
+
+                var laneGrouping = eventLane.getGroupingFromMS(grouping.ms);
+                laneGrouping.text.text = concat([grouping.events.length]);
+                fitToWidth(laneGrouping.text, GRID_SIZE);
+
+                switch(eventToRemove.t)
+                {
+                    case BPM_CHANGE_EVENT_NAME: Conductor.mapBPMChanges();
+                    case CHAR_FOCUS_EVENT_NAME: Conductor.mapCharFocus();
+                }
+
+                tabs.removePage(tabs.pageIndex);
+                tabs.pageIndex = 0;
+            }
+        });
+    }
+
+    UiS.openDialog({content: editEvent, title: 'Edit Event Grouping'});
+}
+
+function buildEventTab(grouping, event, box)
+{
+    var thisTab = UiS.buildXml(['chart-editor', 'event-box']);
+    var entries = UiS.get('entries', thisTab);
+
+    var x = 0;
+    for (i in 0...event.e.length)
+    {
+        var entry = event.e[i];
+        entries.addComponent(getEntryBehaviour(grouping, event, entry, x));
+
+        x++;
+    }
+
+    for (i in 0...grouping.events.length)
+    {
+        if (grouping.events[i].t != event.t) continue;
+
+        var hbox = new HBox();
+
+        var icon = new haxe.ui.components.Image(); 
+        icon.width = 24; 
+        icon.height = 24;
+        icon.value = getEventIcon(grouping.events[i].t);
+        hbox.addComponent(icon);
+
+        var label = new Label();
+        label.text = grouping.events[i].t;
+        label.verticalAlign = 'center';
+        hbox.addComponent(label);
+
+        box.addComponent(thisTab);
+
+        var tabBar = UiS.get('tabbar', box);
+        tabBar.tabButtons[tabBar.tabButtons.length - 1].addComponent(hbox);
+    }
+}
+
+function getCredSource()
+{
+    var source = getDataSource();
+    if (parsedChart.metadata != null) for (cred in parsedChart.metadata) source.add({name: cred.name});
+
+    return source;
+}
+
+function getRoleSource(i)
+{
+    var source = getDataSource();
+    if (parsedChart.metadata != null) for (role in parsedChart.metadata[i].roles) source.add({name: role});
+
+    return source;
+}
+
+function getEntryBehaviour(grouping, event, entry, x)
+{
+    var component = ChartEventManager.getEntryBehaviour(entry.t, parsedChart, grouping.ms, grouping.events.indexOf(event), x);
+    if (component == null) component = UiS.buildXml(['chart-editor', 'missing-behaviour']);
+
+    return component;
+}
+
+function getEventIcon(t) 
+{ 
+    switch(t)
+    {
+        case 'None': return variantFromFrame(new FlxSprite().load(Paths.mods.state.image(['chart', 'icon-noEvent']).content).frame);
+        
+        case BPM_CHANGE_EVENT_NAME: return variantFromFrame(new FlxSprite().load(Paths.mods.state.image(['chart', 'icon-bpmChange']).content).frame);
+        case CHAR_FOCUS_EVENT_NAME: return variantFromFrame(new FlxSprite().load(Paths.mods.state.image(['chart', 'icon-charFocus']).content).frame);
+        
+        default: 
+            var iconGraphic = Paths.mods.event.image([t, 'icon'], WORKING_MOD_DIRECTORY).content;
+            if (iconGraphic == null) return getEventIcon('None');
+
+            return variantFromFrame(new FlxSprite().load(iconGraphic).frame);
+    }
+}
+
+function openJumpDialog(mode)
+{
+    var title = concat(['Jump to ', mode]);
+    var mult = 1;
+
+    switch(mode)
+    {
+        case JUMP_TO_BEAT: mult = 4;
+        case JUMP_TO_SECT: mult = 16;
+    }
+
+    var stepper = new NumberStepper();
+    stepper.min = 0;
+
+    UiS.openDialog({
+        content: stepper, 
+        title: title, 
+        buttons: ['Jump!', 'Cancel'],
+        callback: (e) ->
+        {
+            switch(e.button)
+            {
+                case 'Cancel': return;
+                case 'Jump!': 
+                    if (stepper.pos == null) return;
+                    jumpToMS(Conductor.getMS(stepper.pos * mult));
+            }
+        }
+    });
+}
+
+function openJumpStepDialog(e) { openJumpDialog(JUMP_TO_STEP); }
+function openJumpBeatDialog(e) { openJumpDialog(JUMP_TO_BEAT); }
+function openJumpSectDialog(e) { openJumpDialog(JUMP_TO_SECT); }
+
+function jumpToMS(ms) 
+{
+    Conductor.songPosition = ms; 
+    FlxG.sound.music.time = ms;
+
+    if (needsVoices()) vocxSong.time = ms;
+
+    camManager.currentPos.y = getNoteY(ms);
+}
+
+function openCreateEventDialog(e)
+{
+    var createEvent = UiS.buildXml(['chart-editor', 'dialogs', 'create-event']);
+    var v_EventName = UiS.get('event-name', createEvent);
+    var v_EventNameValidity = UiS.get('event-name-validity', createEvent);
+    var v_EntriesView = UiS.get('entries-view', createEvent);
+    var v_AddEntry = UiS.get('entries-add', createEvent);
+    var v_EditEntry = UiS.get('edit-entry', createEvent);
+    var v_Create = UiS.get('event-create', createEvent);
+
+    var validateCreateButton = () -> 
+    { 
+        v_Create.disabled = true;
+
+        if (v_EventName.text == null) return;
+        if (v_EventName.text == '') return;
+        if (v_EntriesView.dataSource.length <= 0) return;
+
+        v_Create.disabled = false;
+    }
+
+    var event = {
+        t: '',
+        e: []
+    }
+
+    UiS.get('mod-directory', createEvent).text = concat(['\nWorking mod directory "', WORKING_MOD_DIRECTORY, '"']);
+
+    var editorContent = new PropertyGrid(); 
+    v_EditEntry.addComponent(editorContent);
+
+    v_EntriesView.onChange = (e) ->
+    {
+        if (event.e.length == 0) return;
+
+        validateCreateButton();
+
+        v_EditEntry.removeComponent(editorContent);
+        privateAccess(() -> 
+        {
+            var entry = event.e[v_EntriesView.selectedIndex];
+            var method = ChartEventManager.editorEntryMap.get(entry.t);
+
+            editorContent = method(parsedChart, {ms: 0, events: []}, event, entry);
+            v_EditEntry.addComponent(editorContent);
+        });
+    }
+
+    v_EventName.onChange = (e) ->
+    {
+        Paths.VERBOSE = false;
+
+        var path = Paths.mods.event.folder(v_EventName.text, WORKING_MOD_DIRECTORY);
+
+        if (v_EventName.text == '') v_EventNameValidity.text = 'Please enter a name.';
+        else if (path != null) v_EventNameValidity.text = concat(['Event named "', v_EventName.text, '" already exists.']);
+        else v_EventNameValidity.text = 'This name is ok.';
+
+        validateCreateButton();
+
+        Paths.VERBOSE = true;
+    }
+
+    v_AddEntry.onClick = (e) ->
+    {
+        var content = UiS.buildXml(['chart-editor', 'dialogs', 'event-entry']);
+        var v_EntryName = UiS.get('entry-name', content);
+        var v_EntryType = UiS.get('entry-type', content);
+
+        UiS.openDialog({
+            content: content,
+            title: 'Add New Entry',
+            buttons: ['Add', 'Cancel'],
+            callback: (e) ->
+            {
+                if (e.button != 'Add') return;
+
+                if (v_EntryType.selectedItem == null || v_EntryName.text == '' || v_EntryName.text == null) 
+                {
+                    alert('Please enter entry name & select type.', ALERT_TITLE);
+                    return;
+                }
+
+                var name = v_EntryName.text;
+
+                for (entry in event.e) 
+                    if (entry.n == name)
+                    {
+                        alert(concat(['Entry "', name, '" already exists.']), ALERT_TITLE);
+                        return;
+                    }
+
+                event.e.push({
+                    n: name,
+                    t: v_EntryType.selectedItem.text,
+                    v: null
+                });
+                v_EntriesView.dataSource.add({name: name});
+                v_EntriesView.selectedIndex = event.e.length - 1;
+
+                validateCreateButton();
+            }
+        });
+    }
+
+    v_EntriesView.onComponentEvent = (e)->
+    {
+        if (e.source.id != 'delete') return;
+        
+        var name = UiS.get('label', e.target).text;
+        
+        for (i in 0...event.e.length)
+        {
+            var entry = event.e[i];
+            if (entry.n != name) continue;
+            
+            if (v_EntriesView.selectedIndex == event.e.length - 1)
+                if (v_EntriesView.selectedIndex != 0) v_EntriesView.selectedIndex--;
+
+            event.e.remove(entry);
+
+            break;
+        }
+
+        var source = getDataSource();
+        for (entry in event.e) 
+            if (entry.n != name)
+                source.add({name: entry.n});
+
+        v_EntriesView.dataSource = source;
+    }
+
+    var createEventDialog;
+    v_Create.onClick = (e) ->
+    {
+        var name = v_EventName.text;
+
+        FileSystem.createDirectory(concat(['mods/', WORKING_MOD_DIRECTORY, '/custom_events/', name]));
+        var path = Paths.mods.event.folder(name, WORKING_MOD_DIRECTORY);
+
+        var structure = {
+            t: name,
+            e: []
+        }
+
+        for (entry in event.e)
+        {
+            structure.e.push({
+                n: entry.n,
+                t: entry.t,
+                d: entry.v
+            });
+        }
+
+        var content = stringifyJson(structure, '\t');
+        File.saveContent(concat([path, '/', name, '.json']), content);
+
+        UiS.addNotification({
+            title: 'Event Created!',
+            body: concat(['Event named "', structure.t, '" has been saved to "', path, '"!']),
+            actions: [{
+                text: 'Ok'
+            }, {
+                text: 'Take me there!',
+                callback: (e) -> 
+                {
+                    var fullPath = StringTools.replace(Path.join([Sys.getCwd(), path]), '/', '\\');
+                    Sys.command('explorer "' + fullPath + '"');
+                }
+            }],
+            type: NOTIFICATION_SUCCESS,
+            expiryMs: 2750
+        });
+
+        createEventDialog.hide();
+    }
+
+    createEventDialog = UiS.openDialog({
+        content: createEvent,
+        title: 'Create New Event'
+    });
+}
+
+// https://tenor.com/view/kris-flowey-laugh-gif-4551048917041720617

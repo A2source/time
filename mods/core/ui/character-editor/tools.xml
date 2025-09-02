@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Tools" height="200" top="515" left="210">
+    <vbox>
+        <label text="Animation Frame" />
+        <hbox>
+            <number-stepper pos="0" min="0" styleNames="anim-frame" />
+            <label styleNames="frame-range" verticalAlign="center" />
+        </hbox>
+
+        <section-header text="Character Trail" />
+
+        <button text="Set Trail Animation" styleNames="set-trail" />
+
+        <spacer height="6" />
+
+        <label text="Trail Alpha" />
+        <slider min="0" max="1" styleNames="trail-alpha" />
+    </vbox>
+</panel>

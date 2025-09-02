@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vbox width="150">
+    <text-field placeholder="Enter name..." styleNames="anim-name" />
+    <label text="Plase enter a name." styleNames="anim-name-validity" />
+
+    <rule style="margin-top: 4px; margin-bottom: 4px;" />
+
+    <button text="Add" horizontalAlign="center" disabled="true" styleNames="create"/>
+</vbox>

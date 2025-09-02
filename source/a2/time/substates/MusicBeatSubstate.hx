@@ -1,10 +1,10 @@
 package a2.time.substates;
 
 import a2.time.states.IntroState;
-import a2.time.util.Controls;
+import a2.time.backend.Controls;
 import a2.time.objects.song.Conductor;
 import a2.time.objects.song.Conductor.BPMChangeEvent;
-import a2.time.util.ClientPrefs;
+import a2.time.backend.ClientPrefs;
 
 import flixel.FlxG;
 import flixel.FlxSubState;
@@ -36,7 +36,7 @@ class MusicBeatSubstate extends FlxSubState
 
 	public var blockInput:Bool = false;
 
-	override function update(elapsed:Float)
+	override function update(dt:Float)
 	{
 		var oldStep:Int = curStep;
 
@@ -46,7 +46,7 @@ class MusicBeatSubstate extends FlxSubState
 		if (oldStep != curStep && curStep > 0)
 			stepHit();
 
-		super.update(elapsed);
+		super.update(dt);
 
 		if (FocusManager.instance.focus != null || Screen.instance.hasSolidComponentUnderPoint(Screen.instance.currentMouseX, Screen.instance.currentMouseY))
 		{
@@ -79,26 +79,15 @@ class MusicBeatSubstate extends FlxSubState
 	private function updateBeat():Void
 	{
 		curBeat = Math.floor(curStep / 4);
-		curDecBeat = curDecStep/4;
+		curDecBeat = curDecStep / 4;
 	}
 
 	private function updateCurStep():Void
 	{
-		var lastChange = Conductor.getBPMFromSeconds(Conductor.songPosition);
-
-		var shit = ((Conductor.songPosition - ClientPrefs.data.noteOffset) - lastChange.songTime) / lastChange.stepCrochet;
-		curDecStep = lastChange.stepTime + shit;
-		curStep = lastChange.stepTime + Math.floor(shit);
+		curDecStep = Conductor.decStep;
+		curStep = Math.floor(curDecStep);
 	}
 
-	public function stepHit():Void
-	{
-		if (curStep % 4 == 0)
-			beatHit();
-	}
-
-	public function beatHit():Void
-	{
-		//do literally nothing dumbass
-	}
+	public function stepHit():Void if (curStep % 4 == 0) beatHit();
+	public function beatHit():Void {}
 }

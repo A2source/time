@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vbox>
+    <number-stepper min="1" styleNames="index" />
+    <button text="Add" styleNames="add-index" />
+</vbox>

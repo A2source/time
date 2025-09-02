@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menubar width="100%">
+    <menu text="File">
+        <menuitem text="Open..." styleNames="ribbon-file-open" shortcutText="Ctrl+O" />
+        <menuitem text="New..." styleNames="ribbon-file-new" shortcutText="Ctrl+N" />
+        <menuseparator />
+        <menuitem text="Undo" styleNames="ribbon-file-undo" shortcutText="Ctrl+Z" />
+        <menuitem text="Redo" styleNames="ribbon-file-redo" shortcutText="Ctrl+Y" />
+        <menuseparator />
+        <menuitem text="Save" styleNames="ribbon-file-save" shortcutText="Ctrl+S" />
+        <menuseparator />
+        <menuitem text="Preferences" styleNames="ribbon-file-prefs" shortcutText="Ctrl+P" />
+        <menuseparator />
+        <menuitem text="Quit" styleNames="ribbon-file-quit" shortcutText="Escape" />
+    </menu>
+
+    <menu text="Stage">
+        <menuitem text="Mass Import Sprites" styleNames="ribbon-stage-mass-import" />
+        <menuseparator />
+        <menuitem text="Refocus Camera" styleNames="ribbon-stage-refocus" shortcutText="Ctrl+R" />
+        <menuitem text="Cycle Camera Focus" styleNames="ribbon-stage-focus" shortcutText="Ctrl+F" />
+        <menuseparator />
+        <menuitem text="Increase Scale Globally" styleNames="ribbon-stage-increase" />
+        <menuitem text="Decrease Scale Globally" styleNames="ribbon-stage-decrease" />
+    </menu>
+
+    <menu text="View">
+        <menucheckbox text="Show UI" styleNames="ribbon-view-show-ui" selected="true" shortcutText="F" />
+        <menuseparator />
+        <menucheckbox text="Object Panel" styleNames="ribbon-view-object-panel" selected="true" shortcutText="Ctrl+H" />
+        <menucheckbox text="Value Panel" styleNames="ribbon-view-value-panel" selected="true" shortcutText="Ctrl+J" />
+        <menucheckbox text="Lighting Panel" styleNames="ribbon-view-lighting-panel" selected="true" shortcutText="Ctrl+K" />
+        <menucheckbox text="Shadow Panel" styleNames="ribbon-view-shadow-panel" selected="true" shortcutText="Ctrl+L" />
+        <menucheckbox text="Animations Panel" styleNames="ribbon-view-anim-panel" selected="true" shortcutText="Ctrl+;" />
+        <menucheckbox text="Animation Picker" styleNames="ribbon-view-anim-picker" selected="true" shortcutText="Ctrl+'" />
+    </menu>
+</menubar>

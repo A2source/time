@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Difficulty" width="100" height="102">
+        <listview styleNames="diff" width="100%" height="100%" />
+</panel>

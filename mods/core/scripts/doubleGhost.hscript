@@ -1,0 +1,30 @@
+function onHitNote(note, ms)
+{
+    runGhost(note, false);
+}
+
+function onOpponentHit(note)
+{
+    runGhost(note, true);
+}
+
+function runGhost(note, isOpp)
+{
+    if (note.hasTail)
+        return;
+
+    var char = isOpp ? getCurOpponent() : getCurPlayer();
+
+    if (char.prevDir != -1)
+    {
+        var animToSing = char.getSingAnimationFromData(char.prevDir);
+        if (animToSing != '') char.playTrailAnim(true, animToSing, true);
+    }
+    
+    char.prevDir = note.d;
+
+    FlxTimer.wait(0.03, ()->
+    {
+        char.prevDir = -1;
+    });
+}

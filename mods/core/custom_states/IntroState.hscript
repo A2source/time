@@ -1,6 +1,64 @@
+var logo;
+
+var soundTimer = new FlxTimer();
+var tweenTimer = new FlxTimer();
+var introTimer = new FlxTimer();
+var introSound;
+
 function create() 
 {
-    if (!IntroState.initialized) makeTransition();
+    StateTransitionManager.registerStateTransition('BaseStateTransitionSubState');
+    LoadingScreenManager.registerLoadingScreen('BaseLoadingScreen');
+    SoundTrayManager.registerSoundTray('BaseSoundTray');
 
-    LoadingState.loadAndSwitchCustomState('MasterEditorMenu');
+    Main.fpsVar.visible = false;
+    moveFPS(-75);
+
+    logo = new FlxSprite().load(Paths.mods.image(['logo']).content);
+    logo.antialiasing = false;
+    add(logo);
+
+    logo.updateHitbox();
+    logo.screenCenter();
+    logo.alpha = 0;
+
+    introTimer.start(0.6, (t) ->
+    {
+        FlxTween.tween(logo.scale, {x: 0.6, y: 0.6}, 0.4, {ease: FlxEase.expoOut});
+        FlxTween.tween(logo, {alpha: 1}, 0.4, {ease: FlxEase.expoOut});
+
+        soundTimer.start(0.1, (t) ->
+        {
+            intrSound = FlxG.sound.play(Paths.mods.sound(['intro']).content);
+        });
+
+        tweenTimer.start(0.8, (t) -> 
+        { 
+            FlxTween.tween(logo.scale, {x: 0.5, y: 0.5}, 1.6, {ease: FlxEase.expoIn});
+            FlxTween.tween(logo, {alpha: 0}, 1.6, {ease: FlxEase.expoIn, onComplete: (t) -> { finishIntro(); }});
+        });
+    });
+}
+
+function update(dt)
+{
+    if (controls.ACCEPT) finishIntro();
+}
+
+function finishIntro()
+{
+    if (introSound != null)
+        introSound.volume = 0;
+
+    soundTimer.cancel();
+    tweenTimer.cancel();
+    introTimer.cancel();
+
+    FlxTween.cancelTweensOf(logo);
+    FlxTween.cancelTweensOf(logo.scale);
+
+    logo.visible = false;
+
+    Main.fpsVar.visible = ClientPrefs.get('showFPS');
+    LoadingState.switchCustomState('MasterEditorMenu');
 }

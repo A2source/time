@@ -2,8 +2,8 @@ package a2.time.objects.gameplay;
 
 import flixel.FlxSprite;
 
-import a2.time.util.ClientPrefs;
-import a2.time.Paths;
+import a2.time.backend.ClientPrefs;
+import a2.time.backend.Paths;
 
 using StringTools;
 
@@ -23,23 +23,24 @@ class HealthIcon extends FlxSprite
 		scrollFactor.set();
 	}
 
-	override function update(elapsed:Float)
+	override function update(dt:Float)
 	{
-		super.update(elapsed);
+		super.update(dt);
 
 		if (sprTracker != null)
 			setPosition(sprTracker.x + sprTracker.width + 10, sprTracker.y - 30);
 	}
 
 	private var iconOffsets:Array<Float> = [0, 0, 0];
+	public static var ICON_FRAME_SIZE:Int = 150;
 	public function change(char:String, suffix:String = '') 
 	{
 		if(character != char) 
 		{
 			var iconGraphic:Dynamic = null;
-			for (mod in Paths.getModDirectories())
+			for (mod in Paths.directories)
 			{
-				var check = Paths.timeGraphic(Paths.charImage(char, 'icons$suffix', mod));
+				var check = Paths.mods.character.image([char, 'icons$suffix'], mod).content;
 
 				if (check != null)
 				{
@@ -51,36 +52,27 @@ class HealthIcon extends FlxSprite
 			var file:Dynamic = iconGraphic;
 
 			if (file == null)
-				file = Paths.image('face');
+				file = a2.time.backend.Assets.cacheGraphic('assets/shared/images/face.png').content;
 
 			loadGraphic(file); // Load stupidly first for getting the file size
-			var width2 = width;
 
-			if (width == 450) 
+			var iconAmt:Int = Math.floor(width / ICON_FRAME_SIZE);
+			loadGraphic(file, true, Math.floor(width / iconAmt), Math.floor(height));
+
+			var frameIndices:Array<Int> = [];
+			for (i in 0...iconAmt)
 			{
-				loadGraphic(file, true, Math.floor(width / 3), Math.floor(height)); // winning icons go br
-				iconOffsets[0] = (width - 150) / 3;
-				iconOffsets[1] = (width - 150) / 3;
-				iconOffsets[2] = (width - 150) / 3;
-			} 
-			else 
-			{
-				loadGraphic(file, true, Math.floor(width / 2), Math.floor(height)); // Then load it fr
-				iconOffsets[0] = (width - 150) / 2;
-				iconOffsets[1] = (width - 150) / 2;
+				iconOffsets.push((width - ICON_FRAME_SIZE) / iconAmt);
+				frameIndices.push(i);
 			}
 			
 			updateHitbox();
-
-			if (width2 == 450)
-				animation.add(char, [0, 1, 2], 0, false, isPlayer);
-			else
-				animation.add(char, [0, 1], 0, false, isPlayer);
+			animation.add(char, frameIndices, 0, false, isPlayer);
 
 			animation.play(char);
 			character = char;
 
-			antialiasing = ClientPrefs.data.antialiasing;
+			antialiasing = ClientPrefs.get('antialiasing');
 
 			if(character.endsWith('-pixel'))
 				antialiasing = false;
@@ -90,8 +82,6 @@ class HealthIcon extends FlxSprite
 	override function updateHitbox()
 	{
 		super.updateHitbox();
-
-		offset.x = iconOffsets[0];
-		offset.y = iconOffsets[1];
+		offset.set(iconOffsets[0], iconOffsets[0]);
 	}
 }

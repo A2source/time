@@ -1,0 +1,40 @@
+var cols = [
+    'purple',
+    'blue',
+    'green',
+    'red'
+];
+
+function load()
+{
+    registerScriptContentToLoad({
+        method: Paths.mods.atlas,
+        keys: ['noteSplashes']
+    });
+}
+
+function postScoreCalc(note, data)
+{
+    if (note == null) return;
+    if (data.rating != 'sick') return;
+
+    var sprite = game.playerStrums[note.d];
+
+    var splash = new FlxSprite(sprite.x, sprite.y).loadAtlas(Paths.mods.atlas(['noteSplashes']).content);
+    splash.scale.set(0.75, 0.75);
+    splash.offset.set(70, 75);
+    splash.animation.addByPrefix('splash', concat(['note impact ', FlxG.random.int(1, 2), ' ', cols[note.d]]), 24, false);
+    splash.animation.play('splash');
+    splash.cameras = [cams.hud];
+
+    splash.animation.finishCallback = (name) ->
+    {
+        FlxTimer.wait(0.05, ()-> 
+        {
+            remove(splash);
+            splash.destroy();
+        });
+    }
+
+    insert(game.length, splash);
+}

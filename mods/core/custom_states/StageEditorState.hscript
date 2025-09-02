@@ -1,0 +1,2079 @@
+var VERSION = '3.0.0';
+
+var OBJECT_TREE_CHARACTERS = 'Characters';
+var STAGE_PLACEMENT_SCRIPT = 'placement';
+
+var ribbon = Screen.addComponent(UiS.buildXml(['stage-editor/ribbon']));
+var r_MassImport = UiS.get('ribbon-stage-mass-import', ribbon);
+var r_RefocusCamera = UiS.get('ribbon-stage-refocus', ribbon);
+var r_CycleFocus = UiS.get('ribbon-stage-focus', ribbon);
+var r_ScaleIncrease = UiS.get('ribbon-stage-increase', ribbon);
+var r_ScaleDecrease = UiS.get('ribbon-stage-decrease', ribbon);
+
+var r_ShowUI = UiS.get('ribbon-view-show-ui', ribbon);
+var r_Object = UiS.get('ribbon-view-object-panel', ribbon);
+var r_Value = UiS.get('ribbon-view-value-panel', ribbon);
+var r_Lighting = UiS.get('ribbon-view-lighting-panel', ribbon);
+var r_Shadow = UiS.get('ribbon-view-shadow-panel', ribbon);
+var r_Animations = UiS.get('ribbon-view-anim-panel', ribbon);
+var r_Picker = UiS.get('ribbon-view-anim-picker', ribbon);
+
+var values = Screen.addComponent(UiS.buildXml(['stage-editor/values']));
+
+var rim = Screen.addComponent(UiS.buildXml(['stage-editor/rim-light']));
+var rimShaderFrag = Paths.mods.shader(['rimLighting']).content;
+
+var shadow = Screen.addComponent(UiS.buildXml(['stage-editor/shadow']));
+
+// element property
+var ep_ZIndex = UiS.get('values-zindex', values);
+var ep_Antialiasing = UiS.get('values-anti', values);
+var ep_Visible = UiS.get('values-visible', values);
+
+var ep_Blend = UiS.get('values-blend', values);
+var blendModes = [
+    'Add',
+    'Alpha',
+    'Darken',
+    'Difference',
+    'Erase',
+    'Hardlight',
+    'Invert',
+    'Layer',
+    'Lighten',
+    'Multiply',
+    'Normal',
+    'Overlay',
+    'Screen',
+    'Shader',
+    'Subtract'
+];
+
+var ep_X = UiS.get('values-x', values);
+var ep_Y = UiS.get('values-y', values);
+var ep_ScrollX = UiS.get('values-scrollx', values);
+var ep_ScrollY = UiS.get('values-scrolly', values);
+var ep_SkewX = UiS.get('values-skewx', values);
+var ep_SkewY = UiS.get('values-skewy', values);
+var ep_ScaleX = UiS.get('values-scalex', values);
+var ep_ScaleY = UiS.get('values-scaley', values);
+var ep_Alpha = UiS.get('values-alpha', values);
+var ep_Angle = UiS.get('values-angle', values);
+var ep_FlipX = UiS.get('values-flipx', values);
+var ep_FlipY = UiS.get('values-flipy', values);
+var ep_Colour = UiS.get('values-col', values);
+
+var ep_OverlayCol = UiS.get('rim-overlay-col', rim);
+var ep_OverlayAlpha = UiS.get('rim-overlay-alpha', rim);
+var ep_SatinCol = UiS.get('rim-satin-col', rim);
+var ep_SatinAlpha = UiS.get('rim-satin-alpha', rim);
+var ep_InnerCol = UiS.get('rim-inner-col', rim);
+var ep_InnerAlpha = UiS.get('rim-inner-alpha', rim);
+var ep_RimAngle = UiS.get('rim-angle', rim);
+var ep_RimDist = UiS.get('rim-dist', rim);
+
+var ep_SimpleShadows = UiS.get('simple-shadows', shadow);
+var ep_ShadowAlpha = UiS.get('shadow-alpha', shadow);
+var ep_BaseOriginX = UiS.get('base-originx', shadow);
+var ep_BaseOriginY = UiS.get('base-originy', shadow);
+var ep_BaseOffsetX = UiS.get('base-offsetx', shadow);
+var ep_BaseOffsetY = UiS.get('base-offsety', shadow);
+var ep_BaseScaleX = UiS.get('base-scalex', shadow);
+var ep_BaseScaleY = UiS.get('base-scaley', shadow);
+var ep_BaseSkewX = UiS.get('base-skewx', shadow);
+var ep_BaseSkewY = UiS.get('base-skewy', shadow);
+var ep_AnimOffsetX = UiS.get('anim-offsetx', shadow);
+var ep_AnimOffsetY = UiS.get('anim-offsety', shadow);
+var ep_AnimScaleX = UiS.get('anim-scalex', shadow);
+var ep_AnimScaleY = UiS.get('anim-scaley', shadow);
+var ep_AnimSkewX = UiS.get('anim-skewx', shadow);
+var ep_AnimSkewY = UiS.get('anim-skewy', shadow);
+
+var useSimpleShadows = false;
+
+var picker = Screen.addComponent(UiS.buildXml(['character-editor', 'animation-picker']));
+var a_Filter = UiS.get('animation-filter', picker);
+var a_List = UiS.get('animation-picker', picker);
+var a_Add = UiS.get('add-anim', picker);
+
+var animations = Screen.addComponent(UiS.buildXml(['stage-editor', 'animations']));
+var a_Tag = UiS.get('anim-tag', animations);
+var a_FPS = UiS.get('anim-fps', animations);
+var a_FlipX = UiS.get('anim-flipx', animations);
+var a_FlipY = UiS.get('anim-flipy', animations);
+var a_Loop = UiS.get('anim-loop', animations);
+var a_LoopPoint = UiS.get('anim-looppoint', animations);
+
+var objects = Screen.addComponent(UiS.buildXml(['stage-editor/objects']));
+var objectTree = UiS.get('object-tree', objects);
+var objectTreeRootNodes = [];
+var rootToAddSpriteTo = {
+    name: '',
+    root: null
+}
+
+var camManager;
+
+var initChars = [];
+var opps = [];
+
+var stageObjects = [];
+var stageLayers = [];
+
+var gen;
+var saveWindowTitle = Lib.application.window.title;
+
+var camStage;
+var camSelec;
+
+var selectionBox = add(new FlxSprite().makeGraphic(0, 0, 0x00000000));
+
+var UI_MODE_SET = 'SET';
+var UI_MODE_DISABLED = 'DISABLED';
+
+var currentUIMode = UI_MODE_SET;
+var selectedElementID = 0;
+
+var parsedStages = [];
+
+function load()
+{
+    curStage = ClientPrefs.register('timeCurrentStage', 'stage');
+
+    var stageBatch = {
+        name: concat(['Loading "', curStage, '" Stage Assets...']),
+        jobs: [],
+        dir: WORKING_MOD_DIRECTORY
+    }
+
+    var charactersBatch = {
+        name: 'Loading Character Assets...',
+        jobs: [],
+        dir: WORKING_MOD_DIRECTORY
+    }
+
+    privateAccess(() ->
+    {
+        var script = Paths.mods.stage.script([curStage, STAGE_PLACEMENT_SCRIPT], WORKING_MOD_DIRECTORY).path;
+        if (script != null) this.hscriptManager.addScriptFromPath(script);
+
+        this.hscriptManager.setAll('registerCharacterToLoad', (char) ->
+        {
+            var pngs = [];
+            var foundAtlas = [];
+            var jsons = [];
+            for (file in FileSystem.readDirectory(Paths.mods.character.folder(char, WORKING_MOD_DIRECTORY)))
+            {
+                var name = file.split('.')[0];
+
+                if (stringEndsWith(file, PNG_FILE_EXT)) pngs.push(name);
+                else if (stringEndsWith(file, XML_FILE_EXT) && pngs.contains(name)) foundAtlas.push(name);
+                else if (stringEndsWith(file, JSON_FILE_EXT)) jsons.push(name);
+            }
+
+            for (atlas in foundAtlas) 
+            {
+                charactersBatch.jobs.push({
+                    method: Paths.mods.character.atlas,
+                    keys: [char, atlas]
+                });
+            }
+
+            for (json in jsons)
+            {
+                charactersBatch.jobs.push({
+                    method: Paths.mods.character.json,
+                    keys: [char, json]
+                });
+            }
+        });
+        this.hscriptManager.setAll('registerAssetToLoad', (job) ->
+        {
+            stageBatch.jobs.push(job);
+        });
+        this.hscriptManager.call('load', ['NO_SONG'], STAGE_PLACEMENT_SCRIPT);
+    });
+
+    var editorBatch = {
+        name: 'Loading Editor Assets...',
+        jobs: []
+    }
+
+    var xmlPath = 'ui/stage-editor';
+    for (file in FileSystem.readDirectory(Paths.folder(xmlPath)))
+    {
+        var name = file.split('.')[0];
+        if (!stringEndsWith(file, XML_FILE_EXT))
+        {
+            for (xml in FileSystem.readDirectory(Paths.folder(concat([xmlPath, '/', file]))))
+            {
+                var xmlName = xml.split('.')[0];
+                editorBatch.jobs.push({
+                    method: Paths.mods.ui.xml,
+                    keys: ['stage-editor', file, xmlName]
+                });
+            }
+        }
+        else
+        {
+            editorBatch.jobs.push({
+                method: Paths.mods.ui.xml,
+                keys: ['stage-editor', name]
+            });
+        }
+    }
+
+    var batches = [];
+
+    if (stageBatch.jobs.length > 0) batches.push(stageBatch);
+    if (charactersBatch.jobs.length > 0) batches.push(charactersBatch);
+    batches.push(editorBatch);
+
+    LoadingState.initializeLoadingScreen(batches, { state: 'StageEditorState' });
+}
+
+function create()
+{
+    FlxG.mouse.visible = true;
+
+    for (stage in FileSystem.readDirectory(Paths.folder('stages', WORKING_MOD_DIRECTORY)))
+        parsedStages.push(stage);
+
+    DiscordClient.changePresence({state: 'Stage Editor'});
+
+    curStage = ClientPrefs.register('timeCurrentStage', 'stage');
+
+    camManager = new CameraManager([
+        {name: 'stage', follow: true},
+        {name: 'selec', follow: true},
+        {name: 'ui', follow: false}
+    ], 2);
+    camManager.inEditor = true;
+    camManager.minZoom = 0.001;
+    camManager.maxZoom = 100;
+
+    camStage = camManager.cams[0].cam;
+    camSelec = camManager.cams[1].cam;
+
+    privateAccess(() ->
+    {
+        var script = Paths.mods.stage.script([curStage, STAGE_PLACEMENT_SCRIPT], WORKING_MOD_DIRECTORY).path;
+        if (script != null) this.hscriptManager.addScriptFromPath(script);
+
+        setInterps();
+        this.hscriptManager.call('startPost', ['NO_SONG'], STAGE_PLACEMENT_SCRIPT);
+        
+        var charactersLayer = {
+            name: OBJECT_TREE_CHARACTERS,
+            elements: []
+        }
+
+        if (initChars.length == 0) char('bf');
+
+        for (char in initChars) 
+        {
+            var c = getCharacterByName(char);
+
+            var element = new SObj(char, char, c, c.zIndex);
+            element.isCharacter = true;
+            element.layer = OBJECT_TREE_CHARACTERS;
+            charactersLayer.elements.push(element);
+            stageObjects.remove(getCharacterElementByName(char));
+        }
+
+        addRootToObjectTree(charactersLayer);
+        for (layer in stageLayers) 
+        {
+            for (element in layer.elements) element.layer = layer.name;
+            addRootToObjectTree(layer);
+        }
+    });
+
+    setupUI();
+
+    setWindowTitle();
+}
+
+function onLeaveState()
+{
+    Lib.application.window.title = saveWindowTitle;
+}
+
+function onChangedSaved() { setWindowTitle(); }
+function onSave() { saveStage(null); }
+
+function setWindowTitle()
+{
+    var base = saveWindowTitle + ' Stage Editor - ' + curStage;
+    if (UndoManager.unsaved)
+        base += '*';
+
+    Lib.application.window.title = base;
+}
+
+function update(dt)
+{
+    camManager.update(dt);
+    updateControls(dt);
+}
+
+var checkImpulse = false;
+function updateControls(dt)
+{
+    checkImpulse = FlxG.keys.pressed.CONTROL;
+
+    if (this.blockInput) return;
+
+    updateMouseControls();
+    updateKeyboardControls(dt);
+}
+
+function updateMouseControls()
+{
+    if (!FlxG.mouse.pressedRight) return;
+
+    ep_X.value += Std.int(FlxG.mouse.deltaX / camStage.zoom);
+    ep_Y.value += Std.int(FlxG.mouse.deltaY / camStage.zoom);
+}
+
+var MOVE_AMT = 250;
+function updateKeyboardControls(dt)
+{
+    var amt = MOVE_AMT;
+
+    if (FlxG.keys.pressed.SHIFT) amt *= 5;
+
+    amt *= dt;
+    amt = Std.int(amt);
+
+    if (checkImpulse ? FlxG.keys.justPressed.LEFT : FlxG.keys.pressed.LEFT) ep_X.value -= amt;
+    if (checkImpulse ? FlxG.keys.justPressed.DOWN : FlxG.keys.pressed.DOWN) ep_Y.value += amt;
+    if (checkImpulse ? FlxG.keys.justPressed.UP : FlxG.keys.pressed.UP) ep_Y.value -= amt;
+    if (checkImpulse ? FlxG.keys.justPressed.RIGHT : FlxG.keys.pressed.RIGHT) ep_X.value += amt;
+}
+
+var visible = new PanelVisibilityManager(true);
+var prevVisible = new PanelVisibilityManager(true);
+var init = new PanelVisibilityManager(false);
+
+function onKeyDown(key, modifiers)
+{
+    if (this.blockInput) return;
+
+    if (ctrlKeyModifier(modifiers))
+    {
+        onControlShortcut(key);
+        return;
+    }
+
+    switch(key)
+    {
+        case KEY_F: 
+            prevVisible.ui = visible.ui;
+            prevVisible.object = visible.object;
+            prevVisible.value = visible.value;
+            prevVisible.rim = visible.rim;
+            prevVisible.shadow = visible.shadow;
+            prevVisible.animations = visible.animations;
+            prevVisible.picker = visible.picker;
+
+            visible.ui = !visible.ui;
+            r_ShowUI.selected = visible.ui;
+
+            if (!init.show)
+            {
+                toggleObjectPanel(visible.ui ? prevVisible.object : false);
+                toggleValuePanel(visible.ui ? prevVisible.value : false);
+                toggleRimPanel(visible.ui ? prevVisible.rim : false);
+                toggleShadowPanel(visible.ui ? prevVisible.shadow : false);
+                toggleAnimationPanel(visible.ui ? prevVisible.animations : false);
+                toggleAnimFilterPanel(visible.ui ? prevVisible.picker : false);
+            }
+
+            selectionBox.visible = visible.ui;
+
+        case KEY_ESCAPE: quitEditor(null);
+    }
+}
+
+function onControlShortcut(key)
+{
+    switch(key)
+    {
+        case KEY_O: openOpenStageDialog(null);
+        case KEY_N: openNewStageDialog(null);
+        case KEY_P: openPreferencesDialog(null);
+
+        case KEY_R: focusCharacter(null);
+        case KEY_F: refocusCharacter(null);
+
+        case KEY_H:
+            visible.object = !visible.object;
+            r_Object.selected = visible.object;
+
+            if (!init.object) toggleObjectPanel(visible.object);
+
+        case KEY_J:
+            visible.value = !visible.value;
+            r_Value.selected = visible.value;
+
+            if (!init.value) toggleValuePanel(visible.value);
+
+        case KEY_K:
+            visible.rim = !visible.rim;
+            r_Lighting.selected = visible.rim;
+
+            if (!init.rim) toggleRimPanel(visible.rim);
+
+        case KEY_L:
+            visible.shadow = !visible.shadow;
+            r_Shadow.selected = visible.shadow;
+
+            if (!init.shadow) toggleShadowPanel(visible.shadow);
+
+        case KEY_SEMICOLON:
+            visible.animations = !visible.animations;
+            r_Animations.selected = visible.animations;
+
+            if (!init.animations) toggleAnimationPanel(visible.animations);
+
+        case KEY_SINGLE_QUOTE:
+            visible.picker = !visible.picker;
+            r_Picker.selected = visible.picker;
+
+            if (!init.picker) toggleAnimFilterPanel(visible.picker);
+    }
+}
+
+var characterFocus = 0;
+function setupUI()
+{
+    UiS.registerDraggable(values);
+    UiS.registerDraggable(objects);
+    UiS.registerDraggable(rim);
+    UiS.registerDraggable(shadow);
+    UiS.registerDraggable(animations);
+    UiS.registerDraggable(picker);
+    picker.y = 252;
+
+    visible.value = ClientPrefs.register('timeSEObjectPanel', true);
+    if (!visible.value) values.fadeOut();
+
+    visible.object = ClientPrefs.register('timeSEValuesPanel', true);
+    if (!visible.object) objects.fadeOut();
+
+    visible.rim = ClientPrefs.register('timeSERimPanel', true);
+    if (!visible.rim) rim.fadeOut();
+
+    visible.shadow = ClientPrefs.register('timeSEShadowPanel', true);
+    if (!visible.shadow) shadow.fadeOut();
+    
+    prevVisible.value = visible.value;
+    prevVisible.object = visible.object;
+    prevVisible.rim = visible.rim;
+    prevVisible.shadow = visible.shadow;
+
+    FlxTimer.wait(0.1, () ->
+    {
+        r_Value.selected = visible.value;
+        r_Object.selected = visible.object;
+        r_Lighting.selected = visible.rim;
+        r_Shadow.selected = visible.shadow;
+    });
+
+    UiS.get('ribbon-file-open', ribbon).onClick = openOpenStageDialog;
+    UiS.get('ribbon-file-new', ribbon).onClick = openNewStageDialog;
+    UiS.get('ribbon-file-undo', ribbon).onClick = UndoManager.performUndo;
+    UiS.get('ribbon-file-redo', ribbon).onClick = UndoManager.performRedo;
+    UiS.get('ribbon-file-save', ribbon).onClick = UndoManager.performSave;
+    UiS.get('ribbon-file-prefs', ribbon).onClick = openPreferencesDialog;
+    UiS.get('ribbon-file-quit', ribbon).onClick = quitEditor;
+
+    selectionBox.cameras = [camSelec];
+
+    moveFPS(ribbon.height);
+    ribbon.onMenuOpened = (e) -> { moveFPS(ribbon.height + e.target.height); }
+    ribbon.onMenuClosed = (e) -> { moveFPS(ribbon.height); }
+
+    r_MassImport.onClick = massImportSprites;
+
+    r_RefocusCamera.onClick = focusCharacter;
+    r_CycleFocus.onClick = refocusCharacter;
+
+    r_ScaleIncrease.onClick = (e) ->
+    {
+        offsetScaleGlobally(0.1);
+    }
+    r_ScaleDecrease.onClick = (e) ->
+    {
+        offsetScaleGlobally(-0.1);
+    }
+
+    r_ShowUI.onChange = (e) -> 
+    {
+        if (!init.show)
+        {
+            init.show = true;
+            return;
+        } 
+
+        toggleUI(r_ShowUI.selected); 
+    }
+    r_Object.onChange = (e) -> 
+    {
+        if (!init.object)
+        {
+            init.object = true;
+            return;
+        } 
+
+        toggleObjectPanel(r_Object.selected); 
+    }
+    r_Value.onChange = (e) -> 
+    {
+        if (!init.value)
+        {
+            init.value = true;
+            return;
+        } 
+
+        toggleValuePanel(r_Value.selected); 
+    }
+    r_Lighting.onChange = (e) -> 
+    {
+        if (!init.rim)
+        {
+            init.rim = true;
+            return;
+        } 
+
+        toggleRimPanel(r_Lighting.selected); 
+    }
+    r_Shadow.onChange = (e) -> 
+    {
+        if (!init.shadow)
+        {
+            init.shadow = true;
+            return;
+        } 
+
+        toggleShadowPanel(r_Shadow.selected); 
+    }
+    r_Animations.onChange = (e) -> 
+    {
+        if (!init.animations)
+        {
+            init.animations = true;
+            return;
+        } 
+
+        toggleAnimationPanel(r_Animations.selected); 
+    }
+    r_Picker.onChange = (e) -> 
+    {
+        if (!init.picker)
+        {
+            init.picker = true;
+            return;
+        } 
+
+        toggleAnimFilterPanel(r_Picker.selected); 
+    }
+
+    ep_ZIndex.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+
+        getSelectedElement().zIndex = ep_ZIndex.value;
+        getSelectedObject().zIndex = ep_ZIndex.value;
+        reorderElements();
+    }
+
+    ep_Antialiasing.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+
+        getSelectedElement().tryAntialias = ep_Antialiasing.value;
+        getSelectedObject().antialiasing = ClientPrefs.get('antialiasing') ? ep_Antialiasing.value : false;
+    }
+
+    ep_Visible.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+
+        getSelectedObject().visible = ep_Visible.value;
+    }
+
+    ep_Blend.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+
+        getSelectedObject().blend = blendModeFromString(ep_Blend.value);
+    }
+    privateAccess(() ->
+    {
+        var drop = ep_Blend._compositeBuilder.editor.dropDown;
+        drop.searchable = true;
+        drop.searchPrompt = 'Search...';
+    });
+
+    ep_X.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        getSelectedObject().x = ep_X.value;
+    }
+    ep_Y.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        getSelectedObject().y = ep_Y.value;
+    }
+
+    ep_ScrollX.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        getSelectedObject().scrollFactor.x = ep_ScrollX.value;
+    }
+    ep_ScrollY.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        getSelectedObject().scrollFactor.y = ep_ScrollY.value;
+    }
+
+    ep_SkewX.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        getSelectedObject().skew.x = ep_SkewX.value;
+    }
+    ep_SkewY.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        getSelectedObject().skew.y = ep_SkewY.value;
+    }
+
+    ep_ScaleX.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        getSelectedObject().scale.x = ep_ScaleX.value;
+    }
+    ep_ScaleY.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        getSelectedObject().scale.y = ep_ScaleY.value;
+    }
+
+    ep_Alpha.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        getSelectedObject().alpha = ep_Alpha.value;
+    }
+    ep_Angle.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        getSelectedObject().angle = ep_Angle.value;
+    }
+
+    ep_FlipX.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        getSelectedObject().flipX = ep_FlipX.value;
+    }
+    ep_FlipY.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        getSelectedObject().flipY = ep_FlipY.value;
+    }
+
+    ep_Colour.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        getSelectedObject().color = ep_Colour.value;
+    }
+
+    ep_OverlayCol.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        updateOverlayShaderValues();
+    }
+    ep_OverlayAlpha.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        updateOverlayShaderValues();
+    }
+
+    ep_SatinCol.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        updateSatinShaderValues();
+    }
+    ep_SatinAlpha.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        updateSatinShaderValues();
+    }
+
+    ep_InnerCol.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        updateInnerShaderValues();
+    }
+    ep_InnerAlpha.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        updateInnerShaderValues();
+    }
+
+    ep_RimAngle.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+
+        var light = getSelectedObject().rimLightShader;
+        if (light == null) return;
+
+        light.setFloat('innerShadowAngle', ep_RimAngle.value * (Math.PI / 180));
+    }
+
+    ep_RimDist.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+
+        var light = getSelectedObject().rimLightShader;
+        if (light == null) return;
+
+        light.setFloat('innerShadowDistance', ep_RimDist.value);
+    }
+
+    ep_SimpleShadows.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+
+        setSimpleShadows(ep_SimpleShadows.value);
+    }
+    ep_ShadowAlpha.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+
+        var char = getSelectedObject();
+        getSelectedObject().shadowAlpha = ep_ShadowAlpha.value;
+    }
+
+    ep_BaseOriginX.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+
+        getSelectedObject().baseOrigin.x = ep_BaseOriginX.value;
+        playCurrentAnimation();
+    }
+    ep_BaseOriginY.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+
+        getSelectedObject().baseOrigin.y = ep_BaseOriginY.value;
+        playCurrentAnimation();
+    }
+
+    ep_BaseOffsetX.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+
+        getSelectedObject().baseOffset.x = ep_BaseOffsetX.value;
+        playCurrentAnimation();
+    }
+    ep_BaseOffsetY.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+
+        getSelectedObject().baseOffset.y = ep_BaseOffsetY.value;
+        playCurrentAnimation();
+    }
+
+    ep_BaseScaleX.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+
+        getSelectedObject().baseScale.x = ep_BaseScaleX.value;
+        playCurrentAnimation();
+    }
+    ep_BaseScaleY.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+
+        getSelectedObject().baseScale.y = ep_BaseScaleY.value;
+        playCurrentAnimation();
+    }
+
+    ep_BaseSkewX.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+
+        getSelectedObject().baseSkew.x = ep_BaseSkewX.value;
+        playCurrentAnimation();
+    }
+    ep_BaseSkewY.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+
+        getSelectedObject().baseSkew.y = ep_BaseSkewY.value;
+        playCurrentAnimation();
+    }
+
+    ep_AnimOffsetX.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+        
+        var object = getSelectedObject();
+        var anim = object.animation.curAnim.name;
+        object.shadowOffsets.get(anim).x = ep_AnimOffsetX.value;
+        playCurrentAnimation();
+    }
+    ep_AnimOffsetY.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+        
+        var object = getSelectedObject();
+        var anim = object.animation.curAnim.name;
+        object.shadowOffsets.get(anim).y = ep_AnimOffsetY.value;
+        playCurrentAnimation();
+    }
+
+    ep_AnimScaleX.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+        
+        var object = getSelectedObject();
+        var anim = object.animation.curAnim.name;
+        object.shadowScales.get(anim).x = ep_AnimScaleX.value;
+        playCurrentAnimation();
+    }
+    ep_AnimScaleY.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+        
+        var object = getSelectedObject();
+        var anim = object.animation.curAnim.name;
+        object.shadowScales.get(anim).y = ep_AnimScaleY.value;
+        playCurrentAnimation();
+    }
+
+    ep_AnimSkewX.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+        
+        var object = getSelectedObject();
+        var anim = object.animation.curAnim.name;
+        object.shadowSkews.get(anim).x = ep_AnimSkewX.value;
+        playCurrentAnimation();
+    }
+    ep_AnimSkewY.onChange = (e) -> {
+        if (currentUIMode != UI_MODE_SET) return;
+        if (!getSelectedElement().isCharacter) return;
+        
+        var object = getSelectedObject();
+        var anim = object.animation.curAnim.name;
+        object.shadowSkews.get(anim).y = ep_AnimSkewY.value;
+        playCurrentAnimation();
+    }
+
+    a_List.onChange = changeSelectedAnimation;
+    a_List.onComponentEvent = (e) ->
+    {
+        if (e.source.id != 'delete') return;
+
+        var element = getSelectedElement();
+        if (element.animations.length == 1) return;
+        if (element.isCharacter) return;
+
+        var name = a_List.dataSource.get(e.itemIndex).name;
+        a_List.dataSource.removeAt(e.itemIndex);
+
+        element.animations.remove(element.getAnimationByName(name));
+        getSelectedObject().animation.remove(name);
+
+        a_List.selectedIndex = 0;
+    }
+    a_List.selectedIndex = 0;
+
+    a_Filter.onChange = (e) ->
+    {
+        var filter = a_Filter.text;
+        a_List.dataSource.filter((i, data) ->
+        {
+            return stringContains(data.name.toLowerCase(), filter);
+        });
+    }
+
+    a_Add.onClick = (e) ->
+    {
+        privateAccess(() ->
+        {
+            var element = getSelectedElement();
+            var object = element.object;
+
+            var content = UiS.buildXml(['character-editor', 'dialogs', 'add-animation']);
+            var a_Name = UiS.get('anim-name', content);
+            var a_NameValidity = UiS.get('anim-name-validity', content);
+            var a_Add = UiS.get('create', content);
+
+            var validateAddButton = () -> 
+            { 
+                a_Add.disabled = true;
+
+                if (a_Name.text == null) return;
+                if (a_Name.text == '') return;
+
+                a_Add.disabled = false;
+            }
+
+            a_Name.onChange = (e) ->
+            {
+                if (a_Name.text == '') 
+                    a_NameValidity.text = 'Please enter a name.';
+
+                else if (object.animation._animations.exists(a_Name.text)) 
+                    a_NameValidity.text = concat(['Animation "', a_Name.text, '" already exists.']);
+                
+                else 
+                    a_NameValidity.text = 'This name is ok.';
+
+                validateAddButton();
+            }
+
+            var animDialog;
+            a_Add.onClick = (e) ->
+            {
+                var name = a_Name.text;
+
+                a_List.dataSource.add({name: name});
+
+                object.animation.addByPrefix(name, '', 24, false);
+                element.animations.push({
+                    name: name,
+                    tag: ''
+                });
+
+                animDialog.hide();
+            }
+
+            animDialog = UiS.openDialog({
+                content: content,
+                title: 'Add New Animation'
+            });
+        });
+    }
+}
+
+function focusCharacter(e)
+{
+    var name = initChars[characterFocus];
+    var character = getCharacterByName(name);
+
+    camManager.focusOnPoint(character.cameraPosition);
+}
+
+function refocusCharacter(e)
+{
+    characterFocus++;
+    if (characterFocus > initChars.length - 1) characterFocus = 0;
+
+    focusCharacter(null);
+}
+
+function offsetScaleGlobally(amt)
+{
+    for (element in stageObjects)
+    {
+        element.object.scale.x += amt;
+        element.object.scale.y += amt;
+    }
+}
+
+function toggleUI(value)
+{
+    r_Object.selected = value ? prevVisible.object : false;
+    r_Value.selected = value ? prevVisible.value : false;
+    r_Lighting.selected = value ? prevVisible.rim : false;
+    r_Shadow.selected = value ? prevVisible.shadow : false;
+    r_Animations.selected = value ? prevVisible.animations : false;
+    r_Picker.selected = value ? prevVisible.picker : false;
+}
+
+function toggleObjectPanel(value)
+{
+    if (value) objects.fadeIn();
+    else objects.fadeOut();
+}
+
+function toggleValuePanel(value)
+{
+    if (value) values.fadeIn();
+    else values.fadeOut();
+}
+
+function toggleRimPanel(value)
+{
+    if (value) rim.fadeIn();
+    else rim.fadeOut();
+}
+
+function toggleShadowPanel(value)
+{
+    if (value) shadow.fadeIn();
+    else shadow.fadeOut();
+}
+
+function toggleAnimationPanel(value)
+{
+    if (value) animations.fadeIn();
+    else animations.fadeOut();
+}
+
+function toggleAnimFilterPanel(value)
+{
+    if (value) picker.fadeIn();
+    else picker.fadeOut();
+}
+
+function updateOverlayShaderValues()
+{
+    var light = getSelectedObject().rimLightShader;
+    if (light == null) return;
+
+    var col = getColorFloatValues(ep_OverlayCol.value);
+    col.push(ep_OverlayAlpha.value);
+
+    light.setFloatArray('overlayColor', col);
+}
+
+function updateSatinShaderValues()
+{
+    var light = getSelectedObject().rimLightShader;
+    if (light == null) return;
+
+    var col = getColorFloatValues(ep_SatinCol.value);
+    col.push(ep_SatinAlpha.value);
+
+    light.setFloatArray('satinColor', col);
+}
+
+function updateInnerShaderValues()
+{
+    var light = getSelectedObject().rimLightShader;
+    if (light == null) return;
+
+    var col = getColorFloatValues(ep_InnerCol.value);
+    col.push(ep_InnerAlpha.value);
+
+    light.setFloatArray('innerShadowColor', col);
+}
+
+function playCurrentAnimation()
+{
+    if (!getSelectedElement().isCharacter) return;
+
+    var char = getSelectedObject();
+    var anim = char.animation.curAnim.name;
+    char.playAnim(anim);
+}
+
+var animationProperties = [];
+function updateValueProperties()
+{
+    var element = getSelectedElement();
+    var object = getSelectedObject();
+
+    values.text = concat(['Values - "', element.name, '"']);
+
+    var prevUIMode = currentUIMode;
+    currentUIMode = UI_MODE_DISABLED;
+
+    ep_ZIndex.value = element.zIndex;
+
+    ep_FlipX.disabled = element.isCharacter;
+    ep_FlipY.disabled = element.isCharacter;
+
+    ep_Visible.value = object.visible;
+
+    // resets the search prompt
+    // setting the blend mode of selected object wouldnt appear correct
+    // due to the dropdown filter
+    var blendDropDown = UiS.get('dropdown', ep_Blend);
+    blendDropDown.searchField.text = '';
+    blendDropDown.dataSource.filter((i, data) -> { return true; });
+
+    ep_Blend.value = object.blend == null ? 'Normal' : blendModes[object.blend];
+
+    ep_Antialiasing.value = element.tryAntialias;
+    ep_X.value = object.x;
+    ep_Y.value = object.y;
+    ep_ScrollX.value = object.scrollFactor.x;
+    ep_ScrollY.value = object.scrollFactor.y;
+    ep_SkewX.value = object.skew.x;
+    ep_SkewY.value = object.skew.y;
+    ep_ScaleX.value = object.scale.x;
+    ep_ScaleY.value = object.scale.y;
+    ep_Alpha.value = object.alpha;
+    ep_Angle.value = object.angle;
+    ep_FlipX.value = object.flipX;
+    ep_FlipY.value = object.flipY;
+    ep_Colour.value = object.color;
+
+    privateAccess(() ->
+    {
+        var anims = object.animation._animations;
+        a_List.dataSource = getDataSource();
+
+        if (!element.isAnimated && !element.isCharacter)
+        {
+            animations.disabled = true;
+            picker.disabled = true;
+
+            animations.fadeOut();
+            picker.fadeOut();
+
+            visible.animations = false;
+            prevVisible.animations = false;
+
+            visible.picker = false;
+            prevVisible.picker = false;
+
+            r_Animations.selected = false;
+            r_Picker.selected = false;
+
+            return;
+        }
+
+        picker.disabled = false;
+
+        a_Add.disabled = element.isCharacter;
+        animations.disabled = element.isCharacter;
+
+        if (animations.disabled) 
+        {
+            r_Animations.selected = false;
+            visible.animations = false;
+            prevVisible.animations = false;
+            animations.fadeOut();
+        }
+        else 
+        {
+            r_Animations.selected = true;
+            visible.animations = true;
+            prevVisible.animations = true;
+            animations.fadeIn();
+        }
+
+        picker.fadeIn();
+        r_Picker.selected = true;
+        visible.picker = true;
+        prevVisible.picker = true;
+
+        for (name in anims.keys()) a_List.dataSource.add({name: name});
+        a_List.selectedIndex = 0;
+        changeSelectedAnimation();
+
+        a_Filter.text = '';
+    });
+
+    var light = object.rimLightShader;
+    var disableRim = light == null;
+
+    ep_OverlayCol.disabled = disableRim;
+    ep_OverlayAlpha.disabled = disableRim;
+    ep_SatinCol.disabled = disableRim;
+    ep_SatinAlpha.disabled = disableRim;
+    ep_InnerCol.disabled = disableRim;
+    ep_InnerAlpha.disabled = disableRim;
+    ep_RimAngle.disabled = disableRim;
+    ep_RimDist.disabled = disableRim;
+
+    if (!disableRim)
+    {
+        var overlayCol = light.getFloatArray('overlayColor');
+        var satinCol = light.getFloatArray('satinColor');
+        var innerCol = light.getFloatArray('innerShadowColor');
+
+        ep_OverlayCol.value = Std.int(colorFromRGBFloat(overlayCol[0], overlayCol[1], overlayCol[2]));
+        ep_SatinCol.value = Std.int(colorFromRGBFloat(satinCol[0], satinCol[1], satinCol[2]));
+        ep_InnerCol.value = Std.int(colorFromRGBFloat(innerCol[0], innerCol[1], innerCol[2]));
+
+        ep_OverlayAlpha.value = overlayCol[3];
+        ep_SatinAlpha.value = satinCol[3];
+        ep_InnerAlpha.value = innerCol[3];
+        
+        ep_RimAngle.value = light.getFloat('innerShadowAngle') / (Math.PI / 180);
+        ep_RimDist.value = light.getFloat('innerShadowDistance');
+    }
+
+    var disableShadow = !element.isCharacter;
+
+    ep_SimpleShadows.disabled = disableShadow;
+    ep_ShadowAlpha.disabled = disableShadow;
+    ep_BaseOriginX.disabled = disableShadow;
+    ep_BaseOriginY.disabled = disableShadow;
+    ep_BaseOffsetX.disabled = disableShadow;
+    ep_BaseOffsetY.disabled = disableShadow;
+    ep_BaseScaleX.disabled = disableShadow;
+    ep_BaseScaleY.disabled = disableShadow;
+    ep_BaseSkewX.disabled = disableShadow;
+    ep_BaseSkewY.disabled = disableShadow;
+    ep_AnimOffsetX.disabled = disableShadow;
+    ep_AnimOffsetY.disabled = disableShadow;
+    ep_AnimScaleX.disabled = disableShadow;
+    ep_AnimScaleY.disabled = disableShadow;
+    ep_AnimSkewX.disabled = disableShadow;
+    ep_AnimSkewY.disabled = disableShadow;
+
+    if (element.isCharacter) updateShadowValues(object);
+
+    currentUIMode = prevUIMode;
+}
+
+function updateShadowValues(object)
+{
+    var anim = object.animation.curAnim.name;
+
+    ep_SimpleShadows.value = useSimpleShadows;
+    ep_ShadowAlpha.value = object.shadowAlpha;
+    ep_BaseOriginX.value = object.baseOrigin.x;
+    ep_BaseOriginY.value = object.baseOrigin.y;
+    ep_BaseOffsetX.value = object.baseOffset.x;
+    ep_BaseOffsetY.value = object.baseOffset.y;
+    ep_BaseScaleX.value = object.baseScale.x;
+    ep_BaseScaleY.value = object.baseScale.y;
+    ep_BaseSkewX.value = object.baseSkew.x;
+    ep_BaseSkewY.value = object.baseSkew.y;
+
+    var offset = object.shadowOffsets.get(anim);
+    ep_AnimOffsetX.value = offset.x;
+    ep_AnimOffsetY.value = offset.y;
+
+    var scales = object.shadowScales.get(anim);
+    ep_AnimScaleX.value = scales.x;
+    ep_AnimScaleY.value = scales.y;
+
+    var skews = object.shadowSkews.get(anim);
+    ep_AnimSkewX.value = skews.x;
+    ep_AnimSkewY.value = skews.y;
+}
+
+function changeSelectedAnimation()
+{
+    var element = getSelectedElement();
+    if (!element.isAnimated && !element.isCharacter) return;
+
+    var object = getSelectedObject();
+    
+    if (a_List.selectedItem == null || a_List.selectedItem.name == null) return;
+
+    var animToPlay = a_List.selectedItem.name;
+    if (element.isCharacter) object.playAnim(animToPlay, true);
+    else object.animation.play(animToPlay, true);
+
+    privateAccess(() ->
+    {
+        var anim = object.animation._animations.get(animToPlay);
+
+        if (element.animations.length == 0 && element.isCharacter)
+            privateAccess(() ->
+            {
+                for (anim in element.object.animations.keys()) 
+                    element.animations.push({
+                        name: anim,
+                        tag: element.object.animations.get(anim).tag
+                    });
+            });
+
+        // im here with villager news
+        // play white eyes from hot & cold
+        var elementAnimation = element.getAnimationByName(animToPlay);
+
+        a_Tag.value = elementAnimation.tag;
+        a_FPS.value = anim.frameRate;
+        a_FlipX.value = anim.flipX;
+        a_FlipY.value = anim.flipY;
+        a_Loop.value = anim.looped;
+        a_LoopPoint.value = anim.loopPoint;
+
+        a_Tag.onChange = (e) ->
+        {   
+            elementAnimation.tag = a_Tag.value;
+
+            object.animation.addByPrefix(animToPlay, elementAnimation.tag, anim.frameRate, anim.looped, anim.flipX, anim.flipY);
+            object.animation.play(animToPlay, true);
+        }
+
+        a_FPS.onChange = (e) -> { anim.frameRate = a_FPS.value; }
+        a_FlipX.onChange = (e) -> { anim.flipX = a_FlipX.value; }
+        a_FlipY.onChange = (e) -> { anim.flipY = a_FlipY.value; }
+        a_Loop.onChange = (e) -> { anim.looped = a_Loop.value; }
+        a_LoopPoint.onChange = (e) -> { anim.loopPoint = a_LoopPoint.value; }
+    
+        animations.text = animToPlay;
+    });
+}
+
+var currentContext;
+function addRootToObjectTree(layer)
+{
+    var root = objectTree.addNode({text: layer.name, icon: 'haxeui-core/styles/shared/folder-light.png'});
+    objectTreeRootNodes.push(root);
+    root.expanded = true;
+
+    root.onRightClick = (e) -> 
+    { 
+        var xmlSource = 'folder-context';
+        if (layer.name == OBJECT_TREE_CHARACTERS) xmlSource = 'characters-context';
+
+        currentContext = Screen.addComponent(UiS.getContextMenu(e, concat(['stage-editor/context-menus/', xmlSource]))); 
+
+        var addChar = UiS.get('add-char', currentContext);
+        if (addChar != null) addChar.onClick = (e) -> {
+            rootToAddSpriteTo.name = layer.name;
+            rootToAddSpriteTo.root = root;
+
+            openAddCharDialog(e);
+        }
+
+        var addSprite = UiS.get('folder-add-sprite', currentContext);
+        if (addSprite != null) addSprite.onClick = (e) -> {
+            rootToAddSpriteTo.name = layer.name;
+            rootToAddSpriteTo.root = root;
+
+            openAddSpriteDialog(e);
+        }
+    }
+    for (element in layer.elements) addNodeToObjectLayer({root: root, name: layer.name}, element, true);
+}
+
+function addNodeToObjectLayer(root, element, ?select)
+{
+    var node = root.root.addNode({text: element.name});
+    node.onClick = (e) -> { selectNode(node); }
+    node.onRightClick = (e) ->
+    {
+        selectNode(node);
+
+        var menu = Screen.addComponent(UiS.getContextMenu(e, 'stage-editor/context-menus/object-context'));
+        if (root.name == OBJECT_TREE_CHARACTERS) menu.removeComponent(UiS.get('move-to-layer', menu));
+
+        var moveUp = UiS.get('move-up', menu);
+        var moveDown = UiS.get('move-down', menu);
+        var delete = UiS.get('delete', menu);
+
+        moveUp.onClick = (e) -> { moveNodeInTree(node, -1); }
+        moveDown.onClick = (e) -> { moveNodeInTree(node, 1); }
+        delete.onClick = (e) -> { removeNodeFromTree(node); }
+
+        var nodes = node.parentNode.getNodes();
+        if (nodes[0] == node) menu.removeComponent(moveUp);
+        if (nodes[nodes.length - 1] == node) menu.removeComponent(moveDown);
+
+        FlxTimer.wait(0.01, () -> { if (currentContext != null) Screen.removeComponent(currentContext); });
+    }
+
+    if (element != null) initNewElement(element, getGlobalNodeID(node));
+    if (select == null) return node;
+
+    node.selected = true;
+    selectNode(node);
+
+    return node;
+}
+
+var selectedNode;
+function selectNode(node)
+{
+    if (!node.selected || selectedNode == node) return;
+
+    selectedNode = node;
+    selectedElementID = getGlobalNodeID(node);
+
+    updateValueProperties();
+}
+function getTreeLength(node) { return node.parentNode.getNodes().length - 1; }
+function getNodeID(node) { return node.parentNode.getNodes().indexOf(node); }
+function getGlobalNodeID(node)
+{
+    var parentID = objectTreeRootNodes.indexOf(node.parentNode);
+
+    var total = 0;
+    for (i in 0...parentID) total += objectTreeRootNodes[i].getNodes().length;
+
+    return total + getNodeID(node);
+}
+
+function moveNodeInTree(node, amt)
+{
+    var root = node.parentNode;
+    var layer = root.text;
+
+    var nodes = [];
+    for (_node in root.getNodes()) nodes.push(_node);
+    root.clearNodes();
+
+    var elements = [];
+    for (element in stageObjects)
+    {
+        if (element.layer != layer) continue;
+        elements.push(element);
+    }
+
+    removeElements(layer);
+    for (element in elements) stageObjects.remove(element);
+
+    var id = nodes.indexOf(node);
+    nodes.remove(node);
+    nodes.insert(id + amt, node);
+
+    var element = elements[id];
+    elements.remove(element);
+    elements.insert(id + amt, element);
+
+    // trace('Nodes');
+    // for (n in nodes) trace(concat(['    ', n.text]));
+    // trace('Elements');
+    // for (e in elements) trace(concat(['    ', e.name]));
+
+    var nodeToSelect;
+    for (_element in elements)
+    {
+        var node = addNodeToObjectLayer({root: root}, _element, _element == element);
+        if (_element == element) nodeToSelect = node;
+    }
+
+    FlxTimer.wait(0.01, () ->
+    {
+        nodeToSelect.selected = true;
+        selectNode(nodeToSelect);
+    });
+}
+
+function removeNodeFromTree(node)
+{
+    removeElements();
+    stageObjects.remove(stageObjects[getGlobalNodeID(node)]);
+    node.parentNode.removeNode(node);
+
+    reorderElements();
+}
+
+function initNewElement(element, i)
+{
+    if (element.isCharacter) 
+    {
+        initNewCharacter(element, i);
+        return;
+    }
+
+    if (element.isBackdrop) 
+    {
+        initNewBackdrop(element, i);
+        return;
+    }
+
+    initNewSprite(element, i);
+}
+
+function initNewCharacter(element, i)
+{
+    if (!stageObjects.contains(element)) stageObjects.insert(i, element);
+
+    element.object.dance();
+    reorderElements();
+}
+
+function initNewBackdrop(element, i) {}
+function initNewSprite(element, i) 
+{
+    var sprite = createSpriteFromElement(element);
+
+    sprite.scale.set(element.object.scale.x, element.object.scale.y);
+    sprite.scrollFactor.set(element.object.scrollFactor.x, element.object.scrollFactor.y);
+    sprite.visible = element.object.visible;
+    sprite.skew.set(element.object.skew.x, element.object.skew.y);
+    sprite.offset.set(element.object.offset.x, element.object.offset.y);
+
+    if (element.object.blend != null || blendModeToString(element.object.blend) != 'Normal') sprite.blend = element.object.blend;
+
+    sprite.flipX = element.object.flipX;
+    sprite.flipY = element.object.flipY;
+
+    sprite.angle = element.object.angle;
+    sprite.alpha = element.object.alpha;
+    sprite.color = element.object.color;
+    sprite.antialiasing = element.tryAntialias ? ClientPrefs.get('antialiasing') : false;
+    sprite.rimLightShader = new FlxRuntimeShader(rimShaderFrag, null);
+    sprite.animation.copyFrom(element.object.animation);
+
+    element.object = sprite;
+    
+    insertStageElement(element, i);
+}
+
+var NAME_LENGTH_LIMIT = 18; 
+function insertStageElement(element, i) 
+{
+    stageObjects.insert(i, element);
+    reorderElements();
+}
+
+function createSprite(graphic, isAnimated, ?object)
+{
+    var sprite = new FlxSprite(object != null ? object.x : 0, 
+                               object != null ? object.y : 0);
+
+    switch(isAnimated)
+    {
+        case true: sprite.loadAtlas((Paths.mods.stage.atlas([curStage, graphic], WORKING_MOD_DIRECTORY).content));
+        case false: sprite.load(Paths.mods.stage.image([curStage, graphic], WORKING_MOD_DIRECTORY).content);
+    }
+
+    sprite.rimLightShader = new FlxRuntimeShader(rimShaderFrag, null);
+    sprite.antialiasing = ClientPrefs.get('antialiasing');
+    return sprite;
+}
+
+function createSpriteFromElement(element) { createSprite(element.graphic, element.isAnimated, element.object); }
+
+var LAYER_MASS_IMPORT = 'Mass_Import';
+function massImportSprites()
+{
+    var path = FileSystem.readDirectory(Paths.mods.stage.folder(curStage, WORKING_MOD_DIRECTORY));
+
+    var names = [];
+
+    var xmls = [];
+    for (file in path)
+    {
+        var stuff = file.split('.');
+
+        var name = stuff[0];
+        var ext = stuff[1];
+
+        if (ext == 'xml') xmls.push(name);
+        if (ext == 'png') names.push(name);
+    }
+
+    var spritesToAdd = [];
+    for (name in names)
+        if (!xmls.contains(name)) spritesToAdd.push(name);
+
+    if (spritesToAdd.length <= 0) return;
+
+    var layer = {
+        name: LAYER_MASS_IMPORT,
+        elements: []
+    }
+
+    for (name in spritesToAdd)
+    {
+        var obj = new SObj(name, name, createSprite(name, false));
+        obj.layer = LAYER_MASS_IMPORT;
+        layer.elements.push(obj);
+    }
+
+    addRootToObjectTree(layer);
+}
+
+function getObjectByName(name) { return getElementByName(name).object; }
+function getElementByName(name)
+{
+    for (element in stageObjects)
+    {
+        if (element.name != name) continue;
+        return element;
+    }
+
+    return null;
+}
+
+function getCharacterByName(name) { return getCharacterElementByName(name).object; }
+function getCharacterElementByName(name)
+{
+    for (element in stageObjects)
+    {
+        if (!element.isCharacter) continue;
+        if (element.name != name) continue;
+
+        return element;
+    }
+
+    return;
+}
+
+function createCharacterByName(name)
+{
+    if (initChars.contains(name))
+        return getCharacterByName(name);
+
+    initChars.push(name);
+    return createCharacter(name, !opps.contains(name));
+}
+
+function createCharacter(name, player)
+{
+    var c = new Character(0, 0, {
+        name: name,
+        player: player,
+        dir: WORKING_MOD_DIRECTORY, 
+        debug: true
+    });
+    FlxTimer.wait(0.1, () -> { c.playAnim(c.danceAnimations[0]); });
+
+    c.rimLightShader = new FlxRuntimeShader(rimShaderFrag, null);
+    c.trail.rimLightShader = c.rimLightShader;
+
+    var element = new SObj(name, name, c);
+    element.isCharacter = true;
+    element.layer = OBJECT_TREE_CHARACTERS;
+    stageObjects.push(element);
+
+    c.zIndexCallback = (prevIndex, newIndex) -> { element.zIndex = newIndex; }
+
+    return c;
+}
+
+function reorderElements()
+{
+    removeElements();
+
+    var members = [];
+    for (object in stageObjects) members.push(object);
+
+    sortArray(members, (a, b) -> { return a.zIndex < b.zIndex ? -1 : a.zIndex == b.zIndex ? 0 : 1; });
+    for (element in members)
+    {
+        if (element.isCharacter)
+        {
+            add(element.object.shadow);
+            add(element.object.simpleShadow);
+        }
+
+        add(element.object);
+    }
+}
+
+function removeElements(?layer)
+{
+    for (element in stageObjects)
+    {
+        if (layer != null) if (element.layer != layer) continue;
+        if (element.isCharacter)
+        {
+            remove(element.object.shadow);
+            remove(element.object.simpleShadow);
+
+            element.object.shadow.cameras = [camStage];
+            element.object.simpleShadow.cameras = [camStage];
+        }
+            
+        remove(element.object);
+        element.object.cameras = [camStage];
+    }
+}
+
+function setInterps()
+{
+    this.hscriptManager.setAll('addLayerToStageLayers', (layer) ->
+    {
+        stageLayers.push(layer);
+    });
+
+    this.hscriptManager.setAll('setSimpleShadows', setSimpleShadows);
+
+    this.hscriptManager.setAll('addObjectAnimation', (sobj, name, tag, fps, looped, loopPoint, flipX, flipY) ->
+    {
+        var object = sobj.object;
+        sobj.animations.push({
+            name: name,
+            tag: tag
+        });
+
+        object.animation.addByPrefix(name, tag, fps, looped, flipX, flipY);
+        privateAccess(() ->
+        {
+            var animation = object.animation._animations.get(name);
+            animation.loopPoint = loopPoint;
+        });
+    });
+
+    this.hscriptManager.setAll('initChars', initChars);
+    this.hscriptManager.setAll('opps', opps);
+    this.hscriptManager.setAll('createCharacter', createCharacter);
+    this.hscriptManager.setAll('char', createCharacterByName);
+    this.hscriptManager.setAll('registerAsOpp', (name) -> 
+    {
+        opps.push(name);
+        if (!initChars.contains(name)) createCharacterByName(name);
+    });
+}
+
+function setSimpleShadows(value)
+{
+    useSimpleShadows = value;
+    for (object in stageObjects)
+    {
+        if (!object.isCharacter) continue;
+        object.object.simpleShadows = value;
+    }
+}
+
+function getSelectedObject() 
+{ 
+    var object = getSelectedElement().object;
+    
+    FlxTimer.wait(0.01, () -> { updateSelectionBox(object); });
+
+    return object; 
+}
+function getSelectedElement() { return stageObjects[selectedElementID]; }
+
+var SELECT_BOX_COL = 0xFF00FFFF;
+function updateSelectionBox(sel)
+{
+    if (selectionBox == null) return;
+
+    var old = sel.angle;
+    sel.angle = 0;
+    bounds = sel.getGraphicBounds();
+    sel.angle = old;
+
+    var scroll = sel.scrollFactor;
+    var offset = sel.offset;
+    var origin = sel.origin;
+
+    selectionBox.setPosition(bounds.x, bounds.y);
+
+    selectionBox.scrollFactor.set(scroll.x, scroll.y);
+    selectionBox.origin.set(origin.x, origin.y);
+    selectionBox.angle = sel.angle;
+
+    // lag = gone!!!!!!!!!!!!
+    if (bounds.width == selectionBox.width && bounds.height == selectionBox.height) return;
+
+    selectionBox.makeGraphic(bounds.width, bounds.height, 0x00000000);
+    FlxSpriteUtil.drawRect(selectionBox, 0,
+                                     0,
+                                     selectionBox.width,
+                                     selectionBox.height,
+                                     0x00000000, {thickness: 16, color: SELECT_BOX_COL});
+}
+
+// -------- DIALOGS AND SHIT --------
+
+function openOpenStageDialog(e) 
+{
+    var list = new ListView(); list.width = 200; list.height = 350;
+    list.dataSource = getDataSource();
+
+    for (stage in parsedStages)
+        list.dataSource.add({text: stage});
+
+    UiS.openDialog({
+        content: list, 
+        title: 'Select Stage',
+        buttons: ['Open', 'Cancel'], 
+        callback: (e) ->
+        {
+            switch(e.button)
+            {
+                case 'Cancel': return;
+                case 'Open':
+                    if (list.selectedItem == null) return;
+                    ClientPrefs.set('timeCurrentStage', list.selectedItem.text);
+                    reset();
+            }
+        }
+    });
+}
+
+function openNewStageDialog(e) 
+{
+    var content = UiS.buildXml(['stage-editor/new-stage']);
+    var name = UiS.get('new-stage', content);
+    UiS.get('mod-dir', content).text = concat(['Working mod directory: "', WORKING_MOD_DIRECTORY, '"']);
+
+    var alertTitle = concat([ALERT_TITLE, ' Stage Editor']);
+    UiS.openDialog({
+        content: content, 
+        title: 'Create New Stage',
+        buttons: ['Create', 'Cancel'], 
+        callback: (e) ->
+        {
+            switch(e.button)
+            {
+                case 'Cancel': return;
+                case 'Create':
+                    if (name.text == null || name.text == '') 
+                    {
+                        alert('Please enter stage name.', alertTitle);
+                        return;
+                    }
+
+                    if (parsedStages.contains(name.text))
+                    {
+                        alert(concat(['Stage "', name.text, '" already exists.']), alertTitle);
+                        return;
+                    }
+                    
+                    var stagePath = concat([Paths.folder('stages', WORKING_MOD_DIRECTORY), '/', name.text]);
+                    FileSystem.createDirectory(stagePath);
+            
+                    alert(concat(['Created new stage\n', '"', stagePath, '"']));
+            
+                    ClientPrefs.set('timeCurrentStage', name.text);
+                    ClientPrefs.save();
+            
+                    reset();
+            }
+        }
+    });
+}
+
+function openPreferencesDialog(e)
+{
+    var prefs = UiS.buildXml(['stage-editor/dialogs/preferences']);
+    var p_Object = UiS.get('prefs-panel-object', prefs);
+    var p_Values = UiS.get('prefs-panel-value', prefs);
+    var p_Rim = UiS.get('prefs-panel-rim', prefs);
+    var p_Shadow = UiS.get('prefs-panel-shadow', prefs);
+
+    p_Object.value = ClientPrefs.get('timeSEObjectPanel');
+    p_Object.onChange = (e) ->
+    {
+        ClientPrefs.set('timeSEObjectPanel', p_Object.value);
+        ClientPrefs.save();
+    }
+
+    p_Values.value = ClientPrefs.get('timeSEValuesPanel');
+    p_Values.onChange = (e) ->
+    {
+        ClientPrefs.set('timeSEValuesPanel', p_Values.value);
+        ClientPrefs.save();
+    }
+
+    p_Rim.value = ClientPrefs.get('timeSERimPanel');
+    p_Rim.onChange = (e) ->
+    {
+        ClientPrefs.set('timeSERimPanel', p_Rim.value);
+        ClientPrefs.save();
+    }
+
+    p_Shadow.value = ClientPrefs.get('timeSEShadowPanel');
+    p_Shadow.onChange = (e) ->
+    {
+        ClientPrefs.set('timeSEShadowPanel', p_Shadow.value);
+        ClientPrefs.save();
+    }
+
+    UiS.openDialog({
+        title: 'Preferences',
+        content: prefs
+    });
+}
+
+function quitEditor(e) 
+{
+    UiS.openQuitDialog({
+        callback: (e) ->
+        {
+            if (!UiS.QUIT_DIALOG_BUTTONS.contains(e.button)) return;
+            if (e.button == UiS.QUIT_DIALOG_BUTTONS[2]) return;
+
+            if (e.button == UiS.QUIT_DIALOG_BUTTONS[0]) saveStage(null);
+            LoadingState.switchCustomState('MasterEditorMenu');
+        }
+    });
+}
+
+function saveStage(e)
+{
+    var stagePath = Paths.mods.stage.folder(curStage, WORKING_MOD_DIRECTORY);
+
+    gen = new StageScriptGenerator(curStage, stagePath, VERSION);
+    gen.blendModes = blendModes;
+    gen.buildComment(Date.now(), saveWindowTitle);
+
+    for (obj in stageObjects)
+    {
+        if (obj.isCharacter) continue;
+        gen.pushVarToDatabase(gen.getVarName(obj.name));
+    }
+    gen.buildVars();
+
+    for (tree in objectTreeRootNodes) if (tree.text != OBJECT_TREE_CHARACTERS) gen.pushLayerToDatabase(tree.text);
+    gen.createLayers();
+
+    gen.createFunction('startPost', ['song']);
+    gen.setModDirectory(WORKING_MOD_DIRECTORY);
+
+    var setRTX = false;
+
+    for (obj in stageObjects)
+    {
+        var lastOne = obj == stageObjects[stageObjects.length - 1];
+        if (obj.isCharacter) gen.buildCharacter(obj, lastOne);
+        else gen.buildSprite(obj, lastOne);
+
+        if (setRTX) continue;
+
+        var light = obj.object.rimLightShader;
+        if (light == null) continue;
+
+        var overlay = light.getFloatArray('overlayColor');
+        var satin = light.getFloatArray('satinColor');
+        var inner = light.getFloatArray('innerShadowColor');
+        var angle = light.getFloat('innerShadowAngle');
+        var dist = light.getFloat('innerShadowDistance');
+
+        if (overlay[3] != 0 || satin[3] != 0 || inner[3] != 0 || angle != 0 || dist != 0) setRTX = true;
+    }
+
+    gen.setShadowMode();
+    gen.completeLayers();
+    gen.completeFunction();
+
+    if (setRTX)
+    {
+        gen.createFunction('setRimLighting', []);
+        for (obj in stageObjects) gen.buildRimLight(obj);
+        gen.completeFunction(false);
+    }
+
+    gen.buildLoadingFunction();
+
+    File.saveContent(stagePath + '/placement.hscript', gen.script);
+
+    UiS.addNotification({
+        title: 'Stage Saved!',
+        body: 'Stage "' + curStage + '" has been saved to "' + Paths.mods.stage.folder(curStage, WORKING_MOD_DIRECTORY) + '"!',
+        actions: [{
+            text: 'Ok'
+        }, {
+            text: 'Take me there!',
+            callback: (e) -> 
+            {
+                var fullPath = StringTools.replace(Path.join([Sys.getCwd(), Paths.mods.stage.folder(curStage, WORKING_MOD_DIRECTORY)]), '/', '\\');
+                
+			    Sys.command('explorer "' + fullPath + '"');
+            }
+        }],
+        type: NOTIFICATION_SUCCESS,
+        expiryMs: 2750
+    });
+}
+
+var IMAGE_PREVIEW_SIZE = 85;
+function openAddSpriteDialog(e)
+{
+    var content = UiS.buildXml(['stage-editor/dialogs/create-sprite']);
+
+    var fileLabel;
+    UiS.get('file-source', content).onClick = (e) ->
+    {
+        var fileContent = UiS.buildXml(['stage-editor/dialogs/file-browser']);
+        var source = getDataSource();
+        fileContent.dataSource = source;
+
+        fileLabel = UiS.get('file-name', content);
+
+        var images = [];
+        for (file in FileSystem.readDirectory(Paths.mods.stage.folder(curStage, WORKING_MOD_DIRECTORY)))
+        {
+            if (!StringTools.endsWith(file, 'png')) continue;
+            var name = file.substring(0, file.length - 4);
+
+            var button = new Button(); 
+            var box = new VBox();
+            
+            button.toggle = true;
+            var icon = new haxe.ui.components.Image(); 
+            icon.width = IMAGE_PREVIEW_SIZE; 
+            icon.height = IMAGE_PREVIEW_SIZE;
+
+            icon.horizontalAlign = 'center'; 
+            icon.imageVerticalAlign = 'center'; 
+            icon.imageHorizontalAlign = 'center'; 
+            icon.scaleMode = 'fitinside';
+
+            var sprite = new FlxSprite().load(Paths.mods.stage.image([curStage, name], WORKING_MOD_DIRECTORY).content);
+            icon.value = variantFromFrame(sprite.frame);
+            images.push(icon);
+            sprite.destroy();
+
+            source.add({name: name, image: icon});
+        }
+
+        UiS.openDialog({
+            content: fileContent,
+            title: 'Select File',
+            buttons: ['Accept', 'Cancel'],
+            callback: (e) ->
+            {
+                for (image in images) image.destroy();
+
+                switch(e.button)
+                {
+                    case 'Cancel': return;
+                    case 'Accept':
+                        if (fileContent.selectedItem == null) return;
+                        fileLabel.text = fileContent.selectedItem.name;
+                }
+            }
+        });
+    }
+
+    var backdropProperties = UiS.get('backdrop-properties', content);
+    backdropProperties.disabled = true;
+
+    var backdropCheck = UiS.get('backdrop-check', content);
+    backdropCheck.onChange = (e) -> { backdropProperties.disabled = !backdropCheck.selected; }
+
+    UiS.openDialog({
+        content: content, 
+        title: 'Create Sprite',
+        buttons: ['Create', 'Cancel'], 
+        callback: (e) ->
+        {
+            switch(e.button)
+            {
+                case 'Cancel': return;
+                case 'Create':
+                    if (fileLabel == null || fileLabel.text == null || fileLabel.text == '') return;
+
+                    var name = fileLabel.text;
+                    var obj = new SObj(name, name, createSprite(name, UiS.get('is-animated', content).value));
+                    obj.layer = rootToAddSpriteTo.name;
+                    obj.isAnimated = UiS.get('is-animated', content).value;
+                    addNodeToObjectLayer(rootToAddSpriteTo, obj, true);
+            }
+        }
+    });
+}
+
+function openAddCharDialog(e)
+{
+    var list = new ListView();
+    list.width = 200;
+    list.height = 300;
+    list.dataSource = getDataSource();
+
+    for (character in FileSystem.readDirectory(Paths.folder('characters', WORKING_MOD_DIRECTORY)))
+    {
+        var name = concat(['', character]);
+        if (initChars.contains(name)) continue;
+
+        list.dataSource.add({text: name});
+    }
+
+    var isPlayer = new CheckBox();
+    isPlayer.selected = true;
+    isPlayer.text = 'Is Player?';
+
+    var content = new VBox();
+    content.addComponent(list);
+    content.addComponent(isPlayer);
+
+    UiS.openDialog({
+        content: content, 
+        title: 'Add Character',
+        buttons: ['Add', 'Cancel'], 
+        callback: (e) ->
+        {
+            switch(e.button)
+            {
+                case 'Cancel': return;
+                case 'Add':
+                    if (list.selectedItem.text == null) return;
+
+                    var creatingPlayer = isPlayer.selected;
+
+                    var name = list.selectedItem.text;
+
+                    if (!creatingPlayer) opps.push(name);
+                    createCharacterByName(name);
+
+                    var element = new SObj(name, name, getCharacterByName(name));
+                    element.isCharacter = true;
+                    element.layer = OBJECT_TREE_CHARACTERS;
+                    stageObjects.remove(getCharacterElementByName(name));
+
+                    addNodeToObjectLayer(rootToAddSpriteTo, element, true);
+            }
+        }
+    });
+}

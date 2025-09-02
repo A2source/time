@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Controls" width="400" height="600" left="700" top="50">
+    <vbox height="100%" width="100%">
+        <property-grid styleNames="controls" height="100%" width="100%" />
+    </vbox>
+</panel>

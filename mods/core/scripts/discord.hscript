@@ -1,0 +1,4 @@
+function start(song)
+{
+    DiscordClient.changePresence({state: 'In Game'});
+}

@@ -290,7 +290,7 @@ class FlxSound extends FlxBasic
 	/**
 	 * Handles fade out, fade in, panning, proximity, and amplitude operations each frame.
 	 */
-	override public function update(elapsed:Float):Void
+	override public function update(dt:Float):Void
 	{
 		if (!playing)
 			return;

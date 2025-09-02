@@ -1,0 +1,164 @@
+.menubar {
+    background: #1f0029;
+
+    border-color: white;
+
+    border-bottom-width: 2px;
+}
+
+.menuitem {
+    background: #1f0029 #5e007d horizontal;
+    color: white;
+}
+
+.menuitem:hover {
+    background: #8e00be #af00af horizontal;
+    color: black;
+}
+
+.menuseparator-line {
+    background: white #5e007d horizontal;
+}
+
+.verticalrule {
+    background: white #1f0029 vertical;
+}
+
+.menuitem-shortcut-label {
+    color: white;
+
+    font-size: 8px;
+    opacity: 0.75;
+}
+
+.menuitem-shortcut-label:hover {
+    font-size: 10px;
+    opacity: 1;
+}
+
+.button {
+    background: #000000 #1f0029 vertical;
+    fill-opacity: 0.7;
+
+    outline-color: white;
+    color: white;
+}
+
+.button-label {
+    color: white;
+}
+
+.button:hover {
+    background: #8e00be #af00af horizontal;
+    color: black;
+}
+
+.menu {
+    background: #1f0029;
+}
+
+.panel-title {
+    background: #000000 #430330 vertical;
+    
+    width: 100%;
+    height: 25px;
+
+    border-color: white;
+
+    border-width: 2px;
+    border-radius: 3px;
+}
+
+.panel-title-text {
+    color: white;
+
+    vertical-align: center;
+
+    font-size: 12px;
+    font-weight: bold;
+
+    padding-top: 6px;
+    padding-left: 6px;
+}
+
+.editor-panel {
+    background: #1f0029 #5e007d horizontal;
+    border-color: white;
+    border-width: 2px;
+    border-radius: 3px;
+
+    padding: 8px;
+}
+
+.editor-panel > * > .label {
+    color: white;
+}
+/* * > * > .checkbox-label {
+    color: white;
+}
+* > * > .checkbox-label:disabled {
+    color: black;
+} */
+.editor-panel > * > .vertical-rule {
+    background: white;
+}
+.editor-panel > * > .horizontal-rule {
+    background: white;
+}
+
+
+.listview {
+    border-color: white;
+
+    border-radius: 3px;
+    border-width: 2px;
+
+    background: #1f0029 black vertical;
+}
+
+.listview .listview-contents {
+    background: #1f0029 black vertical;
+}
+
+.listview .listview-contents > .itemrenderer .label {
+    color: white;
+}
+
+.label:disabled {
+    color: gray;
+}
+
+.listview .even {
+    background: #1f0029 #5e007d horizontal;
+    border-color: white;
+    border-width: 1px;
+    border-style: dashed;
+}
+
+.listview .even:hover {
+    background: #5d0b78 #5e007d horizontal;
+}
+
+.listview .odd {
+    background: #1f0029 #5e007d horizontal;
+    border-color: white;
+    border-width: 1px;
+    border-style: dashed;
+}
+
+.listview .odd:hover {
+    background: #5d0b78 #5e007d horizontal;
+}
+
+.listview .listview-contents > .itemrenderer:selected {
+    background: #8e00be #af00af horizontal;
+    color: black;
+}
+
+.listview .listview-contents > .itemrenderer:selected .label {
+    color: black;
+}
+
+.listview:disabled .label {
+    color: black;
+}

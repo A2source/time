@@ -1,0 +1,83 @@
+var screen;
+var view;
+
+var options = ['Resume', 'Restart', 'Exit'];
+
+function create()
+{
+    FlxG.mouse.visible = true;
+
+    screen = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0xFF000000);
+    screen.alpha = 0;
+    screen.cameras = [cams.top];
+
+    FlxTween.tween(screen, {alpha: 0.5}, 0.5, {ease: FlxEase.expoOut});
+
+    add(screen);
+
+    view = new HBox();
+    formatBox = new VBox();
+
+    UiS.addSpacer(75, 0, view);
+    view.addComponent(formatBox);
+    UiS.addSpacer(0, 75, formatBox);
+
+    for (i in options)
+    {
+        var button = getButton(i);
+        button.onClick = (e)->
+        {
+            game.closeSubState();
+
+            if (['Restart', 'Exit'].contains(button.text))
+            {
+                if (FlxG.sound.music != null)
+                    FlxG.sound.music.volume = 0;
+
+                if (game.vocals != null)
+                    game.vocals.volume = 0;
+            }
+
+            switch(button.text)
+            {
+                case 'Restart':
+                    game.paused = true;
+                    LoadingState.switchState(new PlayState());
+
+                case 'Exit':
+                    LoadingState.switchCustomState('MasterEditorMenu');
+            }
+        }
+
+        formatBox.addComponent(button);
+        UiS.addSpacer(0, 25, formatBox);
+    }
+
+    view.addComponent(formatBox);
+    view.cameras = [cams.top];
+    Screen.addComponent(view);
+}
+
+function update(dt)
+{
+    if (controls.BACK) game.closeSubState();
+}
+
+function onClose()
+{
+    screen.destroy();
+
+    Screen.removeComponent(view);
+
+    FlxG.mouse.visible = false;
+}
+
+function getButton(text)
+{
+    var button = new Button();
+    button.text = text;
+    button.width = 90;
+    button.height = 60;
+
+    return button;
+}

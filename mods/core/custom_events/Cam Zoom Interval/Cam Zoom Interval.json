@@ -1,0 +1,25 @@
+{
+	"t": "Cam Zoom Interval",
+	"e": [
+		{
+			"d": true,
+			"t": "BOOL",
+			"n": "Enabled"
+		},
+		{
+			"d": 1,
+			"t": "UNSIGNED_INT",
+			"n": "Beat Interval"
+		},
+		{
+			"d": 0.03,
+			"t": "FLOAT",
+			"n": "Game Zoom"
+		},
+		{
+			"d": 0.015,
+			"t": "FLOAT",
+			"n": "HUD Zoom"
+		}
+	]
+}

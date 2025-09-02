@@ -1,0 +1,82 @@
+var video;
+
+function load()
+{
+    LoadingState.initializeLoadingScreen([{
+        name: 'Loading VIDEO!',
+        jobs: [
+            {
+                method: Paths.mods.video,
+                keys: ['togore']
+            }
+        ]
+    }], {state: 'VideoTestState'});
+}
+
+var SCALE = 0.5;
+function create()
+{
+    DiscordClient.changePresence({state: 'Togore'});
+    
+    video = new FlxVideoSprite();
+    video.load(Paths.mods.video(['togore']).path);
+
+    video.scale.set(SCALE, SCALE);
+    video.updateHitbox();
+
+    add(video);
+    video.play();
+
+    video.bitmap.onFormatSetup.add(() ->
+    {
+        var width = video.bitmap.bitmapData.width;
+        var height = video.bitmap.bitmapData.height;
+
+        video.setPosition(HALF_WIDTH - width / 2, HALF_HEIGHT - height / 2);
+    });
+
+    var slider = new HorizontalSlider();
+    slider.min = 0.1;
+    slider.max = 2;
+    slider.width = 200;
+    slider.pos = 1;
+
+    slider.x = HALF_WIDTH - slider.width / 2;
+    slider.y = FlxG.height - 35;
+
+    slider.onChange = (e) ->
+    {
+        video.bitmap.rate = slider.pos;
+    }
+
+    Screen.addComponent(slider);
+}
+
+function onKeyDown(key, modifiers)
+{
+    if (key != KEY_SPACE) return;
+
+    if (video.bitmap.isPlaying) 
+    {
+        video.pause();
+
+        FlxTween.cancelTweensOf(video.scale);
+
+        video.color = 0xFFA2A2A2;
+        FlxTween.tween(video.scale, {x: SCALE * 0.8, y: SCALE * 0.8}, 0.8, {ease: FlxEase.elasticOut});
+    }
+    else 
+    {
+        video.resume();
+
+        FlxTween.cancelTweensOf(video.scale);
+
+        video.color = 0xFFFFFFFF;
+        FlxTween.tween(video.scale, {x: SCALE, y: SCALE}, 0.8, {ease: FlxEase.elasticOut});
+    }
+}
+
+function update(dt)
+{ 
+    if (FlxG.keys.justPressed.ESCAPE) LoadingState.switchCustomState('MasterEditorMenu'); 
+}   

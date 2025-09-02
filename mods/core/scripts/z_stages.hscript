@@ -1,0 +1,202 @@
+var stageObjects = [];
+
+var rimShaderFrag = Paths.mods.shader(['rimLighting']).content;
+
+var objectNameDatabase = ['TEMPLATE_DO_NOT_USE' => {}];
+
+function preLoad()
+{
+    setInterps();
+}
+
+var charactersBatch = {
+    name: 'Loading character assets...',
+    jobs: [],
+    dir: LOADED_MOD_DIRECTORY
+}
+var assetBatch = {
+    name: 'Loading stage assets...',
+    jobs: [],
+    dir: LOADED_MOD_DIRECTORY
+}
+var scriptBatch = {
+    name: 'Loading required script content...',
+    jobs: [],
+    dir: LOADED_MOD_DIRECTORY
+}
+
+function load()
+{
+    if (charactersBatch.jobs.length > 0)
+        game.loadingBatches.push(charactersBatch);
+
+    if (assetBatch.jobs.length > 0)
+        game.loadingBatches.push(assetBatch);
+
+    var songBatch = {
+        name: concat(['Loading "', LOADED_SONG_NAME, '" Song Data...']),
+        jobs: [
+            {
+                method: Paths.mods.song.inst,
+                keys: [LOADED_SONG_NAME]
+            }
+        ],
+        dir: LOADED_MOD_DIRECTORY
+    }
+
+    if (game.chart.needsVoices) songBatch.jobs.push({
+        method: Paths.mods.song.voices,
+        keys: [LOADED_SONG_NAME]
+    });
+
+    game.loadingBatches.push(songBatch);
+
+    if (scriptBatch.jobs.length > 0)
+        game.loadingBatches.push(scriptBatch);
+}
+
+function start(song)
+{
+    setInterps();
+}
+
+function setInterps()
+{
+    game.hscriptManager.setAll('stageObjects', stageObjects);
+    game.hscriptManager.setAll('registerAsOpp', (name) -> {});
+    game.hscriptManager.setAll('addLayerToStageLayers', (layer) ->
+    {
+        for (element in layer.elements)
+            stageObjects.push(element);
+    });
+    game.hscriptManager.setAll('setSimpleShadows', (value) -> { game.forEachCharacter((c) -> { c.simpleShadows = value; });  });
+
+    game.hscriptManager.setAll('addObjectAnimation', (sobj, name, tag, fps, looped, loopPoint, flipX, flipY) ->
+    {
+        var object = sobj.object;
+        object.animation.addByPrefix(name, tag, fps, looped, flipX, flipY);
+        privateAccess(() ->
+        {
+            var animation = object.animation._animations.get(name);
+            animation.loopPoint = loopPoint;
+        });
+    });
+
+    game.hscriptManager.setAll('rimFloat', (name, target, value) ->
+    {
+        var obj = getObjectByName(name);
+        if (obj == null) return;
+
+        obj.object.rimLightShader.setFloat(target, value);
+    });
+    game.hscriptManager.setAll('rimFloatArray', (name, target, value) ->
+    {
+        var obj = getObjectByName(name);
+        if (obj == null) return;
+
+        obj.object.rimLightShader.setFloatArray(target, value);
+    });
+
+    game.hscriptManager.setAll('getObjectByName', getObjectByName);
+
+    game.hscriptManager.setAll('registerCharacterToLoad', (character) ->
+    {
+        var pngs = [];
+        var foundAtlas = [];
+        var jsons = [];
+        for (file in FileSystem.readDirectory(Paths.mods.character.folder(character, LOADED_MOD_DIRECTORY)))
+        {
+            var name = file.split('.')[0];
+
+            if (stringEndsWith(file, PNG_FILE_EXT)) pngs.push(name);
+            else if (stringEndsWith(file, XML_FILE_EXT) && pngs.contains(name)) foundAtlas.push(name);
+            else if (stringEndsWith(file, JSON_FILE_EXT)) jsons.push(name);
+        }
+
+        for (atlas in foundAtlas) 
+        {
+            charactersBatch.jobs.push({
+                method: Paths.mods.character.atlas,
+                keys: [character, atlas]
+            });
+        }
+
+        for (json in jsons)
+        {
+            charactersBatch.jobs.push({
+                method: Paths.mods.character.json,
+                keys: [character, json]
+            });
+        }
+    });
+    game.hscriptManager.setAll('registerAssetToLoad', (job) ->
+    {
+        assetBatch.jobs.push(job);
+    });
+    game.hscriptManager.setAll('registerScriptContentToLoad', (job) ->
+    {
+        scriptBatch.jobs.push(job);
+    });
+}
+
+function getObjectByName(name)
+{
+    if (objectNameDatabase[name] != null) return objectNameDatabase[name];
+
+    for (object in stageObjects)
+    {
+        if (object.name != name) continue;
+    
+        objectNameDatabase[name] = object;
+        return object;
+    }
+
+    return null;
+}
+
+function startPost(song)
+{
+    game.forEachCharacter((c) -> 
+    { 
+        var obj = new SObj(c.name, c.name, c);
+        obj.isCharacter = true;
+        obj.zIndex = c.zIndex;
+        stageObjects.push(obj); 
+    });
+
+    var members = [];
+    for (object in stageObjects)
+    {
+        object.object.rimLightShader = new FlxRuntimeShader(rimShaderFrag, null);
+        if (object.isCharacter) 
+        {
+            object.object.cameras = [cams.game];
+            object.object.shadow.cameras = [cams.game];
+            object.object.simpleShadow.cameras = [cams.game];
+            object.object.trail.cameras = [cams.game];
+
+            members.push(object);
+            continue;
+        }
+
+        object.object.cameras = [cams.game];
+        object.object.zIndex = object.zIndex;
+        
+        members.push(object);
+    }
+
+    sortArray(members, (a, b) -> { return a.zIndex < b.zIndex ? -1 : a.zIndex == b.zIndex ? 0 : 1; });
+    for (member in members)
+    {
+        if (member.isCharacter)
+        {
+            add(member.object.shadow);
+            add(member.object.simpleShadow);
+            add(member.object.trail);
+        }
+
+        add(member.object);
+    }
+
+    game.hscriptManager.callAll('setRimLighting', []);
+}

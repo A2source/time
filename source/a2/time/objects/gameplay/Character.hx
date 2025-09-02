@@ -1,29 +1,22 @@
 package a2.time.objects.gameplay;
 
-import animateatlas.AtlasFrameMaker;
 import flixel.FlxG;
 import flixel.FlxSprite;
-import flixel.addons.effects.FlxTrail;
 import flixel.addons.effects.FlxSkewedSprite;
-import flixel.animation.FlxBaseAnimation;
-import flixel.animation.FlxAnimationController;
 import flixel.graphics.frames.FlxAtlasFrames;
+import flixel.math.FlxPoint;
 import flixel.tweens.FlxTween;
-import flixel.util.FlxSort;
 import sys.io.File;
 import sys.FileSystem;
 import haxe.Json;
-import flixel.math.FlxPoint;
 
+import a2.time.backend.Assets;
+import a2.time.backend.Paths;
 import a2.time.states.PlayState;
 import a2.time.objects.TimeSprite;
 import a2.time.objects.song.Conductor;
-import a2.time.util.ClientPrefs;
-import a2.time.Paths;
-
-#if !flash 
-import flixel.addons.display.FlxRuntimeShader;
-#end
+import a2.time.backend.ClientPrefs;
+import a2.time.util.Offset;
 
 using StringTools;
 
@@ -36,26 +29,53 @@ typedef CharacterMetadata =
 typedef CharacterFile = 
 {
 	var name:String;
+	var sheets:Array<String>;
 
 	var scale:Float;
-	var sing_duration:Float;
+	var singDuration:Float;
 
-	var flip_x:Bool;
+	var flipX:Bool;
+	var flipY:Bool;
+
 	var antialiasing:Bool;
-	var healthbar_colors:Array<Int>;
+
+	var playerCameraPosition:Offset;
+	var opponentCameraPosition:Offset;
 
 	var metadata:CharacterMetadata;
 }
+typedef CharacterAnimationsFile = { var animations:Array<CharacterAnimation>; }
 
-typedef AnimArray = 
+typedef CharacterAnimation = 
 {
-	var anim:String;
-	var sheet:String;
+	var tag:String;
 	var name:String;
+
 	var fps:Int;
+
+	var flipX:Bool;
+	var flipY:Bool;
+
 	var loop:Bool;
+	var loopPoint:Int;
+
 	var indices:Array<Int>;
-	var offsets:Array<Int>;
+
+	var playerOffsets:Offset;
+	var opponentOffsets:Offset;
+
+	var type:String;
+	var typeIndex:Int;
+}
+
+typedef CharacterOptions =
+{
+	var name:String;
+	var player:Bool;
+
+	@:optional var dir:String;
+	@:optional var type:CharacterType; 
+	@:optional var debug:Bool;
 }
 
 enum CharacterType
@@ -67,337 +87,260 @@ enum CharacterType
 
 class Character extends TimeSprite
 {
-	public static var SING_ANIMATIONS:Array<String> = ['singLEFT', 'singDOWN', 'singUP', 'singRIGHT'];
-
-	public var metadata:CharacterMetadata;
-
-	public var rimLightShader:FlxRuntimeShader;
+	public static var DEFAULT_CHARACTER:String = 'bf';
 
 	public var name:String = DEFAULT_CHARACTER;
+	public var player:Bool = false;
 
-	public var animOffsets:Map<String, Array<Dynamic>>;
-	public var debugMode:Bool = false;
+	public var type:CharacterType;
+	public var dir:String = '';
 
-	public var isPlayer:Bool = false;
+	// for idles, also if you character has dance left / right (or more!)
+	public var danceAnimations:Array<String> = [];
+	private var currentDanceIndex:Int = 0;
+	public var doDance:Bool = true;
+
+	// sing and miss animations, sorted by notedata
+	public var singAnimations:Array<String> = [];
+	public var missAnimations:Array<String> = [];
+	public var holdAnimations:Array<String> = [];
+
+	public var hasMissAnimations(get, never):Bool;
+	public function get_hasMissAnimations():Bool return missAnimations.length > 0;
+
+	public var hasHoldAnimations(get, never):Bool;
+	public function get_hasHoldAnimations():Bool return holdAnimations.length > 0;
+
+	public var animations:Map<String, CharacterAnimation> = new Map();
+
+	public var debug:Bool = false;
+	public var metadata:CharacterMetadata;
 
 	public var holdTimer:Float = 0;
-	public var specialAnim:Bool = false;
-	public var stunned:Bool = false;
-
-	public var singDuration:Float = 4; //Multiplier of how long a character holds the sing pose
-
-	public var danceIdle:Bool = false; //Character use dance left and right instead of idle
-	public var skipDance:Bool = false;
-
-	public var animSuffix:String = '';
-	public var iconSuffix:String = '';
-
-	public var healthIcon:String = 'face';
-	public var animationsArray:Array<AnimArray> = [];
-
-	public var positionArray:Array<Float> = [0, 0];
-	public var cameraPosition:Array<Float> = [0, 0];
-
-	public var hasMissAnimations:Bool = false;
-
-	public var trailChar:Character;
-	public var trailInitAlpha:Float = 0.8;
-
+	public var singDuration:Float = 4;
+	
+	public var justHitNote:Bool = false;
 	public var prevDir:Int = -1;
 	public var prevDirKeep:Int = -1;
 
+	public var animSuffix:String = '';
+	public var iconSuffix:String = '';
+	
+	private var playerCameraPosition:Offset = {x: 0, y: 0}
+	private var opponentCameraPosition:Offset = {x: 0, y: 0}
+
+	public var trail:Character;
+	public var trailInitAlpha:Float = 0.8;
+
 	public var hitSustainNote:Bool = false;
 
-	// le shadows
 	public var simpleShadows:Bool = false;
-	public var shadowChar:Character;
+	public var shadow:Character;
 	public var simpleShadow:FlxSkewedSprite;
 
-	public var baseOffset:Array<Float> = [0, 0];
-	public var baseSkew:Array<Float> = [0, 0];
-	public var baseScale:Array<Float> = [1, 1];
-	public var shadowOffsets:Map<String, Array<Float>> = new Map();
-	public var shadowSkews:Map<String, Array<Float>> = new Map();
-	public var shadowScales:Map<String, Array<Float>> = new Map();
+	public var baseOrigin:Offset = {x: 0, y: 0}
+	public var baseOffset:Offset = {x: 0, y: 0}
+	public var baseScale:Offset = {x: 1, y: 1}
+	public var baseSkew:Offset = {x: 0, y: 0}
+	public var shadowOffsets:Map<String, Offset> = new Map();
+	public var shadowScales:Map<String, Offset> = new Map();
+	public var shadowSkews:Map<String, Offset> = new Map();
+	public var shadowAlpha:Float = 0;
 
-	public var charType:CharacterType;
+	public var characterJsonData:CharacterFile;
 
-	private var curController:FlxAnimationController;
+	private var spriteSheets:Array<String> = [];
 
-	//Used on Character Editor
-	public var spriteSheets:Array<String> = [];
-	public var sheetAnimations:Array<FlxAnimationController> = [];
-	public var sheetFrames:Array<Dynamic> = [];
-	public var jsonScale:Float = 1;
-	public var initialWidth:Float = 0;
-	public var noAntialiasing:Bool = false;
-	public var originalFlipX:Bool = false;
-	public var healthColorArray:Array<Int> = [255, 0, 0];
-	public var animSetScale:String = 'idle';
-
-	public var modDirectory:String = '';
-
-	public static var DEFAULT_CHARACTER:String = 'bf'; //In case a character is missing, it will use BF on its place
-	public function new(x:Float, y:Float, ?character:String = 'bf', ?isPlayer:Bool = false, ?type:CharacterType = NORMAL, ?debug:Bool = false)
+	public function new(x:Float, y:Float, options:CharacterOptions)
 	{
 		super(x, y);
 
-		charType = type;
+		name = '${options.name}';
+		player = options.player;
 
-		curController = animation;
+		var parsedDir:String = Reflect.hasField(options, 'dir') ? options.dir : Main.MOD_NAME;
+		var parsedType:CharacterType = Reflect.hasField(options, 'type') ? options.type : NORMAL;
+		var parsedDebug:Bool = Reflect.hasField(options, 'debug') ? options.debug : false;
 
-		Paths.VERBOSE = false;
+		dir = parsedDir;
+		type = parsedType;
+		debug = parsedDebug;
 
-		var scaleToSet:Float = 1;
+		var charContent:String = Paths.mods.character.json([name, 'character'], dir).content;
+		var charJson:CharacterFile = cast Json.parse(charContent);
 
-		#if (haxe >= "4.0.0")
-		animOffsets = new Map();
-		#else
-		animOffsets = new Map<String, Array<Dynamic>>();
-		#end
-		name = character;
-		this.isPlayer = isPlayer;
-		antialiasing = ClientPrefs.data.antialiasing;
-		var library:String = null;
-
-		var jsonToLoad:String = isPlayer ? 'player' : 'opponent';
-		var opposite:String = isPlayer ? 'opponent' : 'player';
-
-		var charPath:String = null;
-		var animPath:String = null;
-
-		for (mod in Paths.getModDirectories())
-		{
-			var charCheck = Paths.charJson(name, 'character', mod);
-			var animCheck = Paths.charJson(name, jsonToLoad, mod);
-
-			if (charCheck != null && charPath == null)
-			{
-				charPath = charCheck;
-				modDirectory = mod;
-			}
-
-			if (animCheck != null && animPath == null)
-			{
-				animPath = animCheck;
-				modDirectory = mod;
-			}
-
-			if (animPath != null && charPath != null)
-				break;
-
-			if (animPath == null) 
-				animPath = Paths.charJson(name, opposite, mod);
-		}
-
-		if (charPath == null || animPath == null)
-		{
-			animPath = Paths.charJson(DEFAULT_CHARACTER, 'player', Main.MOD_NAME); 
-			charPath = Paths.charJson(DEFAULT_CHARACTER, 'character', Main.MOD_NAME);
-			modDirectory = Main.MOD_NAME;
-		}
-
-		var rawCharJson = File.getContent(charPath);
-		var rawAnimJson = File.getContent(animPath);
-
-		var charJson:CharacterFile = cast Json.parse(rawCharJson);
-
-		var castAnimJson = cast Json.parse(rawAnimJson);
-		var animJson:Array<AnimArray> = castAnimJson.animations;
-
-		name = charJson.name;
-		debugMode = debug;
-
-		var spriteType = "sparrow";
-
-		//sparrow
-		//packer
-		//texture
-		// var modTxtToFind:String = Paths.modsTxt(spriteSheets[0]);
-		// var txtToFind:String = Paths.getPath('characters/${name}/${spriteSheets[0]}.txt', TEXT);
+		characterJsonData = charJson;
 		
-		// if (FileSystem.exists(modTxtToFind) || FileSystem.exists(txtToFind) || Assets.exists(txtToFind))
-		// 	spriteType = "packer";
-		
-		// var modAnimToFind:String = Paths.modFolders('characters/${name}/${spriteSheets[0]}/Animation.json');
-		// var animToFind:String = Paths.getPath('characters/${name}/${spriteSheets[0]}/Animation.json', TEXT);
-		
-		// if (FileSystem.exists(modAnimToFind) || FileSystem.exists(animToFind) || Assets.exists(animToFind))
-		// 	spriteType = "texture";
+		playerCameraPosition = charJson.playerCameraPosition;
+		opponentCameraPosition = charJson.opponentCameraPosition;
 
-		for (anim in animJson)
-			animationsArray.push(anim);
+		singDuration = charJson.singDuration;
 
-		if(animationsArray != null && animationsArray.length > 0) 
-		{
-			for (anim in animationsArray) 
-			{
-				var animAnim:String = '' + anim.anim;
-				var animName:String = '' + anim.name;
-				var animFps:Int = anim.fps;
-				var animLoop:Bool = !!anim.loop; //Bruh
-				var animIndices:Array<Int> = anim.indices;
+		var doFlipX:Bool = !!charJson.flipX;
+		var doFlipY:Bool = !!charJson.flipY;
 
-				shadowOffsets.set(anim.anim, [0, 0]);
-				shadowSkews.set(anim.anim, [0, 0]);
-				shadowScales.set(anim.anim, [0, 0]);
+		characterJsonData.flipX = doFlipX;
+		characterJsonData.flipY = doFlipY;
 
-				if (debugMode && charType == TRAIL)
-					animLoop = true;
+		flipX = !player;
+		if (doFlipX) flipX = !flipX;
 
-				// if this animation's spritesheet hasn't been added yet
-				// add it
-				// and a new animation controller too
-				if (!spriteSheets.contains(anim.sheet))
-				{
-					spriteSheets.push(anim.sheet);
-					sheetAnimations.push(new FlxAnimationController(this));
-
-					switch (spriteType)
-					{
-						case "packer":
-							trace('not supported');
-						
-						case "sparrow":
-							frames = Paths.getCharSparrow(name, anim.sheet, modDirectory);
-						
-						case "texture":
-							frames = AtlasFrameMaker.construct(anim.sheet);
-					}
-				}
-
-				if(animIndices != null && animIndices.length > 0) 
-					sheetAnimations[spriteSheets.indexOf(anim.sheet)].addByIndices(animAnim, animName, animIndices, "", animFps, animLoop);
-				else 
-					sheetAnimations[spriteSheets.indexOf(anim.sheet)].addByPrefix(animAnim, animName, animFps, animLoop);
-
-				if(anim.offsets != null && anim.offsets.length > 1 && charType != SHADOW)
-					addOffset(anim.anim, anim.offsets[0], anim.offsets[1]);
-			}
-		} 
-		else 
-			quickAnimAdd('idle', 'BF idle dance');
-
-		switch (spriteType)
-		{
-			case "packer":
-				trace('not supported');
-				// for (sheet in spriteSheets)
-				// {
-				// 	frames = Paths.getCharacterPackerAtlas(name, sheet);
-				// 	sheetFrames.push(frames);
-				// }
-			
-			case "sparrow":
-				for (sheet in spriteSheets)
-				{
-					frames = Paths.getCharSparrow(name, sheet, modDirectory);
-					sheetFrames.push(frames);
-				}
-			
-			case "texture":
-				for (sheet in spriteSheets)
-				{
-					frames = AtlasFrameMaker.construct(sheet);
-					sheetFrames.push(frames);
-				}
-		}
-
-		initialWidth = width;
-		scaleToSet = charJson.scale;
-
-		positionArray = castAnimJson.position;
-		cameraPosition = castAnimJson.camera_position;
-
-		if (positionArray == null)
-		{
-			positionArray = [0, 0];
-			cameraPosition = [0, 0];
-		}
-
-		healthIcon = 'icon';
-		singDuration = charJson.sing_duration;
-
-		flipX = !!charJson.flip_x;
+		if (doFlipY) flipY = true;
 
 		antialiasing = charJson.antialiasing;
-		if(!ClientPrefs.data.antialiasing) antialiasing = false;
+		if(!ClientPrefs.get('antialiasing')) antialiasing = false;
 
-		if(charJson.healthbar_colors != null && charJson.healthbar_colors.length > 2)
-			healthColorArray = charJson.healthbar_colors;
+		if (Reflect.hasField(charJson, 'metadata')) metadata = charJson.metadata;
 
-		if (Reflect.hasField(charJson, 'metadata'))
-			metadata = charJson.metadata;
+		spriteSheets = charJson.sheets;
+		frames = Paths.mods.character.atlas([name, spriteSheets[0]], dir).content;
+		for (i in 1...spriteSheets.length - 1)
+		{
+			var sheetFrames:FlxAtlasFrames = Paths.mods.character.atlas([name, spriteSheets[i]], dir).content;
+			for (frame in sheetFrames.frames) frames.pushFrame(frame);
+		}
 
-		if(animOffsets.exists('singLEFT-miss') || animOffsets.exists('singDOWN-miss') || animOffsets.exists('singUP-miss') || animOffsets.exists('singRIGHT-miss')) hasMissAnimations = true;
+		var animContent:String = Paths.mods.character.json([name, 'animations'], dir).content;
+		var animJson:CharacterAnimationsFile = cast Json.parse(animContent);
 
-		// creating the trail stuff aw yea
+		var foundDanceAnimations:Array<CharacterAnimation> = [];
+		var foundSingAnimations:Array<CharacterAnimation> = [];
+		var foundMissAnimations:Array<CharacterAnimation> = [];
+		var foundHoldAnimations:Array<CharacterAnimation> = [];
+		for (anim in animJson.animations)
+		{
+			animations.set(anim.name, {
+				tag: cast anim.tag,
+				name: cast anim.name,
+
+				fps: cast anim.fps,
+
+				flipX: cast anim.flipX,
+				flipY: cast anim.flipY,
+
+				loop: cast anim.loop,
+				loopPoint: cast anim.loopPoint,
+				
+				indices: cast anim.indices,
+
+				playerOffsets: cast anim.playerOffsets,
+				opponentOffsets: cast anim.opponentOffsets,
+
+				type: cast anim.type,
+				typeIndex: cast anim.typeIndex
+			});
+
+			shadowOffsets.set(anim.name, {x: 0, y: 0});
+			shadowSkews.set(anim.name, {x: 0, y: 0});
+			shadowScales.set(anim.name, {x: 0, y: 0});
+
+			switch(anim.type)
+			{
+				case 'DANCE': foundDanceAnimations.push(anim);
+				case 'SING': foundSingAnimations.push(anim);
+				case 'MISS': foundMissAnimations.push(anim);
+				case 'HOLD': foundHoldAnimations.push(anim);
+			}
+
+			var parsedLoop:Bool = (type == TRAIL && debug) ? true : anim.loop;
+			if (anim.indices.length > 0) 
+				animation.addByIndices(anim.name, anim.tag, anim.indices, "", cast anim.fps, parsedLoop, anim.flipX, anim.flipY);
+			else 
+				animation.addByPrefix(anim.name, anim.tag, cast anim.fps, parsedLoop, anim.flipX, anim.flipY);
+
+			@:privateAccess 
+			{
+				var thisAnim = animation._animations.get(anim.name);
+				if (thisAnim == null) continue;
+				thisAnim.loopPoint = anim.loopPoint;
+			}
+		}
+
+		// foundDanceAnimations.sort((a, b) -> { a.type.order < b.type.order ? -1 : a.type.order == b.type.order ? 0 : 1; });
+		// foundSingAnimations.sort((a, b) -> { a.type.data < b.type.data ? -1 : a.type.data == b.type.data ? 0 : 1; });
+		// foundMissAnimations.sort((a, b) -> { a.type.data < b.type.data ? -1 : a.type.data == b.type.data ? 0 : 1; });
+
+		for (anim in foundDanceAnimations) danceAnimations[anim.typeIndex] = anim.name;
+		for (anim in foundSingAnimations) singAnimations[anim.typeIndex] = anim.name;
+		for (anim in foundMissAnimations) missAnimations[anim.typeIndex] = anim.name;
+		for (anim in foundHoldAnimations) holdAnimations[anim.typeIndex] = anim.name;
 
 		// i accidentally created a recursive loop of making trail characters for trail characters
 		// now there is safety in place for that
 		// oops
-		if (charType == NORMAL)
+		if (type == NORMAL)
 		{
-			trailChar = new Character(x, y, character, isPlayer, TRAIL, debug);
-			trailChar.alpha = 0;
+			trail = new Character(x, y, {
+				name: name,
+				player: player, 
+				dir: dir, 
+				type: TRAIL,
+				debug: debug
+			});
+			trail.alpha = 0;
 
-			shadowChar = new Character(x, y, character, isPlayer, SHADOW, debug);
-			shadowChar.alpha = 0;
-			shadowChar.color = 0xFF000000;
+			shadow = new Character(x, y, {
+				name: name,
+				player: player, 
+				dir: dir, 
+				type: SHADOW,
+				debug: debug
+			});
+			shadow.alpha = 0;
+			shadow.color = 0xFF000000;
 
 			simpleShadow = new FlxSkewedSprite(x, y);
-			simpleShadow.loadGraphic(Paths.image('simpleShadow'));
+			simpleShadow.loadGraphic(cast Assets.cacheGraphic('assets/shared/images/simpleShadow.png').content);
 			simpleShadow.alpha = 0;
 			simpleShadow.color = 0xFF000000;
+
+			shadow.animation.copyFrom(animation);
+			trail.animation.copyFrom(animation);
 		}
 
-		recalculateDanceIdle();
-		dance();
+		setScale(charJson.scale);
 
-		// omfg
-		if (animation.curAnim == null)
-			playAnim(danceIdle ? 'danceLEFT' : 'idle');
-
-		setScale(scaleToSet);
-
-		Paths.VERBOSE = true;
+		if (debug) playAnim(danceAnimations[0], true);
+		else dance();
 	}
 
 	public function setScale(val:Float)
 	{
-		if (charType != NORMAL)
-			return;
+		if (type != NORMAL) return;
 
-		jsonScale = val;
-
-		setGraphicSize(Std.int(initialWidth * val));
+		scale.set(val, val);
 		updateHitbox();
 
-		trailChar.setGraphicSize(Std.int(initialWidth * val));
-		trailChar.updateHitbox();
-		trailChar.jsonScale = val;
+		trail.scale.set(val, val);
+		trail.updateHitbox();
 
-		shadowChar.setGraphicSize(Std.int(initialWidth * val));
-		shadowChar.updateHitbox();
-		shadowChar.jsonScale = val;
+		shadow.scale.set(val, val);
+		shadow.updateHitbox();
 	}
 
 	function updateFollowChars()
 	{
-		if (charType != NORMAL)
-			return;
+		if (type != NORMAL) return;
 
-		trailChar.setPosition(x, y);
-		shadowChar.setPosition(x, y + height);
+		trail.setPosition(x, y);
+		shadow.setPosition(x, y + height);
 		simpleShadow.setPosition(x, y + height);
 
-		shadowChar.visible = visible && !simpleShadows;
-		shadowChar.flipY = !flipY;
+		shadow.visible = visible && !simpleShadows;
+		shadow.flipX = flipX;
+		shadow.flipY = !flipY;
 
 		simpleShadow.visible = visible && simpleShadows;
 
-		trailChar.visible = visible;
-		trailChar.flipY = flipY;
+		trail.visible = visible;
+		trail.flipX = flipX;
+		trail.flipY = flipY;
+
+		shadow.origin.set(baseOrigin.x, baseOrigin.y);
+		simpleShadow.origin.set(baseOrigin.x, baseOrigin.y);
+
+		shadow.alpha = shadowAlpha;
+		simpleShadow.alpha = shadowAlpha;
 	}
 
 	override function update(dt:Float)
@@ -410,245 +353,163 @@ class Character extends TimeSprite
 
 	private function updateAnim(dt:Float)
 	{
-		if(debugMode || animation.curAnim == null)
-			return;
+		if(debug || animation.curAnim == null) return;
 
-		if(specialAnim && animation.curAnim.finished)
-		{
-			specialAnim = false;
-			dance();
-		}
-
-		if (animation.curAnim.name.startsWith('sing') && !hitSustainNote)
-			holdTimer += dt * 0.9;
+		if (animations.get(curAnimName).type == 'SING' && !hitSustainNote) holdTimer += dt * 0.9;
 
 		if (holdTimer >= Conductor.stepCrochet * (0.0011 / (FlxG.sound.music != null ? FlxG.sound.music.pitch : 1)) * singDuration)
 		{
-			dance();
 			holdTimer = 0;
+			justHitNote = false;
+
+			dance();
 		}
 	}
 
-	public var danced:Bool = false;
-
-	/**
-	 * FOR GF DANCING SHIT
-	 */
 	public function dance()
 	{
-		if (debugMode)
-			return;
+		if (debug) return;
+		if (!doDance) return;
 
-		if (skipDance)
-			return;
-
-		if (specialAnim)
-			return;
-
-		if (danceIdle)
+		if (justHitNote && holdTimer == 0) return;
+		if (holdTimer > 0) 
 		{
-			danced = !danced;
-
-			if (danced)
-				playAnim('danceRIGHT');
-			else
-				playAnim('danceLEFT');
+			justHitNote = false;
+			return;
 		}
-		else if (hasAnim('idle'))
-			playAnim('idle');
+
+		if (hitSustainNote) return;
+
+		playAnim(danceAnimations[currentDanceIndex]);
+
+		currentDanceIndex++;
+		if (currentDanceIndex > danceAnimations.length - 1) currentDanceIndex = 0;
 	}
 
-	public function getCameraPosition():FlxPoint
+	public var cameraPosition(get, never):FlxPoint;
+	public function get_cameraPosition():FlxPoint
 	{
 		var point = getMidpoint();
 
-		if(!isPlayer) 
-			point.x += 150 + cameraPosition[0];
+		var position:Offset;
+		if (player)
+		{
+			position = playerCameraPosition;
+			point.x -= 100 + position.x;
+		}
 		else
-			point.x -= 100 + cameraPosition[0];
+		{			
+			position = opponentCameraPosition;
+			point.x -= 100 + position.x;
+		}
 
-		point.y -= 100 - cameraPosition[1];
+		point.y -= 100 - position.y;
 
 		return point;
 	}
 
-	function updateShadow(AnimName:String, Force:Bool = false, Reversed:Bool = false, Frame:Int = 0)
+	function updateShadow(_name:String, force:Bool = false, reversed:Bool = false, frame:Int = 0)
 	{
-		if (charType != NORMAL)
-			return;
+		if (type != NORMAL) return;
 
-		shadowChar.playAnim(AnimName, Force, Reversed, Frame);
+		shadow.playAnim(_name, force, reversed, frame);
 
-		if (shadowOffsets.get(AnimName) != null)
+		if (shadowOffsets.get(_name) != null)
 		{
-			var curOffsets = shadowOffsets.get(AnimName);
-			shadowChar.offset.x = baseOffset[0] + curOffsets[0];
-			shadowChar.offset.y = baseOffset[1] + curOffsets[1];
+			var curOffsets = shadowOffsets.get(_name);
+			shadow.offset.x = baseOffset.x + curOffsets.x;
+			shadow.offset.y = baseOffset.y + curOffsets.y;
 
-			simpleShadow.offset.x = baseOffset[0] + curOffsets[0];
-			simpleShadow.offset.y = baseOffset[1] + curOffsets[1];
+			simpleShadow.offset.x = baseOffset.x + curOffsets.x;
+			simpleShadow.offset.y = baseOffset.y + curOffsets.y;
 		}
 
-		if (shadowSkews.get(AnimName) != null)
+		if (shadowSkews.get(_name) != null)
 		{
-			var curSkews = shadowSkews.get(AnimName);
-			shadowChar.skew.x = baseSkew[0] + curSkews[0];
-			shadowChar.skew.y = baseSkew[1] + curSkews[1];
+			var curSkews = shadowSkews.get(_name);
+			shadow.skew.x = baseSkew.x + curSkews.x;
+			shadow.skew.y = baseSkew.y + curSkews.y;
 
-			simpleShadow.skew.x = baseSkew[0] + curSkews[0];
-			simpleShadow.skew.y = baseSkew[1] + curSkews[1];
+			simpleShadow.skew.x = baseSkew.x + curSkews.x;
+			simpleShadow.skew.y = baseSkew.y + curSkews.y;
 		}
 
-		if (shadowScales.get(AnimName) != null)
+		if (shadowScales.get(_name) != null)
 		{
-			var curScales = shadowScales.get(AnimName);
-			shadowChar.scale.x = baseScale[0] + curScales[0];
-			shadowChar.scale.y = baseScale[1] + curScales[1];
+			var curScales = shadowScales.get(_name);
+			shadow.scale.x = baseScale.x + curScales.x;
+			shadow.scale.y = baseScale.y + curScales.y;
 
-			simpleShadow.scale.x = baseScale[0] + curScales[0];
-			simpleShadow.scale.y = baseScale[1] + curScales[1];
+			simpleShadow.scale.x = baseScale.x + curScales.x;
+			simpleShadow.scale.y = baseScale.y + curScales.y;
 		}
 	}
 
-	public function playAnim(AnimName:String, Force:Bool = false, Reversed:Bool = false, Frame:Int = 0):Void
+	public function playAnim(_name:String, force:Bool = true, reversed:Bool = false, frame:Int = 0):Void
 	{
-		if (hitSustainNote)
-			return;
+		PlayState.callAllScripts('preCharacterAnimation', [this, _name, force, reversed, frame]);
 
-		updateShadow(AnimName, Force, Reversed, Frame);
+		hitSustainNote = false;
+		updateShadow(_name, force, reversed, frame);
 
-		specialAnim = false;
+		animation.play(_name + animSuffix, force, reversed, frame);
 
-		var animIndex:Int = spriteSheets.indexOf(getAnimByName(AnimName).sheet);
-		var controller:FlxAnimationController = sheetAnimations[animIndex];
-
-		curController = controller;
-
-		if (frames != sheetFrames[animIndex])
-			frames = sheetFrames[animIndex];
-
-		animation.copyFrom(controller);
-
-		animation.play(AnimName + animSuffix, Force, Reversed, Frame);
-
-		var daOffset = animOffsets.get(AnimName);
-		if (animOffsets.exists(AnimName))
-			offset.set(daOffset[0], daOffset[1]);
-		else
-			offset.set(0, 0);
-
-		if (danceIdle)
+		var foundOffset:Offset = {x: 0, y: 0}
+		if (animations.exists(_name))
 		{
-			if (AnimName == 'singLEFT')
-				danced = true;
-			
-			else if (AnimName == 'singRIGHT')
-				danced = false;
-		
-			if (AnimName == 'singUP' || AnimName == 'singDOWN')
-				danced = !danced;
+			if (player) foundOffset = animations.get(_name).playerOffsets;
+			else foundOffset = animations.get(_name).opponentOffsets;
 		}
+
+		offset.set(foundOffset.x * scale.x, foundOffset.y * scale.y);
+
+		PlayState.callAllScripts('onCharacterAnimation', [this, _name, force, reversed, frame]);
 	}
 
-	public function playTrailAnim(tween:Bool, AnimName:String, Force:Bool = false, Reversed:Bool = false, Frame:Int = 0):Void
+	public function playTrailAnim(tween:Bool, _name:String, force:Bool = false, reversed:Bool = false, frame:Int = 0):Void
 	{
-		if (charType != NORMAL)
-			return;
+		if (type != NORMAL) return;
 
 		if (tween)
 		{
-			trailChar.alpha = trailInitAlpha;
-			FlxTween.cancelTweensOf(trailChar);
-			PlayState.instance.modchartTweens['${name} ${prevDir} trail'] = FlxTween.tween(trailChar, {alpha: 0}, 0.4);
+			trail.alpha = trailInitAlpha;
+			FlxTween.cancelTweensOf(trail);
+			PlayState.gameInstance.scriptTweens.set('${name} ${prevDir} trail', FlxTween.tween(trail, {alpha: 0}, 0.4));
 		}
 
-		trailChar.holdTimer = 0;
-		trailChar.playAnim(AnimName, Force, Reversed, Frame);
+		trail.holdTimer = 0;
+		trail.playAnim(_name, force, reversed, frame);
 	}
 
-	public function getAnimByName(name:String):AnimArray
+	public function getAnimFromName(name:String):CharacterAnimation return animations.get(name);
+	public function hasAnim(name:String, ?suffix:String = ''):Bool return animations.exists(name + suffix);
+
+	public function getSingAnimationFromData(data:Int)
 	{
-		for (anim in animationsArray)
-			if (anim.anim == name)
-				return anim;
-
-		return animationsArray[0];
+		if (singAnimations[data] == null) return '';
+		return singAnimations[data];
 	}
 
-	public function hasAnim(name:String, ?suffix:String = ''):Bool
+	public function getMissAnimationFromData(data:Int)
 	{
-		for (anim in animationsArray)
-			if (anim.anim == name + suffix)
-				return true;
-
-		return false;
+		if (missAnimations[data] == null) return '';
+		return missAnimations[data];
 	}
 
-	public function animStartsWith(string:String):Bool
+	public function getHoldAnimationFromData(data:Int)
 	{
-		if (animation.curAnim == null)
-			return false;
-
-		return animation.curAnim.name.startsWith(string);
+		if (holdAnimations[data] == null) return '';
+		return holdAnimations[data];
 	}
 
-	public function animEndsWith(string:String):Bool
-	{
-		if (animation.curAnim == null)
-			return false;
+	public function animStartsWith(string:String):Bool return curAnimName.startsWith(string);
+	public function animEndsWith(string:String):Bool return curAnimName.endsWith(string);
+	public function animEquals(string:String):Bool return curAnimName == string;
 
-		return animation.curAnim.name.endsWith(string);
-	}
-
-	public function animEquals(string:String):Bool
-	{
-		if (animation.curAnim == null)
-			return false;
-
-		return animation.curAnim.name == string;
-	}
-
-	public var curAnimName(get, default):String = '';
+	public var curAnimName(get, never):String;
 	public function get_curAnimName():String
 	{
-		if (animation.curAnim == null)
-			return '';
-
+		if (animation.curAnim == null) return '';
 		return animation.curAnim.name;
 	}
-
-	public function hasLoopAnim(name:String):Bool return hasAnim(name, '-loop');
-
-	private function sortAnims(Obj1:Array<Dynamic>, Obj2:Array<Dynamic>):Int return FlxSort.byValues(FlxSort.ASCENDING, Obj1[0], Obj2[0]);
-
-	public var danceEveryNumBeats:Int = 2;
-	private var settingCharacterUp:Bool = true;
-	public function recalculateDanceIdle() 
-	{
-		var lastDanceIdle:Bool = danceIdle;
-		danceIdle = (hasAnim('danceLEFT') && hasAnim('danceRIGHT'));
-
-		if(settingCharacterUp)
-			danceEveryNumBeats = (danceIdle ? 1 : 2);
-
-		else if(lastDanceIdle != danceIdle)
-		{
-			var calc:Float = danceEveryNumBeats;
-			if(danceIdle)
-				calc /= 2;
-			else
-				calc *= 2;
-
-			danceEveryNumBeats = Math.round(Math.max(calc, 1));
-		}
-
-		if (danceIdle)
-			animSetScale = 'danceLEFT';
-
-		settingCharacterUp = false;
-	}
-
-	public function addOffset(name:String, x:Float = 0, y:Float = 0) animOffsets[name] = [x, y];
-
-	public function quickAnimAdd(name:String, anim:String) animation.addByPrefix(name, anim, 24, false);
 }

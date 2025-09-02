@@ -1,0 +1,174 @@
+// generated with TIME Stage Editor v3.0.0
+// 2025-09-01 18:20:13
+// Friday Night Funkin' - TIME - mods/core/stages/stage-erect
+
+// Do NOT add new functionality to this script. Please create a new one,
+// all changes get overwritten if stage is saved again in the editor.
+
+var crowd;
+var bg;
+var brightLightSmall;
+var lightAbove;
+var lightgreen;
+var lightred;
+var lights;
+var orangeLight;
+var server;
+
+var layer_Mass_Import = {
+    name: 'Mass_Import',
+    elements: []
+}
+
+function startPost(song)
+{
+    char('bf').setPosition(1557, 677);
+    char('bf').zIndex = 3;
+    char('bf').baseOffset = {x: -10, y: 150}
+    char('bf').baseScale = {x: 1, y: 0.5}
+    char('bf').baseSkew = {x: -48, y: 0}
+    char('bf').shadowAlpha = 0.194444444444444;
+    char('bf').shadowOffsets.set('missRIGHT', {x: -50, y: 0});
+    char('bf').shadowOffsets.set('singDOWN', {x: -35, y: 0});
+    char('bf').shadowOffsets.set('singUP', {x: -65, y: 0});
+    char('bf').shadowOffsets.set('idle', {x: -11, y: -10});
+    char('bf').shadowOffsets.set('singRIGHT', {x: -50, y: 0});
+    char('bf').shadowOffsets.set('missDOWN', {x: -25, y: -20});
+    char('bf').shadowOffsets.set('missUP', {x: -65, y: 25});
+    registerAsOpp('dad');
+    char('dad').setPosition(560, 356);
+    char('dad').zIndex = 2;
+
+    char('gf').setPosition(895, 378);
+    char('gf').zIndex = 1;
+    char('gf').baseOffset = {x: 0, y: 15}
+    char('gf').baseScale = {x: 1, y: 0.2}
+    char('gf').baseSkew = {x: -75, y: 0}
+    char('gf').shadowAlpha = 0.0648148148148148;
+
+    crowd = new FlxSprite(1313, 538).loadAtlas(Paths.mods.stage.atlas(['stage-erect', 'crowd'], 'core').content);
+    crowd.scrollFactor.set(0.9, 0.9);
+    crowd.scale.set(0.9, 0.9);
+    crowd.antialiasing = ClientPrefs.get('antialiasing');
+    crowd_obj = new SObj('crowd', 'crowd', crowd, 0);
+    crowd_obj.isAnimated = true;
+    addObjectAnimation(crowd_obj, 'idle', 'idle', 12, true, 0, false, false);
+    layer_Mass_Import.elements.push(crowd_obj);
+
+    bg = new FlxSprite().load(Paths.mods.stage.image(['stage-erect', 'bg'], 'core').content);
+    bg.antialiasing = ClientPrefs.get('antialiasing');
+    bg_obj = new SObj('bg', 'bg', bg, 0);
+    layer_Mass_Import.elements.push(bg_obj);
+
+    brightLightSmall = new FlxSprite(1766, 138).load(Paths.mods.stage.image(['stage-erect', 'brightLightSmall'], 'core').content);
+    brightLightSmall.scrollFactor.set(1.2, 1.1);
+    brightLightSmall.antialiasing = ClientPrefs.get('antialiasing');
+    brightLightSmall.blend = blendModeFromString('Add');
+    brightLightSmall_obj = new SObj('brightLightSmall', 'brightLightSmall', brightLightSmall, 0);
+    layer_Mass_Import.elements.push(brightLightSmall_obj);
+
+    lightAbove = new FlxSprite().load(Paths.mods.stage.image(['stage-erect', 'lightAbove'], 'core').content);
+    lightAbove.antialiasing = ClientPrefs.get('antialiasing');
+    lightAbove_obj = new SObj('lightAbove', 'lightAbove', lightAbove, 0);
+    layer_Mass_Import.elements.push(lightAbove_obj);
+
+    lightgreen = new FlxSprite(602, 478).load(Paths.mods.stage.image(['stage-erect', 'lightgreen'], 'core').content);
+    lightgreen.antialiasing = ClientPrefs.get('antialiasing');
+    lightgreen.blend = blendModeFromString('Add');
+    lightgreen_obj = new SObj('lightgreen', 'lightgreen', lightgreen, 0);
+    layer_Mass_Import.elements.push(lightgreen_obj);
+
+    lightred = new FlxSprite(674, 795).load(Paths.mods.stage.image(['stage-erect', 'lightred'], 'core').content);
+    lightred.antialiasing = ClientPrefs.get('antialiasing');
+    lightred.blend = blendModeFromString('Add');
+    lightred_obj = new SObj('lightred', 'lightred', lightred, 0);
+    layer_Mass_Import.elements.push(lightred_obj);
+
+    lights = new FlxSprite(-24, -14).load(Paths.mods.stage.image(['stage-erect', 'lights'], 'core').content);
+    lights.scrollFactor.set(1.2, 1.1);
+    lights.antialiasing = ClientPrefs.get('antialiasing');
+    lights_obj = new SObj('lights', 'lights', lights, 1);
+    layer_Mass_Import.elements.push(lights_obj);
+
+    orangeLight = new FlxSprite(1072, 71).load(Paths.mods.stage.image(['stage-erect', 'orangeLight'], 'core').content);
+    orangeLight.antialiasing = ClientPrefs.get('antialiasing');
+    orangeLight.blend = blendModeFromString('Add');
+    orangeLight_obj = new SObj('orangeLight', 'orangeLight', orangeLight, 3);
+    layer_Mass_Import.elements.push(orangeLight_obj);
+
+    server = new FlxSprite(-212, 449).load(Paths.mods.stage.image(['stage-erect', 'server'], 'core').content);
+    server.antialiasing = ClientPrefs.get('antialiasing');
+    server_obj = new SObj('server', 'server', server, 0);
+    layer_Mass_Import.elements.push(server_obj);
+
+    addLayerToStageLayers(layer_Mass_Import);
+}
+
+function setRimLighting()
+{
+    char('bf').rimLightShader.setFloatArray('overlayColor', [0.913725490196078,0.913725490196078,0.513725490196078,0.0989010989010989]);
+    char('bf').rimLightShader.setFloatArray('satinColor', [0,0,0,0.0989010989010989]);
+    char('bf').rimLightShader.setFloatArray('innerShadowColor', [0.952941176470588,0.682352941176471,0.501960784313725,0.340659340659341]);
+    char('bf').rimLightShader.setFloat('innerShadowAngle', 5.31654141376734);
+    char('bf').rimLightShader.setFloat('innerShadowDistance', 35.7142857142857);
+
+    char('dad').rimLightShader.setFloatArray('satinColor', [0,0,0,0.230769230769231]);
+    char('dad').rimLightShader.setFloatArray('innerShadowColor', [0.952941176470588,0.756862745098039,0.172549019607843,0.0769230769230769]);
+    char('dad').rimLightShader.setFloat('innerShadowDistance', 31.3186813186813);
+
+    char('gf').rimLightShader.setFloatArray('satinColor', [0.0235294117647059,0.0235294117647059,0.0235294117647059,0.186813186813187]);
+    char('gf').rimLightShader.setFloatArray('innerShadowColor', [0.941176470588235,0.768627450980392,0.474509803921569,0.164835164835165]);
+    char('gf').rimLightShader.setFloat('innerShadowDistance', 50);
+}
+
+function load()
+{
+    registerCharacterToLoad('bf');
+    registerCharacterToLoad('dad');
+    registerCharacterToLoad('gf');
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.atlas,
+        keys: ['stage-erect', 'crowd']
+    });
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.image,
+        keys: ['stage-erect', 'bg']
+    });
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.image,
+        keys: ['stage-erect', 'brightLightSmall']
+    });
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.image,
+        keys: ['stage-erect', 'lightAbove']
+    });
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.image,
+        keys: ['stage-erect', 'lightgreen']
+    });
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.image,
+        keys: ['stage-erect', 'lightred']
+    });
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.image,
+        keys: ['stage-erect', 'lights']
+    });
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.image,
+        keys: ['stage-erect', 'orangeLight']
+    });
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.image,
+        keys: ['stage-erect', 'server']
+    });
+}

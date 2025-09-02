@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Animations" width="250" height="250" top="60" left="1025">
+    <vbox width="100%" height="100%">
+        <textfield placeholder="Search..." styleNames="animation-filter" />
+
+        <listview styleNames="animation-picker" width="100%" height="100%">
+            <item-renderer width="100%">
+                <hbox width="100%">
+                    <label id="name" width="100%" verticalAlign="center" />
+                    <button id="delete" text="x" horizontalAlign="right" style="background-color: red;" />
+                </hbox>
+            </item-renderer>
+        </listview>
+
+        <button text="+" width="100%" styleNames="char-button add-anim" style="background-color: lime; font-size: 12px;"/>
+    </vbox>
+</panel>

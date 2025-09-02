@@ -13,57 +13,60 @@ var curScore = 0;
 
 function start(song)
 {
-    healthBarBG = new AttachedSprite(Paths.modsImage('healthBar'));
+    healthBarBG = new FlxSprite().load(Paths.mods.image(['healthBar']).content);
     healthBarBG.y = FlxG.height * 0.89;
     healthBarBG.x = FlxG.width / 2 - healthBarBG.width / 2;
     healthBarBG.scrollFactor.set();
-    healthBarBG.visible = !ClientPrefs.data.hideHud;
-    healthBarBG.xAdd = -4;
-    healthBarBG.yAdd = -4;
-    add(healthBarBG);
+    healthBarBG.visible = !ClientPrefs.get('hideHud');
 
-    if(ClientPrefs.data.downScroll) healthBarBG.y = 0.11 * FlxG.height;
+    if(ClientPrefs.get('downscroll')) healthBarBG.y = 0.11 * FlxG.height;
 
-    healthBar = new FlxBar(healthBarBG.x + 4, healthBarBG.y + 4, FlxBarFillDirection.RIGHT_TO_LEFT, Std.int(healthBarBG.width - 8), Std.int(healthBarBG.height - 8), game,
-        'health', 0, 2);
+    ClientPrefs.set('hpAlpha', 1);
+
+    healthBar = new FlxBar(healthBarBG.x + 4, healthBarBG.y + 4, FlxBarFillDirection.RIGHT_TO_LEFT, Std.int(healthBarBG.width - 8), Std.int(healthBarBG.height - 8),
+        null, '', 0, 1);
     healthBar.scrollFactor.set();
-    healthBar.visible = !ClientPrefs.data.hideHud;
-    healthBar.alpha = ClientPrefs.data.healthBarAlpha;
+    healthBar.visible = !ClientPrefs.get('hideHud');
+    healthBar.alpha = ClientPrefs.get('hpAlpha');
+    healthBar.value = 0.5;
+
+    scoreText = new FlxText(0, healthBarBG.y + 48, FlxG.width, "", 20);
+    scoreText.setFormat(DEFAULT_FONT, 18, 0xFFFFFFFF, 'center', BORDER_OUTLINE, 0xFF000000);
+    scoreText.scrollFactor.set();
+    scoreText.borderSize = 1.8;
+    scoreText.visible = healthBar.visible;
+    
+    healthBarBG.cameras = [cams.hud];
+    healthBar.cameras = [cams.hud];
+    scoreText.cameras = [cams.hud];
+
+    add(healthBarBG);
     add(healthBar);
+    add(scoreText);
 
-    healthBarBG.sprTracker = healthBar;
-
-    playerIcon = new HealthIcon(game.playerGroup.members[0].name, true);
-    opponentIcon = new HealthIcon(game.opponentGroup.members[0].name, false);
-
-    for (icon in [playerIcon, opponentIcon])
-    {
-        icon.y = healthBar.y - 75;
-        icon.visible = !ClientPrefs.data.hideHud;
-        icon.alpha = ClientPrefs.data.healthBarAlpha;
-        icon.cameras = [game.camHUD];
-
-        add(icon);
-    }
+    playerIcon = new HealthIcon(getCurPlayer().name, true);
+    opponentIcon = new HealthIcon(getCurOpponent().name, false);
 
     game.hscriptManager.setAll('playerIcon', playerIcon);
     game.hscriptManager.setAll('opponentIcon', opponentIcon);
 
-    scoreText = new FlxText(0, healthBarBG.y + 36, FlxG.width, "", 20);
-    scoreText.setFormat(Paths.modsFont('vcr'), 18, 0xFFFFFFFF, 'center', FlxTextBorderStyle.OUTLINE, 0xFF000000);
-    scoreText.scrollFactor.set();
-    scoreText.borderSize = 1.8;
-    scoreText.visible = !ClientPrefs.data.hideHud;
-    add(scoreText);
+    for (icon in [playerIcon, opponentIcon])
+    {
+        icon.y = healthBar.y - 75;
+        icon.visible = healthBar.visible;
+        icon.alpha = healthBar.alpha;
+        icon.cameras = [cams.hud];
 
-    for (item in [healthBarBG, healthBar, scoreText])
-        item.cameras = [game.camHUD];
+        add(icon);
+    }
 
     onHealthBarReload();
 }
 
 function update(dt)
 {
+    updateHealthBar(dt);
+
     updateIconPositions();
     updateIconScale(dt);
     updateIconAnimations();
@@ -71,23 +74,48 @@ function update(dt)
     updateScoreText(dt);
 }
 
+function updateHealthBar(dt)
+{
+    healthBar.value = FlxMath.lerp(health, healthBar.value, 0.5);
+
+    healthBarBG.setPosition(healthBar.x - 4, healthBar.y - 4);
+}
+
 function updateScoreText(dt)
 {
-    if (scoreText == null)
-        return;
+    if (scoreText == null) return;
 
-    curScore = Std.int(FlxMath.lerp(score, curScore, CoolUtil.boundTo(1 - (dt * 18 * game.playbackRate), 0, 1)));
+    curScore = Std.int(FlxMath.lerp(score, curScore, 1 - (dt * 18 * Conductor.timescale), 0, 1));
         
-    scoreText.text = 'Score: ' + curScore
+    scoreText.text = 'Score: ' + formatScore(curScore)
     + ' | Misses: ' + tally.miss
     + ' | Accuracy: ' + FlxMath.roundDecimal(accuracy * 100, 2) + '%';
+}
+
+function formatScore(score)
+{
+    var arr = ('' + score).split('');
+
+    var string = '';
+
+    var i = arr.length;
+    for (digit in arr)
+    {
+        if (i % 3 == 0 && i != arr.length)
+            string += ',';
+
+        string += '' + digit;
+        
+        i--;
+    }
+
+    return string;
 }
 
 var ICON_OFFSET = 56;
 function updateIconPositions()
 {
-    if (iconPositionOverride)
-        return;
+    if (iconPositionOverride) return;
 
     playerIcon.x = getIconPosition(true);
 	opponentIcon.x = getIconPosition(false);
@@ -108,52 +136,29 @@ function getIconPosition(player)
     x += remap;
 
     return healthBar.x + (healthBar.width * (FlxMath.remapToRange(healthBar.percent, 0, 100, 100, 0) * 0.01)) + (150 * icon.scale.x - (player ? 150 : 300)) / 2 - ICON_OFFSET;
-
-    return x + combine;
 }
 
 function updateIconAnimations()
 {
+    var oppWin = healthBar.percent < 20;
+    var playerWin = healthBar.percent > 80;
+
     if (playerIcon.animation.frames == 3) 
-    {
-        if (healthBar.percent < 20)
-            playerIcon.animation.curAnim.curFrame = 1;
-        else if (healthBar.percent >80)
-            playerIcon.animation.curAnim.curFrame = 2;
-        else
-            playerIcon.animation.curAnim.curFrame = 0;
-    } 
-    else 
-    {
-        if (healthBar.percent < 20)
-            playerIcon.animation.curAnim.curFrame = 1;
-        else
-            playerIcon.animation.curAnim.curFrame = 0;
-    }
+        playerIcon.animation.curAnim.curFrame = playerWin ? 2 : oppWin ? 1 : 0;
+    else
+        playerIcon.animation.curAnim.curFrame = oppWin ? 1 : 0;
 
     if (opponentIcon.animation.frames == 3) 
-    {
-        if (healthBar.percent > 80)
-            opponentIcon.animation.curAnim.curFrame = 1;
-        else if (healthBar.percent < 20)
-            opponentIcon.animation.curAnim.curFrame = 2;
-        else 
-            opponentIcon.animation.curAnim.curFrame = 0;
-    } 
-    else 
-    {
-        if (healthBar.percent > 80)
-            opponentIcon.animation.curAnim.curFrame = 1;
-        else 
-            opponentIcon.animation.curAnim.curFrame = 0;
-    }
+        opponentIcon.animation.curAnim.curFrame = oppWin ? 2 : playerWin ? 1 : 0;
+    else
+        opponentIcon.animation.curAnim.curFrame = playerWin ? 1 : 0;
 }
 
 function updateIconScale(dt)
 {
     for (icon in [playerIcon, opponentIcon])
     {
-        var mult = FlxMath.lerp(1, icon.scale.x, CoolUtil.boundTo(1 - (dt * 9 * game.playbackRate), 0, 1));
+        var mult = FlxMath.lerp(1, icon.scale.x, 1 - (dt * 9 * Conductor.timescale));
         
         icon.scale.set(mult, mult);
         icon.updateHitbox();
@@ -164,13 +169,9 @@ function updateIconScale(dt)
 
 function onHealthBarReload()
 {
-    if (healthBar == null)
-		return;
+    if (healthBar == null) return;
 
-    healthBar.createFilledBar(colorFromInt(game.dadCol), colorFromInt(game.bfCol));
-
-    trace(game.dadCol, game.bfCol);
-
+    healthBar.createFilledBar(0xFFFF0000, 0xFF00FF00);
     healthBar.updateBar();
 }
 
@@ -196,36 +197,25 @@ function getIconString(char)
     return '' + (char.iconSuffix != '' ? '-' : '') + char.iconSuffix;
 }
 
-function goodNoteHit(note)
+function onHitNotePost(note)
 {
-    var playerIndex = SONG.players.indexOf(note.attachedChar);
-    if (playerIndex == game.curBF)
-        return;
-    
-    if (note.isSustainNote)
-        return;
+    if (note.c == game.prevPlay) return;
+    if (note.hasTail) return;
 
-    game.curBF = playerIndex;
-
-    playerIcon.change(SONG.players[game.curBF], getIconString(char(SONG.players[curBF])));
-    game.updateCharCols();
+    playerIcon.change(getCurPlayer().name, getIconString(getCurPlayer()));
+    updateCharCols();
 }
 
-function opponentNoteHit(note)
+function onOpponentHit(note)
 {
-    var oppIndex = SONG.opponents.indexOf(note.attachedChar);
-	if (oppIndex == game.curDAD)
-        return;
+	if (note.c == game.prevOpp) return;
+    if (note.hasTail) return;
 
-    if (note.isSustainNote)
-        return;
-
-    game.curDAD = oppIndex;
-    opponentIcon.change(SONG.opponents[game.curDAD], getIconString(char(SONG.opponents[game.curDAD])));
-    game.updateCharCols();
+    opponentIcon.change(getCurOpponent().name, getIconString(getCurOpponent()));
+    updateCharCols();
 }
 
-function beatHit(beat)
+function onBeatHit(beat)
 {
     for (icon in [playerIcon, opponentIcon])
     {
@@ -234,25 +224,15 @@ function beatHit(beat)
     }
 }
 
-function onEvent(name, v1, v2, v3)
-{
-    if (name != 'Set Icon Suffix')
-        return;
+// function onEvent(name, v1, v2, v3)
+// {
+//     if (name != 'Set Icon Suffix') return;
 
-    if (!game.charNames.contains(v1))
-    {
-        trace('Character "' + v1 + '" not found, cannot set icon suffix');
-        return;
-    }
+//     var char = char(v1);
+//     char.iconSuffix = '-$v2';
 
-    var char = char(v1);
-    char.iconSuffix = '-$v2';
+//     var icon = '' + (char.iconSuffix != '' ? '-' : '') + char.iconSuffix;
 
-    var icon = '' + (char.iconSuffix != '' ? '-' : '') + char.iconSuffix;
-
-    if (game.getCurBF().name == v1)
-        playerIcon.change(SONG.players[game.curBF], icon);
-
-    if (game.getCurDad().name == v1)
-        opponentIcon.change(SONG.opponents[game.curDAD], icon);
-}
+//     if (game.prevPlay == v1) playerIcon.change(getCurPlayer().name, getIconString(getCurPlayer()), icon);
+//     if (game.prevOpp == v1) opponentIcon.change(getCurPlayer().name, getIconString(getCurPlayer()), icon);
+// }

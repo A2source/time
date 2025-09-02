@@ -2,12 +2,12 @@ package a2.time.objects.song;
 
 import a2.time.objects.song.Section.SongSection;
 import a2.time.objects.song.Section.SwagSection;
-import a2.time.objects.gameplay.Note.NoteFile;
-import a2.time.objects.gameplay.Note.EventNote;
+import a2.time.objects.gameplay.notes.Note.NoteFile;
+import a2.time.objects.gameplay.notes.Note.EventFile;
+import a2.time.objects.util.ChartVersionUtil;
 import a2.time.states.LoadingState;
-import a2.time.states.editors.ChartingState;
 import a2.time.states.PlayState;
-import a2.time.Paths;
+import a2.time.backend.Paths;
 
 import haxe.Json;
 import haxe.DynamicAccess;
@@ -22,29 +22,23 @@ import sys.FileSystem;
 
 using StringTools;
 
-typedef SongMetadata =
+typedef SongCredit =
 {
-	var musicians:Array<String>;
-	var voiceActors:Array<String>;
-	var charters:Array<String>;
-	var programmers:Array<String>;
-	var additionalArtists:Array<String>;
-	var additionalAnimators:Array<String>;
+	name:String,
+	roles:Array<String>
 }
 
-typedef SwagSong =
+typedef TimeSong =
 {
 	var version:String;
 
 	var song:String;
 	var stage:String;
 
-	var metadata:SongMetadata;
+	var metadata:Array<SongCredit>;
 
-	var sections:Array<SongSection>;
 	var notes:Map<String, Map<String, Array<NoteFile>>>;
-
-	var events:Array<EventNote>;
+	var events:Map<String, Array<EventFile>>;
 
 	var bpm:Float;
 	var speed:Float;
@@ -53,96 +47,49 @@ typedef SwagSong =
 
 	var players:Array<String>;
 	var opponents:Array<String>;
-	var autoGF:String;
-
-	var validScore:Bool;
 }
 
 class Song
 {
-	public static inline var CHART_VERSION_STRING:String = 'Created with TIME v2.0.0';
+	public static inline var CHART_VERSION_STRING:String = ChartVersionUtil.CHART_EDITOR_VERSION;
 
-	public var song:String;
-	public var difficulty:String;
-	public var stage:String;
-
-	public var sections:Array<SongSection>;
-	public var notes:Map<String, Array<NoteFile>>;
-
-	public var events:Array<EventNote>;
-
-	public var players:Array<String> = ['bf'];
-	public var opponents:Array<String> = ['dad'];
-
-	public var characters:Array<String>;
-
-	public var bpm:Float;
-	public var needsVoices:Bool = true;
-	public var arrowSkin:String;
-	public var splashSkin:String;
-	public var speed:Float = 1;
-	public var autoGF:String = 'gf';
-
-	public function new(song, sections, notes, bpm)
+	public static function loadFromJson(name:String, ?openChartOnFail:Bool = false):TimeSong
 	{
-		this.song = song;
+		var paths = Paths.mods.song.chart([name], Paths.WORKING_MOD_DIRECTORY);
 
-		this.sections = sections;
-		this.notes = notes;
+		var content:String = paths.content;
 
-		for (segment in [this.players, this.opponents])
-			for (char in segment)
-				this.characters.push(char);
-
-		this.bpm = bpm;
-	}
-
-	public static function loadFromJson(songName:String, ?openChartOnFail:Bool = false):SwagSong
-	{
-		var rawJson = null;
-		var rawEventJson = null;
-
-		var moddyFile:String;
-		moddyFile = Paths.modsSongJson(songName, songName, Paths.WORKING_MOD_DIRECTORY);
-
-		trace('TRYING TO LOAD CHART $moddyFile');
-		if (moddyFile != null)
-			rawJson = File.getContent(moddyFile).trim();
+		if (content != null)
+			content = content.trim();
 		else
 		{
-			Lib.application.window.alert('Chart "$songName" not found. It does not exist.', Main.ALERT_TITLE);
-			LoadingState.loadAndSwitchCustomState('IntroState');
+			Lib.application.window.alert('Chart "$name" not found. It does not exist.', Main.ALERT_TITLE);
+			LoadingState.switchCustomState('IntroState');
 			return null;
 		}
 
-		while (!rawJson.endsWith("}"))
-		{
-			rawJson = rawJson.substr(0, rawJson.length - 1);
-			// LOL GOING THROUGH THE BULLSHIT TO CLEAN IDK WHATS STRANGE
-		}
+		while (!content.endsWith("}")) content = content.substr(0, content.length - 1);
 
-		var songJson:Dynamic = parseJSONshit(rawJson, songName);
-
-		trace('success! loaded $moddyFile');
-
-		if(songJson != null) 
-			StageData.loadDirectory(songJson);
-
-		return songJson;
+		return parseJSONshit(content, name);
 	}
 
-	public static function parseJSONshit(rawJson:String, songName:String):SwagSong
+	public static function parseJSONshit(content:String, name:String):TimeSong
 	{
-		var parsedSong:SwagSong = cast Json.parse(rawJson);
+		var parsedSong:TimeSong = cast Json.parse(content);
 
 		if (!Reflect.hasField(parsedSong, 'version'))
 		{
-			Lib.application.window.alert('Chart is not in the correct format.\nOpen the Chart Convert Menu in the Master Menu\nto convert this chart.', Main.ALERT_TITLE);
-			LoadingState.loadAndSwitchCustomState('IntroState');
+			Lib.application.window.alert('Chart is not in the correct format.\nOpen the Chart Convert Menu in the Chart Editor\nto convert this chart.', Main.ALERT_TITLE);
+			LoadingState.switchCustomState('IntroState');
 			return null;
 		}
 
-		var stupid:Map<String, SwagSong> = new Map();
+		switch (parsedSong.version)
+		{
+			case 'Created with TIME v2.0.0': return ChartVersionUtil.timeChart100To200(content);
+		}
+
+		var stupid:Map<String, TimeSong> = new Map();
         for (field in Reflect.fields(parsedSong))
         	stupid.set(field, Reflect.field(parsedSong, field));
 
@@ -183,19 +130,35 @@ class Song
 			i++;
 		}
 
-		var formattedSong:SwagSong = 
+		var parsedGroupings:Array<Array<EventFile>> = [];
+		var msKey:Array<String> = [];
+
+		for (ms in Reflect.fields(stupid.get('events')))
 		{
-			version: Song.CHART_VERSION_STRING,
+			msKey.push(ms);
+			parsedGroupings.push(Reflect.field(stupid.get('events'), ms));
+		}
+
+		var eventsThing:Map<String, Array<EventFile>> = new Map();
+		for (i in 0...msKey.length)
+		{
+			var key:String = msKey[i];
+			var grouping:Array<EventFile> = parsedGroupings[i];
+
+			eventsThing.set(key, grouping);
+		}
+
+		var formattedSong:TimeSong = 
+		{
+			version: ChartVersionUtil.CHART_EDITOR_VERSION,
 
 			song: '',
 			stage: '',
 
 			metadata: null,
 
-			sections: [],
 			notes: cast notesThing,
-
-			events: [],
+			events: cast eventsThing,
 
 			bpm: 0,
 			speed: 0,
@@ -203,27 +166,17 @@ class Song
 			needsVoices: false,
 
 			players: [],
-			opponents: [],
-			autoGF: '',
-
-			validScore: true
-		};
+			opponents: []
+		}
 
 		var _song:String = cast stupid.get('song');
-		trace('loading $_song');
 		formattedSong.song = _song;
 
 		var _stage:String = cast stupid.get('stage');
 		formattedSong.stage = _stage;
 
-		var _metadata:SongMetadata = cast stupid.get('metadata');
+		var _metadata:Array<SongCredit> = cast stupid.get('metadata');
 		formattedSong.metadata = _metadata;
-
-		var _sections:Array<SongSection> = cast stupid.get('sections');
-		formattedSong.sections = _sections;
-
-		var _events:Array<EventNote> = cast stupid.get('events');
-		formattedSong.events = _events;
 
 		var _bpm:Float = cast stupid.get('bpm');
 		formattedSong.bpm = _bpm;
@@ -239,12 +192,7 @@ class Song
 
 		var _opponents:Array<String> = cast stupid.get('opponents');
 		formattedSong.opponents = _opponents;
-
-		var _autoGF:String = cast stupid.get('autoGF');
-		formattedSong.autoGF = _autoGF;
-
-		trace('returning song name "${formattedSong.song}"');
-
+		
 		return formattedSong;
 	}
 }

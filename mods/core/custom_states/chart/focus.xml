@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="charFocus.png">
+	<!-- Created using the Spritesheet and XML generator -->
+	<!-- https://uncertainprod.github.io/FNF-Spritesheet-XML-generator-Web -->
+	<SubTexture name="idle0000" x="0" y="154" width="186" height="88" frameX="-7" frameY="-56" frameWidth="200" frameHeight="200"/>
+	<SubTexture name="idle0001" x="188" y="0" width="184" height="90" frameX="-8" frameY="-55" frameWidth="200" frameHeight="200"/>
+	<SubTexture name="toggle0000" x="0" y="0" width="188" height="154" frameX="-6" frameY="-23" frameWidth="200" frameHeight="200"/>
+	<SubTexture name="toggle0001" x="188" y="90" width="184" height="36" frameX="-8" frameY="-82" frameWidth="200" frameHeight="200"/>
+	<SubTexture name="toggle0002" x="188" y="126" width="176" height="16" frameX="-12" frameY="-92" frameWidth="200" frameHeight="200"/>
+	<SubTexture name="toggle0003" x="364" y="126" width="4" height="4" frameX="0" frameY="0" frameWidth="200" frameHeight="200"/>
+</TextureAtlas>

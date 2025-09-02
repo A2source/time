@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Offset">
+    <vbox>
+        <label styleNames="data-text" />
+
+        <sectionheader text="Offsets" />
+        <listview styleNames="offset-view" width="100" />
+
+        <number-stepper styleNames="x-stepper" step="0.01" precision="2" />
+        <number-stepper styleNames="y-stepper" step="0.01" precision="2" />
+
+        <label text="Strum Gap" />
+        <number-stepper styleNames="gap-stepper" />
+
+        <label text="Strum Scale" />
+        <number-stepper styleNames="scale-stepper" step="0.01" precision="2" />
+    </vbox>
+</panel>

@@ -43,20 +43,20 @@ class VarTween extends FlxTween
 		return this;
 	}
 
-	override function update(elapsed:Float):Void
+	override function update(dt:Float):Void
 	{
 		var delay:Float = (executions > 0) ? loopDelay : startDelay;
 
 		// Leave properties alone until delay is over
 		if (_secondsSinceStart < delay)
-			super.update(elapsed);
+			super.update(dt);
 		else
 		{
 			// Wait until the delay is done to set the starting values of tweens
 			if (Math.isNaN(_propertyInfos[0].startValue))
 				setStartValues();
 
-			super.update(elapsed);
+			super.update(dt);
 
 			if (active)
 				for (info in _propertyInfos)

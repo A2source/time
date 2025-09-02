@@ -1,0 +1,42 @@
+var songLength = 0;
+
+var timer;
+function startPost(song)
+{
+    timer = new FlxText();
+    timer.setFormat(DEFAULT_FONT, 20, 0xFFFFFFFF, 'center', BORDER_OUTLINE, 0xFF000000);
+    timer.borderSize = 3;
+    timer.cameras = [cams.hud];
+    add(timer);
+
+    if (ClientPrefs.get('downscroll')) timer.y = FlxG.height - timer.height - 5;
+    else timer.y = timer.height;
+}
+
+function stepHit(step)
+{
+    if (step > 1) return;
+
+    songLength = FlxG.sound.music.length;
+    FlxTween.tween(timer, {alpha: 1}, 1, {ease: FlxEase.expoOut}, 'timer in');
+}
+
+var done = false;
+function update(dt)
+{
+    if (FlxG.sound.music == null) return;
+    if (FlxG.sound.music.length == 0 || done) return;
+
+    var calc = FlxG.sound.music.length - (Conductor.songPosition - ClientPrefs.get('offset'));
+
+    timer.applyMarkup(
+        concat([
+            FlxStringUtil.formatTime(Math.floor(calc / 1000), false),
+            Conductor.timescale == 1 ? '' : concat([' (<v>', 'x', Math.floor(Conductor.timescale * 10) / 10, '<v>)'])
+        ]),
+        [new FlxTextFormatMarkerPair(new FlxTextFormat(0xFFAAAAAA), '<v>')]
+    );
+    timer.x = HALF_WIDTH + HALF_WIDTH * 0.45 - timer.width / 2;
+
+    if (timer.text == '0:00') done = true;
+}

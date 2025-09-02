@@ -1,0 +1,204 @@
+{
+	"animations": [
+		{
+			"typeIndex": 3,
+			"fps": 24,
+			"type": "MISS",
+			"tag": "BF NOTE RIGHT MISS",
+			"opponentOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"name": "missRIGHT",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": -61,
+				"y": 22
+			},
+			"indices": []
+		},
+		{
+			"typeIndex": 1,
+			"fps": 24,
+			"type": "SING",
+			"tag": "BF NOTE DOWN0",
+			"opponentOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"name": "singDOWN",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": -20,
+				"y": -49
+			},
+			"indices": []
+		},
+		{
+			"typeIndex": 2,
+			"fps": 24,
+			"type": "SING",
+			"tag": "BF NOTE UP0",
+			"opponentOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"name": "singUP",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": -44,
+				"y": 30
+			},
+			"indices": []
+		},
+		{
+			"typeIndex": 0,
+			"fps": 24,
+			"type": "MISS",
+			"tag": "BF NOTE LEFT MISS",
+			"opponentOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"name": "missLEFT",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": 8,
+				"y": 16
+			},
+			"indices": []
+		},
+		{
+			"typeIndex": 0,
+			"fps": 24,
+			"type": "DANCE",
+			"tag": "BF idle dance",
+			"opponentOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"name": "idle",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"indices": []
+		},
+		{
+			"typeIndex": 0,
+			"fps": 24,
+			"type": "",
+			"tag": "BF HEY",
+			"opponentOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"name": "hey",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": 2,
+				"y": 6
+			},
+			"indices": []
+		},
+		{
+			"typeIndex": 3,
+			"fps": 24,
+			"type": "SING",
+			"tag": "BF NOTE RIGHT0",
+			"opponentOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"name": "singRIGHT",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": -42,
+				"y": -6
+			},
+			"indices": []
+		},
+		{
+			"typeIndex": 0,
+			"fps": 24,
+			"type": "SING",
+			"tag": "BF NOTE LEFT0",
+			"opponentOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"name": "singLEFT",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": 11,
+				"y": -6
+			},
+			"indices": []
+		},
+		{
+			"typeIndex": 1,
+			"fps": 24,
+			"type": "MISS",
+			"tag": "BF NOTE DOWN MISS",
+			"opponentOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"name": "missDOWN",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": -20,
+				"y": -20
+			},
+			"indices": []
+		},
+		{
+			"typeIndex": 2,
+			"fps": 24,
+			"type": "MISS",
+			"tag": "BF NOTE UP MISS",
+			"opponentOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"name": "missUP",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": -41,
+				"y": 29
+			},
+			"indices": []
+		}
+	]
+}

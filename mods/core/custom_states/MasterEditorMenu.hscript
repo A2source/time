@@ -1,79 +1,83 @@
-buttons = [
-    'Options',
-    'Chart Editor',
-    'Character Editor',
-    'Create Stage',
-    'Create Notetype',
-    'Convert Chart',
-    'Edit Strumskins'
+var buttons = [
+    {
+        name: 'Options',
+        state: 'OptionsState'
+    },
+    { 
+        name: 'Chart Editor',
+        state: 'ChartEditorState'
+    },
+    { 
+        name: 'Character Editor',
+        state: 'CharacterEditorState'
+    },
+    { 
+        name: 'Stage Editor',
+        state: 'StageEditorState'
+    },
+    { 
+        name: 'Strumskin Editor',
+        state: 'StrumSkinEditorState'
+    },
+    {
+        name: 'Video Test State',
+        state: 'VideoTestState'
+    },
+    {
+        name: 'Convert Test',
+        state: 'ChartConvertState'
+    }
 ];
 
-uiButtons = [];
+var uiButtons = [];
 
-stateNames = [
-    'OptionsState',
-    new ChartingState(),
-    new CharacterEditorState('bf', false),
-    'MakeStageState',
-    'MakeCustomNoteState',
-    'ChartConvertState',
-    'EditStrumskinState'
-];
-
-isCustomState = [
-    true,
-    false,
-    false,
-    true,
-    true,
-    true,
-    true
-];
-
-diff = [
+var diff = [
     'easy',
     'normal',
     'hard'
 ];
 
+var quickLoadPanel = Screen.addComponent(UiS.buildXml(['master-editor-menu', 'songs']));
+var diffPanel = Screen.addComponent(UiS.buildXml(['master-editor-menu', 'difficulties']));
+
 var initialized = false;
 function create()
 {
-    Paths.clearUnusedMemory();
+    DiscordClient.changePresence({state: ''});
 
-    DiscordClient.changePresence('');
+    var quickLoadPos = ClientPrefs.register('masterQuickLoadPos', {x: FlxG.width * 0.35, y: FlxG.height * 0.1});
+    var masterDiffPos = ClientPrefs.register('masterDiffPos', {x: FlxG.width * 0.525, y: FlxG.height * 0.1});
 
     if (FlxG.sound.music != null)
-		FlxG.sound.music.stop();
+	    FlxG.sound.music.stop();
 
     FlxG.mouse.visible = true;
 
-    view = new HBox();
-    formatBox = new VBox();
+    var view = new HBox();
+    var formatBox = new VBox();
 
     UiS.addSpacer(75, 0, view);
     view.addComponent(formatBox);
     UiS.addSpacer(0, 75, formatBox);
 
     var buttonsBox = new HBox();
-    var curButtonCol = new VBox();
+
+    var boxes = [];
+    var boxIndex = -1;
 
     for (i in 0...buttons.length)
     {
         if (i % 5 == 0)
         {
-            buttonsBox.addComponent(curButtonCol);
-            curButtonCol = new VBox();
+            boxes.push(new VBox());
+            boxIndex++;
         }
 
-        var button = getButton(buttons[i]);
-        button.onClick = (e)->
-        {
-            if (isCustomState[buttons.indexOf(button.text)])
-                LoadingState.loadAndSwitchCustomState(stateNames[i]);
-            else
-                LoadingState.loadAndSwitchState(stateNames[i]);
-        }
+        var curButtonCol = boxes[boxIndex];
+
+        var data = buttons[i];
+        var button = getButton(data.name);
+        button.onClick = (e) -> { LoadingState.switchCustomState(data.state); }
 
         curButtonCol.addComponent(button);
         UiS.addSpacer(0, 25, curButtonCol);
@@ -81,7 +85,9 @@ function create()
         uiButtons.push(button);
     }
 
-    buttonsBox.addComponent(curButtonCol);
+    for (box in boxes)
+        buttonsBox.addComponent(box);
+
     formatBox.addComponent(buttonsBox);
 
     UiS.addSpacer(0, 25, formatBox);
@@ -89,44 +95,38 @@ function create()
 
     var mod = UiS.getModsDropdown(()-> 
     { 
-        trace(WORKING_MOD_DIRECTORY);
-
         if (!initialized)
         {
             initialized = true;
             return;
         }
 
-        LoadingState.loadAndSwitchCustomState('MasterEditorMenu');
+        LoadingState.switchCustomState('MasterEditorMenu');
     });
     formatBox.addComponent(mod);
 
     UiS.addSpacer(125, 0, view);
 
-    quickLoadBox = new VBox();
-    UiS.addSpacer(0, 75, quickLoadBox);
-    UiS.addLabel('Quick Load Song', quickLoadBox);
+    var listView = UiS.get('songs', quickLoadPanel);
+    listView.dataSource = getDataSource();
 
-    listView = new ListView();
-    diffSelect = new ListView();
+    var diffSelect = UiS.get('diff', diffPanel);
 
-    source = getDataSource();
-    if (Paths.mods('songs', WORKING_MOD_DIRECTORY) == null)
+    var path = Paths.folder('songs', WORKING_MOD_DIRECTORY);
+
+    if (path == null)
     {
         listView.disabled = true;
         diffSelect.disabled = true;
 
-        source.add({text: 'Songs folder not found in mod directory "' + WORKING_MOD_DIRECTORY + '"'});
+        listView.dataSource.add({text: 'Songs folder not found in mod directory "' + WORKING_MOD_DIRECTORY + '"'});
 
         uiButtons[1].disabled = true;
     }
     else
-        for (song in FileSystem.readDirectory(Paths.mods('songs', WORKING_MOD_DIRECTORY)))
-            source.add({text: song});
+        for (song in FileSystem.readDirectory(path))
+            listView.dataSource.add({text: song});
 
-    listView.dataSource = source;
-    listView.width = 200;
-    listView.height = FlxG.height - 150;
     listView.onChange = (e)->
     {
         if (listView.selectedItem == null)
@@ -138,35 +138,38 @@ function create()
             return;
         }
 
-	    PlayState.SONG = Song.loadFromJson(listView.selectedItem.text, true);
-
-        var dif = diffSelect.selectedItem.text;
-
-        PlayState.difficulty = dif == 'normal' ? '' : dif;
-        PlayState.storyDifficulty = diff.indexOf(dif);
-        PlayState.storyWeek = 1;
-
-        LoadingState.loadAndSwitchState(new PlayState());
+        var game = new PlayState(listView.selectedItem.text, diffSelect.selectedItem.text, WORKING_MOD_DIRECTORY);
+        LoadingState.switchState(game);
     }
-    quickLoadBox.addComponent(listView);
+    quickLoadPanel.addComponent(listView);
 
-    diffBox = new VBox();
-    UiS.addSpacer(0, 75, diffBox);
-    UiS.addLabel('Difficulty', diffBox);
-
-    diffSource = getDataSource();
+    diffSelect.dataSource = getDataSource();
     for (thing in diff)
-        diffSource.add({text: thing});
+        diffSelect.dataSource.add({text: thing});
 
-    diffSelect.dataSource = diffSource;
-    diffSelect.width = 100;
-    diffBox.addComponent(diffSelect);
+    diffPanel.addComponent(diffSelect);
 
-    view.addComponent(quickLoadBox);
     UiS.addSpacer(25, 0, view);
-    view.addComponent(diffBox);
 
     Screen.addComponent(view);
+
+    UiS.registerDraggable(quickLoadPanel);
+    UiS.registerDraggable(diffPanel);
+
+    quickLoadPanel.x = quickLoadPos.x;
+    quickLoadPanel.y = quickLoadPos.y;
+
+    diffPanel.x = masterDiffPos.x;
+    diffPanel.y = masterDiffPos.y;
+}
+
+function update(dt)
+{
+    if (FlxG.keys.justPressed.H)
+    {
+        var game = new PlayState(['Dad Battle', 'Execution'], 'normal', WORKING_MOD_DIRECTORY);
+        LoadingState.switchState(game);
+    }
 }
 
 function getButton(text)
@@ -177,4 +180,14 @@ function getButton(text)
     button.height = 60;
 
     return button;
+}
+
+function onLeaveState()
+{
+    if (quickLoadPanel == null) return;
+
+    ClientPrefs.set('masterQuickLoadPos', {x: quickLoadPanel.screenLeft, y: quickLoadPanel.screenTop});
+    ClientPrefs.set('masterDiffPos', {x: diffPanel.screenLeft, y: diffPanel.screenTop});
+
+    ClientPrefs.save();
 }

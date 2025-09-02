@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menubar width="100%">
+    <menu text="File">
+        <menuitem text="Open..." styleNames="ribbon-file-open" shortcutText="Ctrl+O" />
+        <menuitem text="New..." styleNames="ribbon-file-new" shortcutText="Ctrl+N" />
+        <menuseparator />
+        <menuitem text="Undo" styleNames="ribbon-file-undo" shortcutText="Ctrl+Z" />
+        <menuitem text="Redo" styleNames="ribbon-file-redo" shortcutText="Ctrl+Y" />
+        <menuseparator />
+        <menuitem text="Save" styleNames="ribbon-file-save" shortcutText="Ctrl+S" />
+        <menuseparator />
+        <menuitem text="Preferences" styleNames="ribbon-file-prefs" shortcutText="Ctrl+P" />
+        <menuseparator />
+        <menuitem text="Quit" styleNames="ribbon-file-quit" shortcutText="Escape" />
+    </menu>
+
+    <menu text="Chart">
+        <menuitem text="Edit Metadata" styleNames="ribbon-chart-metadata" shortcutText="Ctrl+E" />
+        <menuseparator />
+        <menuitem text="Jump to Step" styleNames="ribbon-chart-jump-step" shortcutText="Ctrl+D" />
+        <menuitem text="Jump to Beat" styleNames="ribbon-chart-jump-beat" shortcutText="Ctrl+F" />
+        <menuitem text="Jump to Section" styleNames="ribbon-chart-jump-section" shortcutText="Ctrl+G" />
+        <menuseparator />
+        <menucheckbox text="Metronome" styleNames="ribbon-chart-metronome" />
+        <menuseparator />
+        <vbox style="padding: 5px;">
+            <label text="Playback Rate" />
+            <slider pos="1" min="0.1" max="5" styleNames="ribbon-chart-playback" />
+            <button text="Reset" styleNames="ribbon-chart-playback-reset" />
+        </vbox>
+        <menuseparator />
+        <menuitem text="Zoom In" styleNames="ribbon-chart-zoomin" shortcutText="X" />
+        <menuitem text="Zoom Out" styleNames="ribbon-chart-zoomout" shortcutText="Z" />
+        <menuseparator />
+        <menuitem text="Tighten Snap" styleNames="ribbon-chart-tighten" shortcutText="Right" />
+        <menuitem text="Loosen Snap" styleNames="ribbon-chart-loosen" shortcutText="Left" />
+    </menu>
+
+    <menu text="View">
+        <menucheckbox text="Edit Panel" styleNames="ribbon-chart-edit-panel" selected="true" />
+        <menucheckbox text="Info Panel" styleNames="ribbon-chart-info-panel" selected="true" />
+        <menuseparator />
+        <vbox style="padding: 5px;">
+            <label text="Grid Gap" />
+            <slider pos="15" min="0" max="100" styleNames="ribbon-chart-gridgap" />
+        </vbox>
+    </menu>
+
+    <menu text="Create">
+        <menuitem text="Create New Event" styleNames="ribbon-chart-new-event" />
+        <menuitem text="Create Custom Notetype" styleNames="ribbon-chart-new-notetype" />
+    </menu>
+</menubar>

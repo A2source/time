@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Info" width="200" height="200" top="515" left="5">
+    <hbox width="100%" height="100%">
+        <property-grid width="100%" height="100%">
+            <property-group text="Song">
+                <property label="Position" styleNames="info-song-position" />
+                <property label="Time" styleNames="info-song-timestamp" />
+            </property-group>
+
+            <property-group text="Chart">
+                <property label="Step" styleNames="info-chart-step" />
+                <property label="Beat" styleNames="info-chart-beat" />
+            </property-group>
+
+            <property-group text="Dynamic">
+                <property label="BPM" styleNames="info-dynamic-bpm" />
+                <property label="Focus" styleNames="info-dynamic-focus" />
+            </property-group>
+        </property-grid>
+    </hbox>
+</panel>

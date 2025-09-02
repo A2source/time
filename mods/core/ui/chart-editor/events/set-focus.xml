@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vbox>
+    <section-header text="Choose Focus" />
+    <listview width="200" height="350" styleNames="focus-list">
+        <item-renderer width="100%">
+            <hbox width="100%">
+                <image id="icon" imageScale="0.3" verticalAlign="center" />
+                <label id="text" verticalAlign="center" />
+            </hbox>
+        </item-renderer>
+    </listview>
+</vbox>

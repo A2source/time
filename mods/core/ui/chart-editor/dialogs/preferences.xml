@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vbox width="300">
+    <section-header text="Backup" />
+    <checkbox text="Save backup on crash" selected="true" styleNames="prefs-save-backup" />
+    <button text="Load last backup" styleNames="prefs-load-backup" />
+
+    <section-header text="Animations" />
+    <property-grid width="100%">
+        <property label="Grid Sprite Animation" type="boolean" value="true" styleNames="prefs-anim-grid" />
+        <property label="Note Add Animation" type="boolean" value="true" styleNames="prefs-anim-note-add" />
+        <property label="Note Remove Animation" type="boolean" value="true" styleNames="prefs-anim-note-remove" />
+        <property label="Focus Sprite Animation" type="boolean" value="true" styleNames="prefs-anim-focus" />
+        <property label="Waveform Move Animation" type="boolean" value="true" styleNames="prefs-anim-waveform" />
+    </property-grid>
+</vbox>

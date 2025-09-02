@@ -1,83 +1,120 @@
-var screen;
-var view;
+var objects = [];
+var bars = [];
 
-var options = ['Resume', 'Restart', 'Exit'];
+var options = ['Resume', 'Restart', 'Options', 'Exit'];
 
 function create()
 {
     FlxG.mouse.visible = true;
 
-    screen = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0xFF000000);
-    screen.alpha = 0;
-    screen.cameras = [game.camOther2];
+    var BAR_HEIGHT = 50;
 
-    FlxTween.tween(screen, {alpha: 0.5}, 0.5, {ease: FlxEase.expoOut});
-
-    add(screen);
-
-    view = new HBox();
-    formatBox = new VBox();
-
-    UiS.addSpacer(75, 0, view);
-    view.addComponent(formatBox);
-    UiS.addSpacer(0, 75, formatBox);
-
-    for (i in options)
+    for (i in 0...2)
     {
-        var button = getButton(i);
-        button.onClick = (e)->
-        {
-            game.closeSubState();
+        var bar = new FlxSprite().makeGraphic(FlxG.width, 75, 0xFF000000);
+        bar.cameras = [cams.top];
+        add(bar);
 
-            if (['Restart', 'Exit'].contains(button.text))
-            {
-                if (FlxG.sound.music != null)
-                    FlxG.sound.music.volume = 0;
-
-                if (game.vocals != null)
-                    game.vocals.volume = 0;
-            }
-
-            switch(button.text)
-            {
-                case 'Restart':
-                    game.paused = true;
-                    LoadingState.loadAndSwitchState(new PlayState());
-
-                case 'Exit':
-                    LoadingState.loadAndSwitchCustomState('MasterEditorMenu');
-            }
-        }
-
-        formatBox.addComponent(button);
-        UiS.addSpacer(0, 25, formatBox);
+        bars.push(bar);
     }
 
-    view.addComponent(formatBox);
-    view.cameras = [game.camOther2];
-    Screen.addComponent(view);
+    bars[0].x = -FlxG.width;
+    bars[1].x = FlxG.width;
+    bars[1].y = FlxG.height - BAR_HEIGHT;
+
+    FlxTween.tween(cams.hud, {alpha: 0}, 0.5, {ease: FlxEase.expoOut});
+
+    for (bar in bars)
+        FlxTween.tween(bar, {x: 0}, 0.5, {ease: FlxEase.expoOut});
+
+    var x = 0;
+    for (i in options)
+    {
+        var text = new FlxText(box.x + 350, box.y + 515, FlxG.width, i.toUpperCase());
+        text.setFormat(DEFAULT_FONT, 64, 0xFF000000, 'left');
+        text.scale.set(0, 0);
+
+        text.origin.set(0, text.height / 2);
+
+        FlxTimer.wait(0.075 * x, ()-> 
+        {
+            box.visible = true;
+            // box.animation.play('appear'); 
+
+            FlxTween.tween(text.scale, {x: 0.8, y: 1}, 0.5, {ease: FlxEase.expoOut});
+        });
+
+        box.cameras = [cams.top];
+        text.cameras = [cams.top];
+
+        add(box);
+        add(text);
+
+        objects.push({box: box, text: text});
+
+        var hitbox = new InteractiveSprite(text.x, text.y).loadGraphic(FlxGraphic.fromBitmapData(text.framePixels));
+        hitbox.origin.set(0, hitbox.height / 2);
+        hitbox.cameras = [cams.top];
+        hitbox.scale.set(0.8, 1);
+        hitbox.alpha = 0.5;
+        hitbox.updateHitbox();
+        add(hitbox);
+
+        var index = i;
+        hitbox.onClick = ()->
+        {
+            closeStuff(()->
+            {
+                var text = objects[index].text;
+                if (['RESTART', 'OPTIONS', 'EXIT'].contains(text.text))
+                {
+                    if (FlxG.sound.music != null)
+                        FlxG.sound.music.volume = 0;
+    
+                    if (game.vocals != null)
+                        game.vocals.volume = 0;
+                }
+    
+                switch(text.text)
+                {
+                    case 'RESTART':
+                        game.paused = true;
+                        LoadingState.switchState(new PlayState(PlayState.LOADED_SONG_NAME, PlayState.LOADED_DIFFICULTY));
+    
+                    case 'OPTIONS', 'EXIT':
+                        LoadingState.switchCustomState('MasterEditorMenu');
+                }
+
+                game.unPauseGame();
+            });
+        }
+
+        x++;
+    }
 }
 
 function update(dt)
 {
-    if (controls.BACK) game.closeSubState();
+    if (controls.BACK) closeStuff();
 }
 
 function onClose()
 {
-    screen.destroy();
-
-    Screen.removeComponent(view);
-
     FlxG.mouse.visible = false;
 }
 
-function getButton(text)
+function closeStuff(?onComplete)
 {
-    var button = new Button();
-    button.text = text;
-    button.width = 90;
-    button.height = 60;
+    for (i in 0...2)
+        FlxTween.tween(bars[i], {x: i == 0 ? FlxG.width : -FlxG.width}, 0.5, {ease: FlxEase.expoOut});
 
-    return button;
+    FlxTween.tween(cams.hud, {alpha: 1}, 1, {ease: FlxEase.expoIn});
+
+    FlxTimer.wait(1, ()->
+    {
+        if (onComplete != null)
+            onComplete();
+    
+        game.closeSubState();
+    });
 }

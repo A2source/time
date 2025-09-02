@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="Character Information" width="200" height="400" top="315" left="5">
+    <vbox height="100%" width="100%">
+        <checkbox text="Working as Player" styleNames="working-player" />
+        
+        <rule />
+
+        <property-grid width="100%" height="100%">
+
+            <property-group text="Flip">
+                <property label="X" type="boolean" styleNames="flipx" />
+                <property label="Y" type="boolean" styleNames="flipy" />
+            </property-group>
+
+            <property label="Antialiasing" type="boolean" styleNames="antialiasing" />
+        
+            <property-group text="Sheets">
+                <header verticalAlign="center" style="spacing: 5px;">
+                    <button text="+" styleNames="add-sheet" verticalAlign="center" /> 
+                </header>
+                <listview width="100%" styleNames="sheet-list" style="margin-left: 16px;"/>
+            </property-group>
+
+            <property label="Sing Duration" type="number" min="1" step="0.1" precision="1" styleNames="sing-duration" />
+            <property label="Scale" type="number" min="0.001" step="0.001" precision="3" styleNames="scale" />
+        
+            <property-group text="Player Camera Position">
+                <property label="X" type="number" styleNames="player-x" />
+                <property label="Y" type="number" styleNames="player-y" />
+            </property-group>
+
+            <property-group text="Opponent Camera Position">
+                <property label="X" type="number" styleNames="opp-x" />
+                <property label="Y" type="number" styleNames="opp-y" />
+            </property-group>
+        </property-grid>
+
+        <button text="Edit Character Metadata" width="100%" styleNames="metadata" />
+    </vbox>
+</panel>

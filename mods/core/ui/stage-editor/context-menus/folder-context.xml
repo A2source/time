@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu width="125">
+    <menu-item text="Rename" />
+    <menuseparator />
+    <menu-item text="Add Sprite" styleNames="folder-add-sprite" />
+</menu>

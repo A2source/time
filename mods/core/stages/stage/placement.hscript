@@ -1,0 +1,91 @@
+// generated with TIME Stage Editor v3.0.0
+// 2025-09-01 19:22:54
+// Friday Night Funkin' - TIME - mods/core/stages/stage
+
+// Do NOT add new functionality to this script. Please create a new one,
+// all changes get overwritten if stage is saved again in the editor.
+
+var stageback;
+var stagefront;
+var stagecurtains;
+var stage_light;
+var stage_light_two;
+
+var layer_Mass_Import = {
+    name: 'Mass_Import',
+    elements: []
+}
+
+function startPost(song)
+{
+    char('bf').setPosition(1438, 685);
+    char('bf').zIndex = 2;
+
+    char('gf').setPosition(896, 368);
+    char('gf').zIndex = 1;
+
+    registerAsOpp('dad');
+    char('dad').setPosition(605, 296);
+    char('dad').zIndex = 1;
+
+    stageback = new FlxSprite().load(Paths.mods.stage.image(['stage', 'stageback'], 'core').content);
+    stageback.antialiasing = ClientPrefs.get('antialiasing');
+    stageback_obj = new SObj('stageback', 'stageback', stageback, 0);
+    layer_Mass_Import.elements.push(stageback_obj);
+
+    stagefront = new FlxSprite(-16, 865).load(Paths.mods.stage.image(['stage', 'stagefront'], 'core').content);
+    stagefront.antialiasing = ClientPrefs.get('antialiasing');
+    stagefront_obj = new SObj('stagefront', 'stagefront', stagefront, 0);
+    layer_Mass_Import.elements.push(stagefront_obj);
+
+    stagecurtains = new FlxSprite(122, 5).load(Paths.mods.stage.image(['stage', 'stagecurtains'], 'core').content);
+    stagecurtains.scrollFactor.set(1.2, 0.8);
+    stagecurtains.antialiasing = ClientPrefs.get('antialiasing');
+    stagecurtains_obj = new SObj('stagecurtains', 'stagecurtains', stagecurtains, 1);
+    layer_Mass_Import.elements.push(stagecurtains_obj);
+
+    stage_light = new FlxSprite(507, 187).load(Paths.mods.stage.image(['stage', 'stage_light'], 'core').content);
+    stage_light.antialiasing = ClientPrefs.get('antialiasing');
+    stage_light_obj = new SObj('stage_light', 'stage_light', stage_light, 0);
+    layer_Mass_Import.elements.push(stage_light_obj);
+
+    stage_light_two = new FlxSprite(1766, 179).load(Paths.mods.stage.image(['stage', 'stage_light'], 'core').content);
+    stage_light_two.flipX = true;
+    stage_light_two.antialiasing = ClientPrefs.get('antialiasing');
+    stage_light_two_obj = new SObj('stage_light_two', 'stage_light', stage_light_two, 0);
+    layer_Mass_Import.elements.push(stage_light_two_obj);
+
+    addLayerToStageLayers(layer_Mass_Import);
+}
+
+function load()
+{
+    registerCharacterToLoad('bf');
+    registerCharacterToLoad('gf');
+    registerCharacterToLoad('dad');
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.image,
+        keys: ['stage', 'stageback']
+    });
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.image,
+        keys: ['stage', 'stagefront']
+    });
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.image,
+        keys: ['stage', 'stagecurtains']
+    });
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.image,
+        keys: ['stage', 'stage_light']
+    });
+    
+    registerAssetToLoad({
+        method: Paths.mods.stage.image,
+        keys: ['stage', 'stage_light']
+    });
+}

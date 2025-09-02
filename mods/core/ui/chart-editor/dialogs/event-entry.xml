@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vbox>
+    <text-field placeholder="Enter entry name..." styleNames="entry-name" />
+
+    <rule />
+
+    <label text="Select Entry Type" horizontalAlign="center" />
+    <list-view width="225" styleNames="entry-type">
+        <data>
+            <item text="NONE" />
+            <item text="STRING" />
+            <item text="INT" />
+            <item text="UNSIGNED_INT" />
+            <item text="FLOAT" />
+            <item text="BOOL" />
+        </data>
+    </list-view>
+</vbox>

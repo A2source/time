@@ -1,0 +1,40 @@
+var offsets = [[-10, 0], [0, 10], [0, -10], [10, 0]];
+var mult = 1.5;
+
+var focusData = -1;
+function update(dt)
+{
+    game.forEachCharacter((c) ->
+    {
+        if (Conductor.focus != c.name) return;
+
+        if ((c.animStartsWith('idle') || c.animStartsWith('dance')) && focusData != -1)
+        {
+            focusCam(c, -1);
+            return;
+        }
+
+        if (!c.animStartsWith('sing')) return;
+
+        var index = c.singAnimations.indexOf(c.curAnimName.split('-')[0]);
+        if (focusData != index) focusCam(c, index);
+    });
+}
+
+function focusCam(c, dir)
+{
+    focusData = dir;
+    
+    var point = c.cameraPosition;
+
+    if (dir == -1)
+    {
+        game.camManager.focusOnPoint(point);
+        return;
+    }
+
+    var x = point.x + (offsets[dir][0] * mult * FlxG.camera.zoom);
+    var y = point.y + (offsets[dir][1] * mult * FlxG.camera.zoom);
+
+    game.camManager.focusOnPos(x, y);
+}

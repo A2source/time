@@ -21,6 +21,7 @@
  */
 package hscript;
 
+import haxe.CallStack;
 import haxe.PosInfos;
 import hscript.Expr;
 import haxe.Constraints.IMap;
@@ -50,12 +51,14 @@ class Interp {
 
 	#if hscriptPos
 	var curExpr : Expr;
+	var curLine : Int;
 	#end
 
 	var nameToLog:String;
 	public var nameInHscriptManager:String = '';
 
-	public function new(name:String = 'hscript') {
+	public function new(name:String = 'hscript') 
+	{
 		#if haxe3
 		locals = new Map();
 		#else
@@ -68,7 +71,8 @@ class Interp {
 		nameToLog = name;
 	}
 
-	private function resetVariables(){
+	private function resetVariables()
+	{
 		#if haxe3
 		variables = new Map<String,Dynamic>();
 		#else
@@ -94,7 +98,7 @@ class Interp {
 			if (curExpr != null)
 				return cast { fileName : nameToLog, lineNumber : curExpr.line };
 		#end
-		return cast { fileName : "hscript", lineNumber : 0 };
+		return cast { fileName : nameToLog, lineNumber : 0 };
 	}
 
 	function initOps() {
@@ -266,6 +270,7 @@ class Interp {
 		locals = new Hash();
 		#end
 		declared = new Array();
+
 		return exprReturn(expr);
 	}
 
@@ -308,7 +313,7 @@ class Interp {
 	}
 
 	inline function error(e : #if hscriptPos ErrorDef #else Error #end, rethrow=false ) : Dynamic {
-		#if hscriptPos var e = new Error(e, curExpr.pmin, curExpr.pmax, curExpr.origin, curExpr.line); #end
+		#if hscriptPos var e = new Error(e, curExpr.pmin, curExpr.pmax, nameToLog, curExpr.line); #end
 		if( rethrow ) this.rethrow(e) else throw e;
 		return null;
 	}
@@ -334,8 +339,10 @@ class Interp {
 	public function expr( e : Expr ) : Dynamic {
 		#if hscriptPos
 		curExpr = e;
+		curLine = e.line;
 		var e = e.e;
 		#end
+
 		switch( e ) {
 		case EConst(c):
 			switch( c ) {

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vbox>
+    <section-header text="No Event" />
+    <label text="This is an empty event." />
+    <label text="Please add a new one using the big green '+' below." />
+</vbox>

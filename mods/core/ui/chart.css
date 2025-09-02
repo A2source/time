@@ -1,0 +1,21 @@
+.char-box {
+    background-color: darkmagenta;
+
+    border-radius: 12px;
+    border-color: transparent;
+}
+
+.char-button {
+    border-width: 2px;
+    border-radius: 12px;
+}
+.char-button > .label {
+    font-size: 24px;
+}
+
+.editor-pad {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    margin-left: 12px;
+    margin-right: 12px;
+}

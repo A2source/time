@@ -1,105 +1,77 @@
-var combo = 0;
+var health = 0.5;
 
-function onMiss(dir, note)
+function updateValues()
 {
-    if (game.practiceMode)
-        return;
+    game.hscriptManager.setAll('health', health);
+}
 
-    if (game.instakillOnMiss)
-    {
-        game.health = 0;
-        return;
-    }
+function start(song) { updateValues(); }
 
-    combo = 0;
+function onMissNote(note)
+{
+    // if (game.practiceMode)
+    //     return;
+
+    // if (game.instakillOnMiss)
+    // {
+    //     game.health = 0;
+    //     return;
+    // }
     
-    if (note != null)
-        game.health -= note.missHealth * game.healthLoss;
+    if (note != null) health -= note.missHealth /** game.healthLoss*/;
 
     game.vocals.volume = 0;
 
-    noteMiss(note);
-    gameFeedback(dir);
+    gameFeedback();
         
-    game.hscriptManager.setAll('combo', combo);
+    updateValues();
 }
 
-function goodNoteHit(note)
+function onHitNote(note)
 {
-    game.health += note.hitHealth * game.healthGain;
+    game.vocals.volume = 1;
+    health += note.hitHealth /** game.healthGain*/;
 
-    if (note.isSustainNote)
-        return;
-
-    combo += 1;
-    if(combo > 9999) combo = 9999;
-
-    game.hscriptManager.setAll('combo', combo);
+    updateValues();
 }
 
-function noteMiss(note)
+function onOpponentHit(note)
 {
-    if (note == null)
-        return;
-
-    game.notes.forEachAlive((cur) -> 
-    {
-        var kill = true;
-
-        if (note == cur)
-            kill = false;
-
-        if (!cur.mustPress)
-            kill = false;
-
-        if (cur.noteData != note.noteData)
-            kill = false;
-
-        if (note.isSustainNote != cur.isSustainNote)
-            kill = false;
-
-        if (Math.abs(note.strumTime - cur.strumTime) > 1) 
-            kill = false;
-
-        if (kill)
-        {
-            note.kill();
-            notes.remove(note, true);
-            note.destroy();
-        }
-    });
+    game.vocals.volume = 1;
 }
 
+var died = false;
 function update(dt)
 {
-    if (game.health >= 2)
-        game.health = 2;
+    if (health >= 1) health = 1;
 
-    if (!ClientPrefs.data.noReset && controls.RESET && !game.inCutscene && game.startedCountdown && !game.endingSong)
-		game.health = 0;
+    if (ClientPrefs.get('allowReset') && controls.RESET) health = 0;
 
-    if (game.health > 0)
-        return;
-
-    trace('dead');
-
-    game.pauseGame();
+    if (health > 0 || died) return;
+    runGameover();
 
     // var pause = new CustomSubState('GameOverSubState', null);
     // pause.hscriptManager.setAll('game', game);
 	// game.openSubState(pause);
 }
 
-function gameFeedback(dir)
+function runGameover()
 {
-    var guy = game.getCurBF();
-	if (guy.stunned)
-        return;
+    return;
 
-    FlxG.sound.play(Paths.soundRandom('missnote', 1, 3), FlxG.random.float(0.1, 0.2));
+    Conductor.songPosition = -1000;
 
-    guy.hitSustainNote = false;
+    game.pauseGame();
+    game.hscriptManager.callAll('onGameOver', []);
+    game.hscriptManager.setAll('health', 0);
 
-    if (guy.hasMissAnimations)
-        guy.playAnim(SING_ANIMATIONS[Std.int(Math.abs(dir))] + '-miss', true);
+    game.paused = true;
+    died = true;
+
+    game.vocals.stop();
+}
+
+function gameFeedback()
+{
+    // FlxG.sound.play(Paths.mods.sound(['missnote'], 1, 3), FlxG.random.float(0.1, 0.2));
 }

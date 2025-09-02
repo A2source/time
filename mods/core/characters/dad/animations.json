@@ -1,0 +1,104 @@
+{
+	"animations": [
+		{
+			"typeIndex": 0,
+			"fps": 24,
+			"type": "DANCE",
+			"tag": "Dad idle",
+			"opponentOffsets": {
+				"x": -11,
+				"y": 0
+			},
+			"name": "idle",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"indices": []
+		},
+		{
+			"typeIndex": 3,
+			"fps": 24,
+			"type": "SING",
+			"tag": "Dad Sing Note RIGHT",
+			"opponentOffsets": {
+				"x": -14,
+				"y": 27
+			},
+			"name": "right",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"indices": []
+		},
+		{
+			"typeIndex": 1,
+			"fps": 24,
+			"type": "SING",
+			"tag": "Dad Sing Note DOWN",
+			"opponentOffsets": {
+				"x": -10,
+				"y": -30
+			},
+			"name": "down",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"indices": []
+		},
+		{
+			"typeIndex": 2,
+			"fps": 24,
+			"type": "SING",
+			"tag": "Dad Sing Note UP",
+			"opponentOffsets": {
+				"x": -20,
+				"y": 50
+			},
+			"name": "up",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"indices": []
+		},
+		{
+			"typeIndex": 0,
+			"fps": 24,
+			"type": "SING",
+			"tag": "Dad Sing Note LEFT",
+			"opponentOffsets": {
+				"x": -19,
+				"y": 10
+			},
+			"name": "left",
+			"flipX": false,
+			"flipY": false,
+			"loop": false,
+			"loopPoint": 0,
+			"playerOffsets": {
+				"x": 0,
+				"y": 0
+			},
+			"indices": []
+		}
+	]
+}

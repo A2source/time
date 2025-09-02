@@ -1,20 +1,27 @@
 {
-	"flip_x": false,
+	"scale": 1,
+	"opponentCameraPosition": {
+		"x": 0,
+		"y": 0
+	},
+	"flipX": false,
+	"name": "gf",
+	"singDuration": 4,
+	"sheets": [
+		"gf"
+	],
+	"flipY": false,
+	"antialiasing": true,
 	"metadata": {
-		"animators": [
+		"artists": [
 			"PhantomArcade"
 		],
-		"artists": [
+		"animators": [
 			"PhantomArcade"
 		]
 	},
-	"healthbar_colors": [
-		165,
-		0,
-		77
-	],
-	"antialiasing": true,
-	"name": "gf",
-	"sing_duration": 4,
-	"scale": 1
+	"playerCameraPosition": {
+		"x": -100,
+		"y": 0
+	}
 }

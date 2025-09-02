@@ -15,4 +15,76 @@
 		<class package="haxe.ui.containers" loadAll="true" />
 		<class package="haxe.ui.core" loadAll="true" />
 	</components>
+
+    <!-- Global TIME UI Theme  -->
+	<themes>
+		<time parent="dark">
+            <!-- normal  -->
+            <var name="normal-background-color-start" value="#382e3b" />
+            <var name="normal-background-color-end" value="#221824" />
+            <var name="normal-border-color" value="#232226" />
+            <var name="normal-text-color" value="#ffffff" />
+            <var name="normal-border-size" value="1px" />
+            <var name="normal-border-radius" value="2px" />
+            <var name="normal-inner-shadow" value="drop-shadow(1, 45, #000000, 0.2, 2, 2, 1, 3, true)" />
+            <!-- hover -->
+            <var name="hover-background-color-start" value="#423c47" />
+            <var name="hover-background-color-end" value="#352f3b" />
+            <var name="hover-text-color" value="#e096ff" />
+            <var name="hover-border-color" value="#2012a24" />
+            <!-- down -->
+            <var name="down-background-color-start" value="#2f2238" />
+            <var name="down-background-color-end" value="#251c30" />
+            <var name="down-text-color" value="#a796b3" />
+            <var name="down-border-color" value="#252226" />
+            <!-- disabled -->
+            <var name="disabled-background-color-start" value="#23102b" />
+            <var name="disabled-background-color-end" value="#120517" />
+            <var name="disabled-text-color" value="#433f45" />
+            <var name="disabled-border-color" value="#201a26" />
+            <!-- selection -->
+            <var name="selection-background-color" value="#8ad3de" />
+            <var name="selection-text-color" value="#cc33ff" />
+            <var name="selection-background-color-hover" value="#2a1d36" />
+            <!-- accent -->
+            <var name="accent-color" value="#cc33ff" />
+            <var name="accent-color-darker" value="#8321b0" />
+            <var name="accent-color-lighter" value="#cd85e6" />
+            <var name="accent-gradient-start" value="#5b3366" />
+            <var name="accent-gradient-end" value="#34263d" />
+            <!-- warning / error / success -->
+            <var name="warning-border-color" value="#807100" />
+            <var name="warning-background-color-start" value="#4d4400" />
+            <var name="warning-background-color-end" value="#473f00" />
+            <var name="error-border-color" value="#8b160e" />
+            <var name="error-background-color-start" value="#4a1721" />
+            <var name="error-background-color-end" value="#3a121a" />
+            <var name="success-border-color" value="#146c43" />
+            <var name="success-background-color-start" value="#0c4129" />
+            <var name="success-background-color-end" value="#093421" />
+            <!-- misc -->
+            <var name="default-background-color" value="#1f1721" />
+            <var name="secondary-background-color" value="#1b0d26" />
+            <var name="tertiary-background-color" value="#140317" />
+            <var name="solid-background-color" value="#19111f" />
+            <var name="solid-background-color-alt" value="#1f0b1d" />
+            <var name="solid-background-color-hover" value="#24182e" />
+            <var name="solid-background-color-down" value="#150529" />
+            <var name="solid-background-color-disabled" value="#1e1724" />
+            <var name="lighter-text-color" value="#c1b3c9" />
+            <!--
+            <var name="error-background-color" value="#cf6679" />
+            <var name="error-text-color" value="#880000" />
+            -->
+            <var name="modal-background-color" value="#17121f" />
+            <!-- special cases -->
+            <var name="scrollbar-background-color" value="#420e4f" />
+            <var name="contrast-background-color" value="#ffffff" />
+            <var name="scrollbar-button-color" value="#302638" />
+            <var name="dialog-title-color" value="#ffffff" />
+            <var name="tooltip-background-color" value="#443b4a" />
+            <var name="dialog-shadow" value="drop-shadow(1, 45, #000000, 0.2, 30, 2, 1, 3, false)" />
+            <var name="menu-shadow" value="drop-shadow(2, 45, #000000, 0.15, 6, 1, 30, 35, false)" />
+        </time>
+	</themes>
 </module>

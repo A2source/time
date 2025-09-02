@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<panel text="animation name" width="250" height="400" top="315" left="1025">
+    <property-grid width="100%" height="100%">
+        <property label="Tag" styleNames="anim-tag" />
+
+        <property label="FPS" type="number" styleNames="anim-fps" />
+
+        <property-group text="Flip">
+            <property label="X" type="boolean" styleNames="anim-flipx" />
+            <property label="Y" type="boolean" styleNames="anim-flipy" />
+        </property-group>
+
+        <property label="Loop" type="boolean" styleNames="anim-loop" />
+        <property label="Loop Point" type="number" styleNames="anim-looppoint" />
+
+        <property-group text="Indices" styleNames="anim-indices">
+            <header verticalAlign="center" style="spacing: 5px;">
+                <button text="+" styleNames="add-index" verticalAlign="center" /> 
+            </header>
+
+            <listview width="100%" styleNames="index-list" style="margin-left: 16px;">
+                <item-renderer width="100%">
+                    <hbox width="100%">
+                        <label id="index" width="100%" verticalAlign="center" />
+                        <button id="delete" text="x" height="10" horizontalAlign="right" style="background-color: red;" />
+                    </hbox>
+                </item-renderer>
+            </listview>
+        </property-group>
+
+        <property-group text="Player Offsets">
+            <property label="X" type="number" styleNames="anim-player-x" />
+            <property label="Y" type="number" styleNames="anim-player-y" />
+        </property-group>
+
+        <property-group text="Opponent Offsets">
+            <property label="X" type="number" styleNames="anim-opp-x" />
+            <property label="Y" type="number" styleNames="anim-opp-y" />
+        </property-group>
+
+        <property label="Animation Type" type="list" styleNames="anim-type">
+            <data>
+                <item text="" />
+                <item text="DANCE" />
+                <item text="SING" />
+                <item text="MISS" />
+                <item text="HOLD" />
+            </data>
+        </property>
+        <property label="Type Index" type="number" styleNames="anim-type-index" />
+    </property-grid>
+</panel>

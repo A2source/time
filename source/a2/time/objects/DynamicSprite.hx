@@ -1,26 +1,32 @@
 package a2.time.objects;
 
 import a2.time.objects.TimeSprite;
-import a2.time.Paths;
+import a2.time.backend.ClientPrefs;
+
+import flixel.graphics.frames.FlxAtlasFrames;
+import flixel.system.FlxAssets.FlxGraphicAsset;
 
 class DynamicSprite extends TimeSprite 
 {
     public var verbose:Bool = false;
 
-    public function load(key:String, _animated:Bool = false, _width:Int = 0, _height:Int = 0, _unique:Bool = false, ?_key:String)
+    override public function new(x:Float = 0, y:Float = 0, ?simpleGraphic:Null<flixel.system.FlxAssets.FlxGraphicAsset>)
     {
-        if (verbose)
-            trace('loading graphic "$key"');
+        super(x, y, simpleGraphic);
 
-        return super.loadGraphic(Paths.timeImage(key), _animated, _width, _height, _unique, _key);
+        // this is heat
+        antialiasing = ClientPrefs.get('antialiasing');
     }
 
-    public function loadSparrow(folder:String, key:String, modDirectory:String = Main.MOD_NAME)
+    public function load(key:FlxGraphicAsset, _animated:Bool = false, _width:Int = 0, _height:Int = 0, _unique:Bool = false, ?_key:String)
     {
-        if (verbose)
-            trace('loading sparrow "$folder/$key" from mod "$modDirectory"');
+        super.loadGraphic(key, _animated, _width, _height, _unique, _key);
+        return this;
+    }
 
-        frames = Paths.modsSparrow(folder, key, modDirectory);
+    public function loadAtlas(_frames:FlxAtlasFrames):DynamicSprite
+    {
+        frames = _frames;
         return this;
     }
 }

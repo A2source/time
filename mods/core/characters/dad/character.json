@@ -1,5 +1,17 @@
 {
-	"flip_x": false,
+	"scale": 1,
+	"opponentCameraPosition": {
+		"x": -400,
+		"y": 0
+	},
+	"flipX": true,
+	"name": "dad",
+	"singDuration": 4,
+	"sheets": [
+		"DADDY_DEAREST"
+	],
+	"flipY": false,
+	"antialiasing": true,
 	"metadata": {
 		"animators": [
 			"PhantomArcade"
@@ -8,13 +20,8 @@
 			"PhantomArcade"
 		]
 	},
-	"healthbar_colors": [
-		175,
-		102,
-		206
-	],
-	"antialiasing": true,
-	"name": "dad",
-	"sing_duration": 4,
-	"scale": 1
+	"playerCameraPosition": {
+		"x": 0,
+		"y": 0
+	}
 }

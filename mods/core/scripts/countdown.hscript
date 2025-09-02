@@ -1,0 +1,67 @@
+var strings = ['ready', 'set', 'go'];
+var introSounds = ['3', '2', '1', 'Go'];
+
+function load()
+{
+    for (sprite in strings)
+        registerScriptContentToLoad({
+            method: Paths.mods.image,
+            keys: [sprite]
+        });
+
+    for (sound in introSounds)
+        registerScriptContentToLoad({
+            method: Paths.mods.sound,
+            keys: [concat(['intro', sound])]
+        });
+}
+
+function start(song)
+{
+    for (sprite in strings)
+        spr = new FlxSprite().load(Paths.mods.image([sprite]).content);
+}
+
+function preCountdown()
+{
+    // trace(Conductor.crochet);
+    game.countdownTickDelay = Conductor.crochet / 1000;
+}
+
+var angle = false;
+function onCountdownTick(num)
+{
+    zoomCams();
+
+    FlxG.sound.play(Paths.mods.sound([concat(['intro', introSounds[num]])]).content, 0.7);
+
+    if (num - 1 < 0)
+        return;
+
+    var sprite = new FlxSprite().load(Paths.mods.image([strings[num - 1]]).content);
+    sprite.cameras = [cams.hud];
+    sprite.screenCenter();
+    add(sprite);
+
+    sprite.alpha = 0;
+    sprite.angle = angle ? 7 : -7;
+    FlxTween.tween(sprite.scale, {x: 0.6, y: 0.6}, Conductor.crochet * 0.0009, {ease: FlxEase.expoOut}, 'intro ' + num + ' scale');
+    FlxTween.tween(sprite, {alpha: 1}, Conductor.crochet * 0.0009, {ease: FlxEase.expoOut}, 'intro ' + num + ' in');
+    FlxTween.tween(sprite, {alpha: 0, y: sprite.y + 20}, Conductor.crochet * 0.002, {ease: FlxEase.expoIn, startDelay: Conductor.stepCrochet * 0.002, 
+    onComplete: (t)->
+    {
+        sprite.destroy();
+    }}, 'intro ' + num + ' kill');
+
+    angle = !angle;
+}
+
+function postCountdown() { zoomCams(2); }
+
+function zoomCams(?mult)
+{
+    if (mult == null) mult = 1;
+    
+    cams.game.zoom += game.camManager.cams[0].bumpAmt * mult;
+    cams.hud.zoom += game.camManager.cams[2].bumpAmt * mult;
+}
